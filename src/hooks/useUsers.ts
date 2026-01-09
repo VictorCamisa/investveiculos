@@ -11,7 +11,7 @@ import type {
   PermissionType 
 } from '@/types/users';
 
-const SUPABASE_URL = 'https://ahfoixzdnpswuqavbmgf.supabase.co';
+const SUPABASE_URL = 'https://rugbunseyblzapwzevqh.supabase.co';
 
 // Fetch all users with their roles
 export function useUsersWithRoles() {

@@ -1,7 +1,7 @@
 project_id = "rugbunseyblzapwzevqh"
 
 [functions.create-user]
-verify_jwt = true
+verify_jwt = false
 
 [functions.meta-ads-sync]
 verify_jwt = false
@@ -19,16 +19,16 @@ verify_jwt = false
 verify_jwt = false
 
 [functions.import-vehicles]
-verify_jwt = true
+verify_jwt = false
 
 [functions.import-vehicle-photos]
-verify_jwt = true
+verify_jwt = false
 
 [functions.update-user-auth]
-verify_jwt = true
+verify_jwt = false
 
 [functions.sync-users]
-verify_jwt = true
+verify_jwt = false
 
 [functions.generate-report]
 verify_jwt = false
