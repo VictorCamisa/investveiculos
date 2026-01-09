@@ -1,0 +1,272 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Modern Luxury Design System - Matheus Veículos
+   All colors MUST be HSL.
+   Primary brand color: Vermelho #E53935 (0 73% 55%)
+   Typography: Playfair Display (headings) + Plus Jakarta Sans (body)
+*/
+
+@layer base {
+  :root {
+    /* Light mode - Vermelho, Branco e Preto */
+    --background: 0 0% 98%;
+    --foreground: 0 0% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 0 0% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 0 0% 10%;
+
+    --primary: 0 73% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 96%;
+    --secondary-foreground: 0 0% 20%;
+
+    --muted: 0 0% 96%;
+    --muted-foreground: 0 0% 45%;
+
+    --accent: 0 73% 97%;
+    --accent-foreground: 0 73% 45%;
+
+    --destructive: 0 73% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 0 73% 55%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 0 73% 55%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 0 0% 90%;
+    --input: 0 0% 92%;
+    --ring: 0 73% 55%;
+
+    --radius: 0.625rem;
+
+    /* Sidebar - Light */
+    --sidebar-background: 0 0% 100%;
+    --sidebar-foreground: 0 0% 30%;
+    --sidebar-primary: 0 73% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 96%;
+    --sidebar-accent-foreground: 0 0% 20%;
+    --sidebar-border: 0 0% 92%;
+    --sidebar-ring: 0 73% 55%;
+
+    /* Surface levels for depth */
+    --surface-1: 0 0% 100%;
+    --surface-2: 0 0% 98%;
+    --surface-3: 0 0% 96%;
+
+    /* Text hierarchy */
+    --text-primary: 0 0% 10%;
+    --text-secondary: 0 0% 40%;
+    --text-muted: 0 0% 55%;
+
+    /* Auth page colors */
+    --auth-bg: 0 0% 97%;
+    --auth-surface: 0 0% 100%;
+    --auth-muted-surface: 0 0% 96%;
+    --auth-border: 0 0% 90%;
+    --auth-text-secondary: 0 0% 50%;
+    --auth-text-primary: 0 0% 20%;
+    --auth-heading: 0 0% 10%;
+
+    /* Public website theme - Matheus Veículos */
+    --public-primary: 0 73% 55%;
+    --public-primary-dark: 0 73% 45%;
+    --public-primary-light: 0 73% 65%;
+    --public-primary-foreground: 0 0% 100%;
+    --public-background: 0 0% 100%;
+    --public-foreground: 0 0% 10%;
+    --public-surface: 0 0% 98%;
+    --public-muted: 0 0% 96%;
+    --public-border: 0 0% 90%;
+  }
+
+  .dark {
+    /* Dark mode - Vermelho, Branco e Preto */
+    --background: 0 0% 7%;
+    --foreground: 0 0% 92%;
+
+    --card: 0 0% 10%;
+    --card-foreground: 0 0% 92%;
+
+    --popover: 0 0% 10%;
+    --popover-foreground: 0 0% 92%;
+
+    --primary: 0 73% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 0 0% 14%;
+    --secondary-foreground: 0 0% 85%;
+
+    --muted: 0 0% 14%;
+    --muted-foreground: 0 0% 55%;
+
+    --accent: 0 20% 15%;
+    --accent-foreground: 0 73% 65%;
+
+    --destructive: 0 73% 55%;
+    --destructive-foreground: 0 0% 100%;
+
+    --success: 0 73% 55%;
+    --success-foreground: 0 0% 100%;
+
+    --warning: 0 73% 55%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 0 0% 16%;
+    --input: 0 0% 16%;
+    --ring: 0 73% 55%;
+
+    /* Sidebar - Dark */
+    --sidebar-background: 0 0% 8%;
+    --sidebar-foreground: 0 0% 75%;
+    --sidebar-primary: 0 73% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 0 0% 13%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 14%;
+    --sidebar-ring: 0 73% 55%;
+
+    /* Surface levels for depth */
+    --surface-1: 0 0% 10%;
+    --surface-2: 0 0% 12%;
+    --surface-3: 0 0% 14%;
+
+    /* Text hierarchy */
+    --text-primary: 0 0% 95%;
+    --text-secondary: 0 0% 65%;
+    --text-muted: 0 0% 50%;
+
+    /* Auth page colors */
+    --auth-bg: 0 0% 5%;
+    --auth-surface: 0 0% 10%;
+    --auth-muted-surface: 0 0% 14%;
+    --auth-border: 0 0% 18%;
+    --auth-text-secondary: 0 0% 55%;
+    --auth-text-primary: 0 0% 80%;
+    --auth-heading: 0 0% 95%;
+
+    /* Public website theme - Matheus Veículos (dark mode) */
+    --public-primary: 0 73% 55%;
+    --public-primary-dark: 0 73% 45%;
+    --public-primary-light: 0 73% 65%;
+    --public-primary-foreground: 0 0% 100%;
+    --public-background: 0 0% 5%;
+    --public-foreground: 0 0% 95%;
+    --public-surface: 0 0% 8%;
+    --public-muted: 0 0% 12%;
+    --public-border: 0 0% 18%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  html {
+    @apply h-full scroll-smooth antialiased;
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    @apply min-h-full bg-background text-foreground m-0 p-0 font-sans;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overflow-x: hidden;
+    overscroll-behavior: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  #root {
+    @apply min-h-full;
+    overflow-x: hidden;
+  }
+
+  /* Safe area padding for mobile devices */
+  @supports (padding-top: env(safe-area-inset-top)) {
+    body {
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+      padding-left: env(safe-area-inset-left);
+      padding-right: env(safe-area-inset-right);
+    }
+  }
+}
+
+/* Auth card styling */
+.auth-card {
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.15),
+    0 0 0 1px hsl(var(--border));
+}
+
+.dark .auth-card {
+  box-shadow: 
+    0 25px 50px -12px rgba(0, 0, 0, 0.5),
+    0 0 0 1px hsl(var(--border));
+}
+
+/* Glass effect utilities */
+@layer utilities {
+  .glass {
+    @apply bg-card/80 backdrop-blur-xl border border-border/50;
+  }
+
+  .glass-subtle {
+    @apply bg-card/60 backdrop-blur-md;
+  }
+
+  .gradient-border {
+    position: relative;
+  }
+
+  .gradient-border::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, hsl(var(--primary) / 0.3), transparent);
+    -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+  }
+
+  .text-gradient {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-primary to-accent-foreground;
+  }
+
+  .animate-fade-in {
+    animation: fadeIn 0.5s ease-out forwards;
+    opacity: 0;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+}
+
+/* Smooth transitions for theme switching */
+html.transitioning,
+html.transitioning *,
+html.transitioning *::before,
+html.transitioning *::after {
+  transition: background-color 0.3s ease, border-color 0.3s ease, color 0.3s ease !important;
+}

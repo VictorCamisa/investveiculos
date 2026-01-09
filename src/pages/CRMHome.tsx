@@ -1,0 +1,271 @@
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { UserCircle, User2, Pencil } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useLeads, useCreateLead } from '@/hooks/useLeads';
+import { useNegotiations, useCreateNegotiation, useUpdateNegotiation } from '@/hooks/useNegotiations';
+import { LeadForm } from '@/components/crm/LeadForm';
+import { LeadDetailSheet } from '@/components/crm/LeadDetailSheet';
+import { NegotiationPipeline } from '@/components/crm/NegotiationPipeline';
+import { NegotiationForm } from '@/components/crm/NegotiationForm';
+import { CustomerDetailSheet } from '@/components/crm/CustomerDetailSheet';
+import { Skeleton } from '@/components/ui/skeleton';
+import type { Lead, LeadStatus, LeadSource } from '@/types/crm';
+import type { Negotiation } from '@/types/negotiations';
+
+export default function CRMHome() {
+  const { role } = useAuth();
+  const { data: leads = [], isLoading: leadsLoading } = useLeads();
+  const { data: negotiations = [], isLoading: negotiationsLoading } = useNegotiations();
+  
+  const createLead = useCreateLead();
+  const createNegotiation = useCreateNegotiation();
+  const updateNegotiation = useUpdateNegotiation();
+  
+  const [createLeadOpen, setCreateLeadOpen] = useState(false);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadDetailOpen, setLeadDetailOpen] = useState(false);
+  
+  const [createNegotiationOpen, setCreateNegotiationOpen] = useState(false);
+  const [editNegotiationOpen, setEditNegotiationOpen] = useState(false);
+  const [selectedNegotiation, setSelectedNegotiation] = useState<Negotiation | null>(null);
+  const [preSelectedLeadId, setPreSelectedLeadId] = useState<string | null>(null);
+  const [preSelectedSalespersonId, setPreSelectedSalespersonId] = useState<string | null>(null);
+
+  const [customerDetailOpen, setCustomerDetailOpen] = useState(false);
+  const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  
+  // Action choice dialog for negotiation click
+  const [actionChoiceOpen, setActionChoiceOpen] = useState(false);
+  const [pendingNegotiation, setPendingNegotiation] = useState<Negotiation | null>(null);
+
+  const isManager = role === 'gerente';
+
+  const handleCreateLead = async (data: Record<string, unknown>) => {
+    await createLead.mutateAsync({
+      name: data.name as string,
+      phone: data.phone as string,
+      email: data.email as string | undefined,
+      source: data.source as LeadSource,
+      status: (data.status as LeadStatus) || 'novo',
+      notes: data.notes as string | undefined,
+      vehicle_interest: data.vehicle_interest as string | undefined,
+      assigned_to: data.assigned_to as string,
+    });
+    setCreateLeadOpen(false);
+  };
+
+  const handleStartNegotiation = (leadId: string, salespersonId?: string) => {
+    const lead = leads.find(l => l.id === leadId);
+    setPreSelectedLeadId(leadId);
+    setPreSelectedSalespersonId(salespersonId || lead?.assigned_to || null);
+    setLeadDetailOpen(false);
+    setCreateNegotiationOpen(true);
+  };
+
+  const handleCreateNegotiation = async (data: Record<string, unknown>) => {
+    const vehicleId = data.vehicle_id as string | undefined;
+    await createNegotiation.mutateAsync({
+      lead_id: (preSelectedLeadId || data.lead_id) as string,
+      vehicle_id: vehicleId && vehicleId !== '' ? vehicleId : undefined,
+      salesperson_id: data.salesperson_id as string,
+      status: data.status as 'em_andamento' | 'proposta_enviada' | 'negociando' | 'ganho' | 'perdido' | 'pausado',
+      estimated_value: data.estimated_value ? Number(data.estimated_value) : undefined,
+      probability: data.probability ? Number(data.probability) : undefined,
+      expected_close_date: data.expected_close_date as string | undefined,
+      notes: data.notes as string | undefined,
+    });
+    setCreateNegotiationOpen(false);
+    setPreSelectedLeadId(null);
+    setPreSelectedSalespersonId(null);
+  };
+
+  const handleUpdateNegotiation = async (data: Record<string, unknown>) => {
+    if (!selectedNegotiation) return;
+    const vehicleId = data.vehicle_id as string | undefined;
+    await updateNegotiation.mutateAsync({
+      id: selectedNegotiation.id,
+      vehicle_id: vehicleId && vehicleId !== '' ? vehicleId : null,
+      status: data.status as 'em_andamento' | 'proposta_enviada' | 'negociando' | 'ganho' | 'perdido' | 'pausado',
+      estimated_value: data.estimated_value ? Number(data.estimated_value) : null,
+      probability: data.probability ? Number(data.probability) : null,
+      expected_close_date: data.expected_close_date as string | undefined,
+      loss_reason: data.loss_reason as string | undefined,
+      notes: data.notes as string | undefined,
+    });
+    setEditNegotiationOpen(false);
+    setSelectedNegotiation(null);
+  };
+
+  const handleNegotiationClick = (negotiation: Negotiation) => {
+    setPendingNegotiation(negotiation);
+    setActionChoiceOpen(true);
+  };
+
+  const handleChooseViewLead = () => {
+    if (pendingNegotiation?.lead) {
+      const lead = leads.find(l => l.id === pendingNegotiation.lead_id);
+      if (lead) {
+        setSelectedLead(lead);
+        setLeadDetailOpen(true);
+      }
+    }
+    setActionChoiceOpen(false);
+    setPendingNegotiation(null);
+  };
+
+  const handleChooseEditNegotiation = () => {
+    if (pendingNegotiation) {
+      setSelectedNegotiation(pendingNegotiation);
+      setEditNegotiationOpen(true);
+    }
+    setActionChoiceOpen(false);
+    setPendingNegotiation(null);
+  };
+
+  const handleViewCustomer = (customerId: string) => {
+    setSelectedCustomerId(customerId);
+    setCustomerDetailOpen(true);
+  };
+
+  const isLoading = leadsLoading || negotiationsLoading;
+
+  return (
+    <div className="space-y-4">
+      {/* Pipeline */}
+      {isLoading ? (
+        <div className="flex gap-3 overflow-x-auto pb-4">
+          {[...Array(5)].map((_, i) => (
+            <div key={i} className="w-72 shrink-0">
+              <Skeleton className="h-16 mb-2 rounded-lg" />
+              <Skeleton className="h-28 rounded-lg" />
+              <Skeleton className="h-28 mt-2 rounded-lg" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="overflow-x-auto pb-4">
+          <NegotiationPipeline 
+            negotiations={negotiations}
+            onNegotiationClick={handleNegotiationClick}
+            onCreateNegotiation={() => setCreateNegotiationOpen(true)}
+            onCreateLead={() => setCreateLeadOpen(true)}
+            showSalesperson={isManager}
+          />
+        </div>
+      )}
+
+      {/* Dialogs */}
+      <Dialog open={createLeadOpen} onOpenChange={setCreateLeadOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Novo Lead</DialogTitle>
+          </DialogHeader>
+          <LeadForm onSubmit={handleCreateLead} isLoading={createLead.isPending} />
+        </DialogContent>
+      </Dialog>
+
+      <LeadDetailSheet
+        lead={selectedLead}
+        open={leadDetailOpen}
+        onOpenChange={setLeadDetailOpen}
+        onStartNegotiation={handleStartNegotiation}
+      />
+
+      <Dialog open={createNegotiationOpen} onOpenChange={(open) => {
+        setCreateNegotiationOpen(open);
+        if (!open) {
+          setPreSelectedLeadId(null);
+          setPreSelectedSalespersonId(null);
+        }
+      }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Nova Negociação</DialogTitle>
+          </DialogHeader>
+          <NegotiationForm 
+            onSubmit={handleCreateNegotiation} 
+            isLoading={createNegotiation.isPending}
+            negotiation={preSelectedLeadId ? { 
+              lead_id: preSelectedLeadId,
+              salesperson_id: preSelectedSalespersonId || ''
+            } as Negotiation : undefined}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={editNegotiationOpen} onOpenChange={setEditNegotiationOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Editar Negociação</DialogTitle>
+          </DialogHeader>
+          {selectedNegotiation && (
+            <>
+              <NegotiationForm 
+                negotiation={selectedNegotiation}
+                onSubmit={handleUpdateNegotiation} 
+                isLoading={updateNegotiation.isPending}
+              />
+              {selectedNegotiation.customer_id && (
+                <Button 
+                  variant="outline" 
+                  className="w-full mt-2"
+                  onClick={() => {
+                    setEditNegotiationOpen(false);
+                    handleViewCustomer(selectedNegotiation.customer_id!);
+                  }}
+                >
+                  <UserCircle className="h-4 w-4 mr-2" />
+                  Ver Ficha do Cliente
+                </Button>
+              )}
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Action Choice Dialog */}
+      <Dialog open={actionChoiceOpen} onOpenChange={setActionChoiceOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>O que deseja fazer?</DialogTitle>
+            <DialogDescription>
+              Escolha uma ação para a negociação de <span className="font-semibold">{pendingNegotiation?.lead?.name || 'Lead'}</span>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 mt-4">
+            <Button
+              variant="outline"
+              className="justify-start h-14 text-left"
+              onClick={handleChooseViewLead}
+            >
+              <User2 className="h-5 w-5 mr-3" />
+              <div>
+                <div className="font-medium">Ver Ficha do Lead</div>
+                <div className="text-xs text-muted-foreground">WhatsApp, histórico e informações</div>
+              </div>
+            </Button>
+            <Button
+              variant="outline"
+              className="justify-start h-14 text-left"
+              onClick={handleChooseEditNegotiation}
+            >
+              <Pencil className="h-5 w-5 mr-3" />
+              <div>
+                <div className="font-medium">Editar Negociação</div>
+                <div className="text-xs text-muted-foreground">Status, valor, previsão e objeções</div>
+              </div>
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <CustomerDetailSheet
+        customerId={selectedCustomerId}
+        open={customerDetailOpen}
+        onOpenChange={setCustomerDetailOpen}
+      />
+    </div>
+  );
+}

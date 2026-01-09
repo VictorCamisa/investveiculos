@@ -1,0 +1,142 @@
+import { Car, MoreHorizontal, Globe, EyeOff } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import type { Vehicle } from '@/types/inventory';
+import { vehicleStatusLabels, vehicleStatusColors, fuelTypeLabels } from '@/types/inventory';
+
+interface VehicleTableProps {
+  vehicles: Vehicle[];
+  onVehicleClick: (vehicle: Vehicle) => void;
+}
+
+export function VehicleTable({ vehicles, onVehicleClick }: VehicleTableProps) {
+  const formatCurrency = (value: number | null) => {
+    if (!value) return '-';
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL',
+    }).format(value);
+  };
+
+  const formatKm = (km: number) => {
+    return new Intl.NumberFormat('pt-BR').format(km) + ' km';
+  };
+
+  if (vehicles.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+        <Car className="h-12 w-12 mb-4 opacity-50" />
+        <p>Nenhum veículo encontrado</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-[300px]">Veículo</TableHead>
+            <TableHead>Ano</TableHead>
+            <TableHead>KM</TableHead>
+            <TableHead>Placa</TableHead>
+            <TableHead className="text-right">Preço Venda</TableHead>
+            <TableHead className="text-right">Custo</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="text-center">Site</TableHead>
+            <TableHead className="w-[50px]"></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {vehicles.map((vehicle) => (
+            <TableRow
+              key={vehicle.id}
+              className="cursor-pointer"
+              onClick={() => onVehicleClick(vehicle)}
+            >
+              <TableCell>
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-primary/10 rounded-lg">
+                    <Car className="h-4 w-4 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-medium">{vehicle.brand} {vehicle.model}</p>
+                    {vehicle.version && (
+                      <p className="text-sm text-muted-foreground">{vehicle.version}</p>
+                    )}
+                  </div>
+                </div>
+              </TableCell>
+              <TableCell>{vehicle.year_fabrication}/{vehicle.year_model}</TableCell>
+              <TableCell>{formatKm(vehicle.km)}</TableCell>
+              <TableCell className="font-mono">{vehicle.plate || '-'}</TableCell>
+              <TableCell className="text-right font-semibold">
+                {formatCurrency(vehicle.sale_price)}
+              </TableCell>
+              <TableCell className="text-right text-muted-foreground">
+                {formatCurrency(vehicle.purchase_price)}
+              </TableCell>
+              <TableCell>
+                <Badge className={vehicleStatusColors[vehicle.status]}>
+                  {vehicleStatusLabels[vehicle.status]}
+                </Badge>
+              </TableCell>
+              <TableCell className="text-center">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <div className="flex justify-center">
+                      {vehicle.featured ? (
+                        <Globe className="h-4 w-4 text-green-500" />
+                      ) : (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </div>
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    {vehicle.featured ? 'Visível no site' : 'Não visível no site'}
+                  </TooltipContent>
+                </Tooltip>
+              </TableCell>
+              <TableCell>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                    <Button variant="ghost" size="icon" className="h-8 w-8">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem onClick={(e) => {
+                      e.stopPropagation();
+                      onVehicleClick(vehicle);
+                    }}>
+                      Ver detalhes
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+}

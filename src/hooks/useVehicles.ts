@@ -1,0 +1,285 @@
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import type { Vehicle, VehicleCost, VehicleDRE, VehicleStatus, VehicleCostType } from '@/types/inventory';
+import { toast } from 'sonner';
+
+// Shared query options for better caching
+const vehicleQueryOptions = {
+  staleTime: 1000 * 60 * 5, // 5 minutes
+  gcTime: 1000 * 60 * 15, // 15 minutes
+};
+
+export function useVehicles() {
+  return useQuery({
+    queryKey: ['vehicles'],
+    queryFn: async (): Promise<Vehicle[]> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('vehicles')
+        .select('*')
+        .order('created_at', { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as Vehicle[];
+    },
+    ...vehicleQueryOptions,
+  });
+}
+
+export function useVehicle(id: string) {
+  return useQuery({
+    queryKey: ['vehicles', id],
+    queryFn: async (): Promise<Vehicle | null> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('vehicles')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+
+      if (error) throw error;
+      return data as Vehicle | null;
+    },
+    enabled: !!id,
+    ...vehicleQueryOptions,
+  });
+}
+
+export function useVehicleDRE(id?: string) {
+  return useQuery({
+    queryKey: ['vehicle-dre', id],
+    queryFn: async (): Promise<VehicleDRE | null> => {
+      if (!id) return null;
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('vehicle_dre')
+        .select('*')
+        .eq('id', id)
+        .maybeSingle();
+      
+      if (error) throw error;
+      return data as VehicleDRE | null;
+    },
+    enabled: !!id,
+    ...vehicleQueryOptions,
+  });
+}
+
+export function useAllVehicleDRE() {
+  return useQuery({
+    queryKey: ['vehicle-dre-all'],
+    queryFn: async (): Promise<VehicleDRE[]> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('vehicle_dre')
+        .select('*')
+        .order('created_at', { ascending: false });
+      
+      if (error) throw error;
+      return (data || []) as VehicleDRE[];
+    },
+    ...vehicleQueryOptions,
+  });
+}
+
+export function useVehicleCosts(vehicleId: string) {
+  return useQuery({
+    queryKey: ['vehicle-costs', vehicleId],
+    queryFn: async (): Promise<VehicleCost[]> => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('vehicle_costs')
+        .select('*')
+        .eq('vehicle_id', vehicleId)
+        .order('cost_date', { ascending: false });
+
+      if (error) throw error;
+      return (data || []) as VehicleCost[];
+    },
+    enabled: !!vehicleId,
+    ...vehicleQueryOptions,
+  });
+}
+
+interface CreateVehicleInput {
+  brand: string;
+  model: string;
+  version?: string;
+  year_fabrication: number;
+  year_model: number;
+  color: string;
+  plate?: string;
+  renavam?: string;
+  chassis?: string;
+  km: number;
+  fuel_type?: string;
+  transmission?: string;
+  doors?: number;
+  purchase_price?: number;
+  purchase_date?: string;
+  purchase_source?: string;
+  fipe_price_at_purchase?: number;
+  sale_price?: number;
+  minimum_price?: number;
+  expected_margin_percent?: number;
+  expected_sale_days?: number;
+  estimated_maintenance?: number;
+  estimated_cleaning?: number;
+  estimated_documentation?: number;
+  estimated_other_costs?: number;
+  status?: VehicleStatus;
+  notes?: string;
+  featured?: boolean;
+  images?: string[];
+}
+
+export function useCreateVehicle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateVehicleInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('vehicles')
+        .insert({
+          ...input,
+          created_by: user?.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
+      queryClient.invalidateQueries({ queryKey: ['public-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-vehicles'] });
+      toast.success('Veículo cadastrado com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao cadastrar veículo: ${error.message}`);
+    },
+  });
+}
+
+export function useUpdateVehicle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...input }: { id: string } & Partial<CreateVehicleInput>) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('vehicles')
+        .update(input)
+        .eq('id', id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
+      queryClient.invalidateQueries({ queryKey: ['public-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['featured-vehicles'] });
+      toast.success('Veículo atualizado com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao atualizar veículo: ${error.message}`);
+    },
+  });
+}
+
+export function useDeleteVehicle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from('vehicles')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
+      toast.success('Veículo excluído com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao excluir veículo: ${error.message}`);
+    },
+  });
+}
+
+interface CreateVehicleCostInput {
+  vehicle_id: string;
+  cost_type: VehicleCostType;
+  description: string;
+  amount: number;
+  cost_date?: string;
+  receipt_url?: string;
+}
+
+export function useCreateVehicleCost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (input: CreateVehicleCostInput) => {
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { data, error } = await (supabase as any)
+        .from('vehicle_costs')
+        .insert({
+          ...input,
+          created_by: user?.id,
+        })
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-costs', variables.vehicle_id] });
+      queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
+      toast.success('Custo adicionado com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao adicionar custo: ${error.message}`);
+    },
+  });
+}
+
+export function useDeleteVehicleCost() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, vehicleId }: { id: string; vehicleId: string }) => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { error } = await (supabase as any)
+        .from('vehicle_costs')
+        .delete()
+        .eq('id', id);
+
+      if (error) throw error;
+      return { vehicleId };
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['vehicle-costs', data.vehicleId] });
+      queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
+      toast.success('Custo excluído com sucesso!');
+    },
+    onError: (error: Error) => {
+      toast.error(`Erro ao excluir custo: ${error.message}`);
+    },
+  });
+}

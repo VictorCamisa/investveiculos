@@ -1,0 +1,93 @@
+import { Card, CardContent } from '@/components/ui/card';
+import { Badge } from '@/components/ui/badge';
+import { Car, Phone, Calendar, TrendingUp, User, UserCircle } from 'lucide-react';
+import type { Negotiation } from '@/types/negotiations';
+import { negotiationStatusLabels, negotiationStatusColors } from '@/types/negotiations';
+import { format } from 'date-fns';
+import { ptBR } from 'date-fns/locale';
+
+interface NegotiationCardProps {
+  negotiation: Negotiation;
+  onClick?: () => void;
+  showSalesperson?: boolean;
+}
+
+export function NegotiationCard({ negotiation, onClick, showSalesperson }: NegotiationCardProps) {
+  const formatCurrency = (value: number | null) => {
+    if (!value) return '-';
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+  };
+
+  return (
+    <Card 
+      className="cursor-pointer hover:shadow-md transition-shadow border-border/50 bg-card"
+      onClick={onClick}
+    >
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div className="min-w-0 flex-1">
+            <h4 className="font-medium text-sm truncate text-foreground">
+              {negotiation.lead?.name || 'Lead não encontrado'}
+            </h4>
+            {negotiation.lead?.phone && (
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Phone className="h-3 w-3" />
+                <span>{negotiation.lead.phone}</span>
+              </div>
+            )}
+          </div>
+          <Badge variant="outline" className="text-xs shrink-0">
+            {negotiationStatusLabels[negotiation.status]}
+          </Badge>
+        </div>
+
+        {negotiation.customer && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
+            <UserCircle className="h-3 w-3" />
+            <span className="truncate">Cliente: {negotiation.customer.name}</span>
+          </div>
+        )}
+
+        {negotiation.vehicle && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
+            <Car className="h-3 w-3" />
+            <span className="truncate">
+              {negotiation.vehicle.brand} {negotiation.vehicle.model} {negotiation.vehicle.year_model}
+            </span>
+          </div>
+        )}
+
+        <div className="flex items-center justify-between text-xs">
+          {negotiation.estimated_value ? (
+            <span className="font-semibold text-foreground">
+              {formatCurrency(negotiation.estimated_value)}
+            </span>
+          ) : (
+            <span className="text-muted-foreground">Valor não definido</span>
+          )}
+          
+          {negotiation.probability !== null && (
+            <div className="flex items-center gap-1 text-muted-foreground">
+              <TrendingUp className="h-3 w-3" />
+              <span>{negotiation.probability}%</span>
+            </div>
+          )}
+        </div>
+
+        {negotiation.expected_close_date && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <Calendar className="h-3 w-3" />
+            <span>Previsão: {format(new Date(negotiation.expected_close_date), 'dd/MM/yyyy', { locale: ptBR })}</span>
+          </div>
+        )}
+
+        {showSalesperson && negotiation.salesperson?.full_name && (
+          <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1 border-t border-border/50">
+            <User className="h-3 w-3" />
+            <span>{negotiation.salesperson.full_name}</span>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
