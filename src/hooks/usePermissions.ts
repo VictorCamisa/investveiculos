@@ -2,14 +2,15 @@ import { useAuth } from '@/contexts/AuthContext';
 import type { ModuleName, PermissionType } from '@/types/users';
 import { useMemo, useCallback } from 'react';
 
-// Permissões por role
+// Permissões por role - vendedor só vê Dashboard, CRM e Estoque na sidebar
 const PERMISSIONS_BY_ROLE: Record<string, { modules: ModuleName[]; permissions: PermissionType[] }> = {
   gerente: {
     modules: ['crm', 'vendas', 'estoque', 'financeiro', 'marketing', 'comissoes', 'configuracoes', 'usuarios'],
     permissions: ['view', 'create', 'edit', 'delete', 'manage'],
   },
   vendedor: {
-    modules: ['crm', 'estoque', 'comissoes'],
+    // Vendedor só acessa CRM e Estoque (Dashboard é acessível a todos)
+    modules: ['crm', 'estoque'],
     permissions: ['view', 'create', 'edit'],
   },
   marketing: {
