@@ -147,6 +147,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const signIn = async (email: string, password: string) => {
     // Limpar todo o cache antes do login para evitar dados de outro usuário
     queryClient.clear();
+    // Limpar insights dismissados para nova sessão
+    localStorage.removeItem('dismissedMarketingInsights');
     
     const { error } = await supabase.auth.signInWithPassword({
       email,

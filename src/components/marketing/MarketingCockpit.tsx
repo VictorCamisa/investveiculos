@@ -29,7 +29,10 @@ export function MarketingCockpit() {
   const presets = useDatePresets();
   const [dateRange, setDateRange] = useState(presets.last30Days);
   const [activePreset, setActivePreset] = useState<string>('last30Days');
-  const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
+  const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(() => {
+    const stored = localStorage.getItem('dismissedMarketingInsights');
+    return stored ? new Set(JSON.parse(stored)) : new Set();
+  });
 
   const { data: kpis, isLoading: kpisLoading } = useCockpitKPIs(dateRange);
   const { data: funnel, isLoading: funnelLoading } = useFunnelData(dateRange);
@@ -37,7 +40,11 @@ export function MarketingCockpit() {
   const { data: insights } = useAutoInsights(kpis, leadOps);
 
   const dismissInsight = useCallback((title: string) => {
-    setDismissedInsights(prev => new Set([...prev, title]));
+    setDismissedInsights(prev => {
+      const updated = new Set([...prev, title]);
+      localStorage.setItem('dismissedMarketingInsights', JSON.stringify([...updated]));
+      return updated;
+    });
   }, []);
 
   const visibleInsights = insights?.filter(insight => !dismissedInsights.has(insight.title)) || [];
