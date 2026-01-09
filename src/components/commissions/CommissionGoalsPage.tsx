@@ -33,13 +33,28 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
-function useProfiles() {
+function useSalespeople() {
   return useQuery({
-    queryKey: ['profiles'],
+    queryKey: ['salespeople-for-goals'],
     queryFn: async () => {
-      const { data, error } = await supabase.from('profiles').select('*');
-      if (error) throw error;
-      return data || [];
+      // Get only users with vendedor role
+      const { data: roles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'vendedor');
+      
+      if (!roles?.length) return [];
+      
+      const userIds = (roles as { user_id: string }[]).map(r => r.user_id);
+      
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', userIds)
+        .eq('is_active', true)
+        .order('full_name');
+      
+      return profiles || [];
     },
   });
 }
@@ -47,7 +62,7 @@ function useProfiles() {
 export function CommissionGoalsPage() {
   const [formOpen, setFormOpen] = useState(false);
   const { data: goals, isLoading } = useSalespersonGoals();
-  const { data: profiles } = useProfiles();
+  const { data: salespeople } = useSalespeople();
   const createGoal = useCreateSalespersonGoal();
   const { role } = useAuth();
 
@@ -234,7 +249,7 @@ export function CommissionGoalsPage() {
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        {profiles?.filter((p: any) => p.id).map((p: any) => (
+                        {salespeople?.map((p) => (
                           <SelectItem key={p.id} value={p.id}>{p.full_name || 'Sem nome'}</SelectItem>
                         ))}
                       </SelectContent>

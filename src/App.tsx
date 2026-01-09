@@ -60,7 +60,7 @@ const CommissionDashboard = lazy(() => import("@/components/commissions/Commissi
 const CommissionRulesPage = lazy(() => import("@/components/commissions/CommissionRulesPage").then(m => ({ default: m.CommissionRulesPage })));
 const CommissionGoalsPage = lazy(() => import("@/components/commissions/CommissionGoalsPage").then(m => ({ default: m.CommissionGoalsPage })));
 const CommissionRankingPage = lazy(() => import("@/components/commissions/CommissionRankingPage").then(m => ({ default: m.CommissionRankingPage })));
-const CommissionCalendarPage = lazy(() => import("@/components/commissions/CommissionCalendarPage").then(m => ({ default: m.CommissionCalendarPage })));
+
 const CommissionHistoryPage = lazy(() => import("@/components/commissions/CommissionHistoryPage").then(m => ({ default: m.CommissionHistoryPage })));
 const CommissionSimulatorPage = lazy(() => import("@/components/commissions/CommissionSimulatorPage").then(m => ({ default: m.CommissionSimulatorPage })));
 
@@ -234,7 +234,7 @@ const App = () => (
                     <Route path="regras" element={<CommissionRulesPage />} />
                     <Route path="metas" element={<CommissionGoalsPage />} />
                     <Route path="ranking" element={<CommissionRankingPage />} />
-                    <Route path="calendario" element={<CommissionCalendarPage />} />
+                    
                     <Route path="historico" element={<CommissionHistoryPage />} />
                     <Route path="simulador" element={<CommissionSimulatorPage />} />
                   </Route>
