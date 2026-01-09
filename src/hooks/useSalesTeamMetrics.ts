@@ -88,9 +88,11 @@ export function useSalesTeamMetrics() {
         ).length;
 
         const convertedLeads = userLeads.filter(l => l.status === 'convertido').length;
-        const conversionRate = userLeads.length > 0 
-          ? (convertedLeads / userLeads.length) * 100 
-          : 0;
+        
+        // Prioriza taxa baseada em negociações ganhas, senão usa leads convertidos
+        const conversionRate = userNegotiations.length > 0 
+          ? (wonNegotiations / userNegotiations.length) * 100
+          : (userLeads.length > 0 && convertedLeads > 0 ? 100 : 0);
 
         const avgValue = userNegotiations.length > 0
           ? userNegotiations.reduce((sum, n) => sum + (n.estimated_value || 0), 0) / userNegotiations.length
@@ -118,9 +120,9 @@ export function useSalesTeamMetrics() {
         };
       });
 
-      return metrics.filter(m => 
-        m.total_leads > 0 || m.total_negotiations > 0 || m.total_sales > 0 || m.total_interactions > 0
-      );
+      return metrics
+        .filter(m => m.total_leads > 0 || m.total_negotiations > 0 || m.total_sales > 0 || m.total_interactions > 0)
+        .sort((a, b) => b.total_revenue - a.total_revenue);
     },
   });
 }

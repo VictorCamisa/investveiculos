@@ -26,6 +26,7 @@ export function SalesDashboard() {
   const { data: negotiations } = useTeamNegotiations();
 
   const formatCurrency = (value: number) => {
+    if (value === 0) return 'R$ 0';
     return new Intl.NumberFormat('pt-BR', { 
       style: 'currency', 
       currency: 'BRL',
@@ -175,6 +176,7 @@ export function SalesDashboard() {
                       <div>
                         <p className="font-medium">{member.full_name}</p>
                         <p className="text-xs text-muted-foreground">
+                          {member.total_sales > 0 ? `${member.total_sales} vendas • ` : ''}
                           {member.total_negotiations} negociações • {member.conversion_rate.toFixed(0)}% conversão
                         </p>
                       </div>
