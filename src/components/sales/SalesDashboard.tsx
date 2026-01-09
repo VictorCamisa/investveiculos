@@ -206,6 +206,9 @@ export function SalesDashboard() {
                       <p className="text-xs text-muted-foreground">
                         {neg.vehicle ? `${neg.vehicle.brand} ${neg.vehicle.model}` : 'Sem veículo'}
                       </p>
+                      <p className="text-xs text-blue-500 font-medium">
+                        Vendedor: {neg.salesperson?.full_name || 'Não atribuído'}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">{formatCurrency(neg.estimated_value || 0)}</p>

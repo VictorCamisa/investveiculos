@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -56,6 +57,7 @@ const roleLabels: Record<string, string> = {
 };
 
 export function SalesTeamView() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('equipe');
   const [editingConfig, setEditingConfig] = useState<string | null>(null);
   const [addDialogOpen, setAddDialogOpen] = useState(false);
@@ -221,7 +223,8 @@ export function SalesTeamView() {
                   return (
                     <div 
                       key={person.id} 
-                      className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
+                      className="flex items-center justify-between p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors cursor-pointer"
+                      onClick={() => navigate(`/vendas/equipe/${person.id}`)}
                     >
                       <div className="flex items-center gap-4">
                         <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
