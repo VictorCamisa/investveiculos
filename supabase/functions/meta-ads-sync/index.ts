@@ -57,6 +57,11 @@ interface MetaInsight {
   date_stop: string;
 }
 
+interface TestCredentials {
+  accessToken: string;
+  adAccountId: string;
+}
+
 async function fetchFromMeta(endpoint: string, accessToken: string, params: Record<string, string> = {}) {
   const url = new URL(`${META_BASE_URL}/${endpoint}`);
   url.searchParams.set('access_token', accessToken);
@@ -74,6 +79,19 @@ async function fetchFromMeta(endpoint: string, accessToken: string, params: Reco
   }
 
   return response.json();
+}
+
+async function testConnection(accessToken: string, adAccountId: string) {
+  // Test the connection by fetching account info
+  console.log('Testing Meta connection...');
+  console.log(`Ad Account ID: ${adAccountId}`);
+  
+  const data = await fetchFromMeta(adAccountId, accessToken, {
+    fields: 'id,name,account_status'
+  });
+  
+  console.log('Connection test successful:', data);
+  return data;
 }
 
 async function syncCampaigns(supabase: any, adAccountId: string, accessToken: string) {
@@ -305,31 +323,79 @@ serve(async (req) => {
   }
 
   try {
-    // Get environment variables
-    const META_ACCESS_TOKEN = Deno.env.get('META_ACCESS_TOKEN');
-    const META_AD_ACCOUNT_ID = Deno.env.get('META_AD_ACCOUNT_ID');
     const SUPABASE_URL = Deno.env.get('SUPABASE_URL');
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-
-    if (!META_ACCESS_TOKEN || !META_AD_ACCOUNT_ID) {
-      throw new Error('Missing Meta Ads configuration. Please set META_ACCESS_TOKEN and META_AD_ACCOUNT_ID secrets.');
-    }
 
     if (!SUPABASE_URL || !SUPABASE_SERVICE_ROLE_KEY) {
       throw new Error('Missing Supabase configuration.');
     }
 
-    console.log('Starting Meta Ads sync...');
-    console.log(`Ad Account ID: ${META_AD_ACCOUNT_ID}`);
+    // Parse request body
+    let body: any = {};
+    try {
+      body = await req.json();
+    } catch (e) {
+      // No body provided, use env vars
+    }
+
+    const syncType = body.syncType || 'full';
+    const testCredentials: TestCredentials | undefined = body.testCredentials;
+
+    // Use test credentials if provided, otherwise use env vars
+    let accessToken: string;
+    let adAccountId: string;
+
+    if (testCredentials) {
+      accessToken = testCredentials.accessToken;
+      adAccountId = testCredentials.adAccountId;
+      console.log('Using provided test credentials');
+    } else {
+      const META_ACCESS_TOKEN = Deno.env.get('META_ACCESS_TOKEN');
+      const META_AD_ACCOUNT_ID = Deno.env.get('META_AD_ACCOUNT_ID');
+
+      if (!META_ACCESS_TOKEN || !META_AD_ACCOUNT_ID) {
+        throw new Error('Missing Meta Ads configuration. Please set META_ACCESS_TOKEN and META_AD_ACCOUNT_ID secrets or provide testCredentials.');
+      }
+
+      accessToken = META_ACCESS_TOKEN;
+      adAccountId = META_AD_ACCOUNT_ID;
+      console.log('Using environment credentials');
+    }
+
+    // Ensure adAccountId has act_ prefix
+    if (!adAccountId.startsWith('act_')) {
+      adAccountId = `act_${adAccountId}`;
+    }
+
+    console.log(`Starting Meta Ads ${syncType}...`);
+    console.log(`Ad Account ID: ${adAccountId}`);
 
     // Create Supabase client with service role for bypassing RLS
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    // If it's just a test, verify connection and return
+    if (syncType === 'test') {
+      const accountInfo = await testConnection(accessToken, adAccountId);
+      
+      return new Response(
+        JSON.stringify({
+          success: true,
+          message: 'Connection test successful',
+          data: {
+            account_id: accountInfo.id,
+            account_name: accountInfo.name,
+            account_status: accountInfo.account_status
+          }
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Create sync log entry
     const { data: syncLog, error: syncLogError } = await supabase
       .from('meta_sync_logs')
       .insert({
-        sync_type: 'full',
+        sync_type: syncType,
         status: 'in_progress',
         started_at: new Date().toISOString()
       })
@@ -344,10 +410,10 @@ serve(async (req) => {
 
     try {
       // Sync all data
-      const campaignsCount = await syncCampaigns(supabase, META_AD_ACCOUNT_ID, META_ACCESS_TOKEN);
-      const adsetsCount = await syncAdSets(supabase, META_AD_ACCOUNT_ID, META_ACCESS_TOKEN);
-      const adsCount = await syncAds(supabase, META_AD_ACCOUNT_ID, META_ACCESS_TOKEN);
-      const insightsCount = await syncInsights(supabase, META_AD_ACCOUNT_ID, META_ACCESS_TOKEN);
+      const campaignsCount = await syncCampaigns(supabase, adAccountId, accessToken);
+      const adsetsCount = await syncAdSets(supabase, adAccountId, accessToken);
+      const adsCount = await syncAds(supabase, adAccountId, accessToken);
+      const insightsCount = await syncInsights(supabase, adAccountId, accessToken);
 
       // Update sync log with success
       if (syncLogId) {
