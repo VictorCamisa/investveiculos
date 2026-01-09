@@ -10,16 +10,8 @@ import { Loader2 } from "lucide-react";
 
 // Eager load only essential components
 import AppLayout from "@/components/layout/AppLayout";
-import { PublicLayout } from "@/components/public/PublicLayout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Auth from "./pages/Auth";
-
-// Lazy load public pages
-const Home = lazy(() => import("./pages/Home"));
-const PublicEstoque = lazy(() => import("./pages/PublicEstoque"));
-const PublicVehicleDetails = lazy(() => import("./pages/PublicVehicleDetails"));
-const Sobre = lazy(() => import("./pages/Sobre"));
-const Contato = lazy(() => import("./pages/Contato"));
 
 // Lazy load internal pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -122,14 +114,8 @@ const App = () => (
           <AuthProvider>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                {/* Public Website Routes */}
-                <Route element={<PublicLayout />}>
-                  <Route path="/" element={<Home />} />
-                  <Route path="/veiculos" element={<PublicEstoque />} />
-                  <Route path="/veiculos/:id" element={<PublicVehicleDetails />} />
-                  <Route path="/sobre" element={<Sobre />} />
-                  <Route path="/contato" element={<Contato />} />
-                </Route>
+                {/* Redirect root to auth */}
+                <Route path="/" element={<Navigate to="/auth" replace />} />
 
                 {/* Auth */}
                 <Route path="/auth" element={<Auth />} />
