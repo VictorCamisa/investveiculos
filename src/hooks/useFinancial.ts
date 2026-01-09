@@ -227,13 +227,27 @@ export function useDREData(months: number = 6) {
       const cac = monthSales.reduce((sum, s) => sum + (s.lead_cac || 0), 0);
       const lucroBruto = monthSales.reduce((sum, s) => sum + (s.gross_profit || 0), 0);
 
-      // Detalhar custos de veículo por categoria
+      // Detalhar custos de veículo por categoria (usando cost_type)
       const vehicleIds = monthSales.map(s => s.vehicle_id).filter(Boolean);
       const monthVehicleCosts = vehicleCosts?.filter((c: any) => vehicleIds.includes(c.vehicle_id)) || [];
       const custosVeiculoDetails: DRECategoryDetail[] = [];
       const vehicleCostsByCategory: Record<string, number> = {};
+      
+      // Mapeamento de cost_type para nome legível
+      const costTypeLabels: Record<string, string> = {
+        'documentacao': 'Documentação',
+        'transferencia': 'Transferência',
+        'ipva': 'IPVA',
+        'manutencao': 'Manutenção',
+        'limpeza': 'Limpeza',
+        'frete': 'Frete',
+        'comissao_compra': 'Comissão de Compra',
+        'outros': 'Outros',
+      };
+      
       monthVehicleCosts.forEach((c: any) => {
-        const cat = c.category || 'Outros';
+        const costType = c.cost_type || 'outros';
+        const cat = costTypeLabels[costType] || costType;
         vehicleCostsByCategory[cat] = (vehicleCostsByCategory[cat] || 0) + (Number(c.amount) || 0);
       });
       Object.entries(vehicleCostsByCategory).forEach(([category, amount]) => {
