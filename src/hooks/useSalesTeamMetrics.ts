@@ -136,14 +136,31 @@ export function usePendingApprovals() {
         .select(`
           *,
           customer:customers(id, name, phone),
-          vehicle:vehicles(id, brand, model, year_model, plate),
-          salesperson:profiles!salesperson_id(id, full_name)
+          vehicle:vehicles(id, brand, model, year_model, plate)
         `)
         .eq('status', 'pendente')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return data || [];
+      
+      const sales = data || [];
+      
+      // Fetch salesperson profiles separately to avoid PGRST200 error
+      const salespersonIds = [...new Set(sales.map(s => s.salesperson_id).filter(Boolean))];
+      
+      if (salespersonIds.length === 0) return sales;
+      
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', salespersonIds);
+      
+      const profileMap = new Map((profiles || []).map(p => [p.id, p]));
+      
+      return sales.map(s => ({
+        ...s,
+        salesperson: profileMap.get(s.salesperson_id) || null,
+      }));
     },
   });
 }
