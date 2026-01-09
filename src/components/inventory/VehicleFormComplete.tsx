@@ -533,22 +533,50 @@ export function VehicleFormComplete({ vehicle, onSubmit, isLoading }: VehicleFor
               />
             </div>
 
-            {/* Resumo de custos */}
-            <Separator />
-            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Custo Total Estimado:</span>
-                <span className="font-semibold">{formatCurrency(totalEstimatedCost)}</span>
+            {/* Resumo de custos - Card Destacado */}
+            <div className="bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/30 rounded-xl p-5 space-y-3">
+              <div className="flex items-center gap-2 mb-3">
+                <Calculator className="h-5 w-5 text-primary" />
+                <span className="font-semibold text-primary">Resumo de Custo Total</span>
               </div>
+              
+              <div className="space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Valor de Compra:</span>
+                  <span className="font-medium">{formatCurrency(Number(form.watch('purchase_price')) || 0)}</span>
+                </div>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">(+) Custos Estimados:</span>
+                  <span className="font-medium">
+                    {formatCurrency(
+                      (Number(form.watch('estimated_maintenance')) || 0) +
+                      (Number(form.watch('estimated_cleaning')) || 0) +
+                      (Number(form.watch('estimated_documentation')) || 0) +
+                      (Number(form.watch('estimated_other_costs')) || 0)
+                    )}
+                  </span>
+                </div>
+                <Separator className="my-2" />
+                <div className="flex justify-between items-center">
+                  <span className="font-bold text-lg">(=) CUSTO TOTAL:</span>
+                  <span className="font-bold text-2xl text-primary">{formatCurrency(totalEstimatedCost)}</span>
+                </div>
+              </div>
+
               {salePrice && salePrice > 0 && (
-                <>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Margem Estimada:</span>
-                    <span className={`font-semibold ${estimatedMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                      {formatCurrency(estimatedMargin)} ({estimatedMarginPercent.toFixed(1)}%)
-                    </span>
+                <div className="mt-4 pt-3 border-t border-primary/20">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm font-medium">Margem Estimada:</span>
+                    <div className="text-right">
+                      <span className={`font-bold text-lg ${estimatedMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        {formatCurrency(estimatedMargin)}
+                      </span>
+                      <span className={`ml-2 text-sm ${estimatedMargin >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                        ({estimatedMarginPercent.toFixed(1)}%)
+                      </span>
+                    </div>
                   </div>
-                </>
+                </div>
               )}
             </div>
           </CardContent>
