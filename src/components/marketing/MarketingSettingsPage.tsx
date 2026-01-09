@@ -4,12 +4,9 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
 import { toast } from 'sonner';
 import { 
-  Settings, 
-  Key, 
   CheckCircle2, 
   AlertCircle, 
   ExternalLink,
@@ -17,9 +14,11 @@ import {
   EyeOff,
   Save,
   RefreshCw,
-  Info
+  Info,
+  Loader2
 } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { supabase } from '@/integrations/supabase/client';
 
 interface ApiConfig {
   metaAccessToken: string;
@@ -27,6 +26,8 @@ interface ApiConfig {
   googleClientId: string;
   googleClientSecret: string;
   googleRefreshToken: string;
+  googleCustomerId: string;
+  googleDeveloperToken: string;
   isMetaConnected: boolean;
   isGoogleConnected: boolean;
 }
@@ -34,6 +35,8 @@ interface ApiConfig {
 export default function MarketingSettingsPage() {
   const [showMetaToken, setShowMetaToken] = useState(false);
   const [showGoogleSecret, setShowGoogleSecret] = useState(false);
+  const [isTestingMeta, setIsTestingMeta] = useState(false);
+  const [isTestingGoogle, setIsTestingGoogle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
   const [config, setConfig] = useState<ApiConfig>({
@@ -42,40 +45,48 @@ export default function MarketingSettingsPage() {
     googleClientId: '',
     googleClientSecret: '',
     googleRefreshToken: '',
+    googleCustomerId: '',
+    googleDeveloperToken: '',
     isMetaConnected: false,
     isGoogleConnected: false,
   });
 
-  // Load config from localStorage on mount
+  // Check connection status on mount by trying to sync
   useEffect(() => {
-    const savedConfig = localStorage.getItem('marketing_api_config');
-    if (savedConfig) {
-      try {
-        const parsed = JSON.parse(savedConfig);
-        setConfig(parsed);
-      } catch (e) {
-        console.error('Error loading config:', e);
-      }
-    }
+    checkConnectionStatus();
   }, []);
 
-  const handleSave = async () => {
-    setIsSaving(true);
+  const checkConnectionStatus = async () => {
+    // Check Meta connection
     try {
-      // Update connection status based on filled fields
-      const updatedConfig = {
-        ...config,
-        isMetaConnected: !!(config.metaAccessToken && config.metaAdAccountId),
-        isGoogleConnected: !!(config.googleClientId && config.googleClientSecret),
-      };
+      const { data: metaLogs } = await supabase
+        .from('meta_sync_logs')
+        .select('status, completed_at')
+        .order('created_at', { ascending: false })
+        .limit(1);
       
-      localStorage.setItem('marketing_api_config', JSON.stringify(updatedConfig));
-      setConfig(updatedConfig);
-      toast.success('Configurações salvas com sucesso!');
-    } catch (error) {
-      toast.error('Erro ao salvar configurações');
-    } finally {
-      setIsSaving(false);
+      const metaLogArray = metaLogs as { status: string; completed_at: string }[] | null;
+      if (metaLogArray && metaLogArray.length > 0 && metaLogArray[0].status === 'completed') {
+        setConfig(prev => ({ ...prev, isMetaConnected: true }));
+      }
+    } catch (e) {
+      console.log('Error checking meta status:', e);
+    }
+
+    // Check Google connection
+    try {
+      const { data: googleLogs } = await supabase
+        .from('google_sync_logs')
+        .select('status, completed_at')
+        .order('created_at', { ascending: false })
+        .limit(1);
+      
+      const googleLogArray = googleLogs as { status: string; completed_at: string }[] | null;
+      if (googleLogArray && googleLogArray.length > 0 && googleLogArray[0].status === 'completed') {
+        setConfig(prev => ({ ...prev, isGoogleConnected: true }));
+      }
+    } catch (e) {
+      console.log('Error checking google status:', e);
     }
   };
 
@@ -85,25 +96,138 @@ export default function MarketingSettingsPage() {
       return;
     }
     
+    setIsTestingMeta(true);
     toast.info('Testando conexão com Meta Ads...');
-    // Simulating connection test - in production, this would make an actual API call
-    setTimeout(() => {
-      toast.success('Conexão com Meta Ads estabelecida com sucesso!');
-      setConfig(prev => ({ ...prev, isMetaConnected: true }));
-    }, 1500);
+    
+    try {
+      // First, we need to save the secrets temporarily to test
+      // Call the edge function with the credentials in the body for testing
+      const { data, error } = await supabase.functions.invoke('meta-ads-sync', {
+        body: { 
+          syncType: 'test',
+          testCredentials: {
+            accessToken: config.metaAccessToken,
+            adAccountId: config.metaAdAccountId.startsWith('act_') 
+              ? config.metaAdAccountId 
+              : `act_${config.metaAdAccountId}`
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success('Conexão com Meta Ads estabelecida! Sincronizando dados...');
+        setConfig(prev => ({ ...prev, isMetaConnected: true }));
+        
+        // Now trigger full sync
+        await supabase.functions.invoke('meta-ads-sync', {
+          body: { 
+            syncType: 'full',
+            testCredentials: {
+              accessToken: config.metaAccessToken,
+              adAccountId: config.metaAdAccountId.startsWith('act_') 
+                ? config.metaAdAccountId 
+                : `act_${config.metaAdAccountId}`
+            }
+          }
+        });
+        
+        toast.success('Dados do Meta Ads sincronizados com sucesso!');
+      } else {
+        throw new Error(data?.error || 'Erro desconhecido');
+      }
+    } catch (error: any) {
+      console.error('Meta connection error:', error);
+      const errorMessage = error.message || 'Erro ao conectar com Meta Ads';
+      
+      if (errorMessage.includes('Invalid OAuth access token')) {
+        toast.error('Token de acesso inválido. Verifique se o token está correto e não expirou.');
+      } else if (errorMessage.includes('Invalid account')) {
+        toast.error('ID da conta de anúncios inválido. Verifique se o ID está correto.');
+      } else {
+        toast.error(`Erro: ${errorMessage}`);
+      }
+      setConfig(prev => ({ ...prev, isMetaConnected: false }));
+    } finally {
+      setIsTestingMeta(false);
+    }
   };
 
   const testGoogleConnection = async () => {
-    if (!config.googleClientId || !config.googleClientSecret) {
-      toast.error('Preencha o Client ID e Client Secret do Google');
+    if (!config.googleClientId || !config.googleClientSecret || !config.googleRefreshToken) {
+      toast.error('Preencha o Client ID, Client Secret e Refresh Token do Google');
       return;
     }
     
+    setIsTestingGoogle(true);
     toast.info('Testando conexão com Google Ads...');
-    setTimeout(() => {
-      toast.success('Conexão com Google Ads estabelecida com sucesso!');
-      setConfig(prev => ({ ...prev, isGoogleConnected: true }));
-    }, 1500);
+    
+    try {
+      const { data, error } = await supabase.functions.invoke('google-ads-sync', {
+        body: { 
+          syncType: 'test',
+          testCredentials: {
+            clientId: config.googleClientId,
+            clientSecret: config.googleClientSecret,
+            refreshToken: config.googleRefreshToken,
+            customerId: config.googleCustomerId,
+            developerToken: config.googleDeveloperToken
+          }
+        }
+      });
+
+      if (error) throw error;
+
+      if (data?.success) {
+        toast.success('Conexão com Google Ads estabelecida! Sincronizando dados...');
+        setConfig(prev => ({ ...prev, isGoogleConnected: true }));
+        
+        // Now trigger full sync
+        await supabase.functions.invoke('google-ads-sync', {
+          body: { 
+            syncType: 'full',
+            testCredentials: {
+              clientId: config.googleClientId,
+              clientSecret: config.googleClientSecret,
+              refreshToken: config.googleRefreshToken,
+              customerId: config.googleCustomerId,
+              developerToken: config.googleDeveloperToken
+            }
+          }
+        });
+        
+        toast.success('Dados do Google Ads sincronizados com sucesso!');
+      } else {
+        throw new Error(data?.error || 'Erro desconhecido');
+      }
+    } catch (error: any) {
+      console.error('Google connection error:', error);
+      toast.error(`Erro: ${error.message || 'Erro ao conectar com Google Ads'}`);
+      setConfig(prev => ({ ...prev, isGoogleConnected: false }));
+    } finally {
+      setIsTestingGoogle(false);
+    }
+  };
+
+  const handleSave = async () => {
+    setIsSaving(true);
+    try {
+      toast.info('Para salvar as credenciais de forma segura, use o botão "Testar Conexão" que valida e salva automaticamente.');
+      
+      // Save connection status locally for quick reference
+      const statusConfig = {
+        isMetaConnected: config.isMetaConnected,
+        isGoogleConnected: config.isGoogleConnected,
+        lastUpdated: new Date().toISOString()
+      };
+      localStorage.setItem('marketing_connection_status', JSON.stringify(statusConfig));
+      
+    } catch (error) {
+      toast.error('Erro ao salvar configurações');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -113,7 +237,8 @@ export default function MarketingSettingsPage() {
         <AlertTitle>Configuração de APIs</AlertTitle>
         <AlertDescription>
           Configure suas chaves de API para conectar o sistema com Meta Ads e Google Ads. 
-          As credenciais são armazenadas localmente e usadas para sincronizar dados de campanhas.
+          Ao clicar em "Testar Conexão", o sistema valida as credenciais e, se corretas, 
+          sincroniza automaticamente todos os dados de campanhas.
         </AlertDescription>
       </Alert>
 
@@ -179,20 +304,29 @@ export default function MarketingSettingsPage() {
               <Label htmlFor="metaAdAccountId">ID da Conta de Anúncios</Label>
               <Input
                 id="metaAdAccountId"
-                placeholder="act_123456789"
+                placeholder="act_123456789 ou 123456789"
                 value={config.metaAdAccountId}
                 onChange={(e) => setConfig(prev => ({ ...prev, metaAdAccountId: e.target.value }))}
               />
               <p className="text-xs text-muted-foreground">
-                ID da conta de anúncios (começa com "act_")
+                ID da conta de anúncios (com ou sem "act_")
               </p>
             </div>
           </div>
           
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={testMetaConnection}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Testar Conexão
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={testMetaConnection}
+              disabled={isTestingMeta}
+            >
+              {isTestingMeta ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              {isTestingMeta ? 'Testando...' : 'Testar e Conectar'}
             </Button>
             <Button variant="ghost" size="sm" asChild>
               <a 
@@ -284,23 +418,60 @@ export default function MarketingSettingsPage() {
             </div>
           </div>
           
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="googleRefreshToken">Refresh Token</Label>
+              <Input
+                id="googleRefreshToken"
+                placeholder="1//0xxxxxxxxxx"
+                value={config.googleRefreshToken}
+                onChange={(e) => setConfig(prev => ({ ...prev, googleRefreshToken: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                Token de atualização para acesso contínuo
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="googleCustomerId">Customer ID</Label>
+              <Input
+                id="googleCustomerId"
+                placeholder="123-456-7890"
+                value={config.googleCustomerId}
+                onChange={(e) => setConfig(prev => ({ ...prev, googleCustomerId: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                ID da conta Google Ads (MCC ou conta individual)
+              </p>
+            </div>
+          </div>
+
           <div className="space-y-2">
-            <Label htmlFor="googleRefreshToken">Refresh Token (Opcional)</Label>
+            <Label htmlFor="googleDeveloperToken">Developer Token</Label>
             <Input
-              id="googleRefreshToken"
-              placeholder="1//0xxxxxxxxxx"
-              value={config.googleRefreshToken}
-              onChange={(e) => setConfig(prev => ({ ...prev, googleRefreshToken: e.target.value }))}
+              id="googleDeveloperToken"
+              placeholder="xxxxxxxxxxxxxxxx"
+              value={config.googleDeveloperToken}
+              onChange={(e) => setConfig(prev => ({ ...prev, googleDeveloperToken: e.target.value }))}
             />
             <p className="text-xs text-muted-foreground">
-              Token de atualização para acesso contínuo
+              Token de desenvolvedor do Google Ads API
             </p>
           </div>
           
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={testGoogleConnection}>
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Testar Conexão
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={testGoogleConnection}
+              disabled={isTestingGoogle}
+            >
+              {isTestingGoogle ? (
+                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+              ) : (
+                <RefreshCw className="h-4 w-4 mr-2" />
+              )}
+              {isTestingGoogle ? 'Testando...' : 'Testar e Conectar'}
             </Button>
             <Button variant="ghost" size="sm" asChild>
               <a 
@@ -319,17 +490,14 @@ export default function MarketingSettingsPage() {
 
       <Separator />
 
-      {/* Save Button */}
-      <div className="flex justify-end">
-        <Button onClick={handleSave} disabled={isSaving}>
-          {isSaving ? (
-            <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
-          ) : (
-            <Save className="h-4 w-4 mr-2" />
-          )}
-          Salvar Configurações
-        </Button>
-      </div>
+      <Alert variant="default" className="border-amber-500/50 bg-amber-500/10">
+        <AlertCircle className="h-4 w-4 text-amber-500" />
+        <AlertTitle className="text-amber-600">Dica de Segurança</AlertTitle>
+        <AlertDescription className="text-amber-600/80">
+          As credenciais são enviadas diretamente para validação no servidor e não são armazenadas no navegador. 
+          Use o botão "Testar e Conectar" para validar e ativar a integração automaticamente.
+        </AlertDescription>
+      </Alert>
     </div>
   );
 }
