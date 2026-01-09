@@ -3,7 +3,94 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Sale, SaleProfitReport, PaymentMethod, SaleStatus } from '@/types/sales';
-import { syncSaleRevenue } from './useFinancialSync';
+
+// Inline sync function to avoid circular dependency with useFinancialSync
+async function syncSaleRevenueInline(sale: {
+  id: string;
+  sale_price: number;
+  sale_date: string;
+  status: string;
+  vehicle_id: string;
+}, vehicleInfo?: { brand: string; model: string }) {
+  if (sale.status !== 'concluida') return;
+
+  const vehicleLabel = vehicleInfo ? `${vehicleInfo.brand} ${vehicleInfo.model}` : 'Veículo';
+
+  const { data: existing } = await (supabase as any)
+    .from('financial_transactions')
+    .select('id')
+    .eq('sale_id', sale.id)
+    .eq('type', 'receita')
+    .maybeSingle();
+
+  if (existing) {
+    await (supabase as any)
+      .from('financial_transactions')
+      .update({
+        amount: sale.sale_price,
+        transaction_date: sale.sale_date,
+        status: 'pago',
+        paid_at: sale.sale_date,
+      })
+      .eq('id', existing.id);
+  } else {
+    await (supabase as any)
+      .from('financial_transactions')
+      .insert({
+        sale_id: sale.id,
+        vehicle_id: sale.vehicle_id,
+        type: 'receita',
+        category: 'Vendas',
+        subcategory: 'Venda de Veículos',
+        description: `Venda: ${vehicleLabel}`,
+        amount: sale.sale_price,
+        transaction_date: sale.sale_date,
+        status: 'pago',
+        paid_at: sale.sale_date,
+      });
+  }
+
+  // Sync sale costs
+  const { data: saleDetails } = await (supabase as any)
+    .from('sales')
+    .select('documentation_cost, transfer_cost, other_sale_costs')
+    .eq('id', sale.id)
+    .maybeSingle();
+
+  if (saleDetails) {
+    const saleCosts = [
+      { amount: saleDetails.documentation_cost, desc: 'Documentação' },
+      { amount: saleDetails.transfer_cost, desc: 'Transferência' },
+      { amount: saleDetails.other_sale_costs, desc: 'Outros custos' },
+    ].filter(c => c.amount && c.amount > 0);
+
+    for (const cost of saleCosts) {
+      const { data: existingCost } = await (supabase as any)
+        .from('financial_transactions')
+        .select('id')
+        .eq('sale_id', sale.id)
+        .eq('description', `${cost.desc} - ${vehicleLabel}`)
+        .maybeSingle();
+
+      if (!existingCost) {
+        await (supabase as any)
+          .from('financial_transactions')
+          .insert({
+            sale_id: sale.id,
+            vehicle_id: sale.vehicle_id,
+            type: 'despesa',
+            category: 'Custos de Venda',
+            subcategory: cost.desc,
+            description: `${cost.desc} - ${vehicleLabel}`,
+            amount: cost.amount,
+            transaction_date: sale.sale_date,
+            status: 'pago',
+            paid_at: sale.sale_date,
+          });
+      }
+    }
+  }
+}
 
 // Shared query options - reduced caching for better real-time updates
 const salesQueryOptions = {
@@ -150,7 +237,7 @@ export function useCreateSale() {
           .maybeSingle();
         
         if (data.status === 'concluida') {
-          await syncSaleRevenue({
+          await syncSaleRevenueInline({
             id: data.id,
             sale_price: input.sale_price,
             sale_date: input.sale_date || new Date().toISOString().split('T')[0],
@@ -215,7 +302,7 @@ export function useUpdateSale() {
           .eq('id', data.vehicle_id)
           .maybeSingle();
         
-        await syncSaleRevenue({
+        await syncSaleRevenueInline({
           id: data.id,
           sale_price: data.sale_price,
           sale_date: data.sale_date,
