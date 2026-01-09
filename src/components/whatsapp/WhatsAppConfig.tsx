@@ -66,14 +66,14 @@ export function WhatsAppConfig() {
               <Label>URL do Webhook</Label>
               <div className="flex gap-2">
                 <Input 
-                  value="https://ahfoixzdnpswuqavbmgf.supabase.co/functions/v1/whatsapp-webhook"
+                  value="https://rugbunseyblzapwzevqh.supabase.co/functions/v1/whatsapp-webhook"
                   readOnly
                   className="font-mono text-sm"
                 />
                 <Button 
                   variant="outline"
                   onClick={() => {
-                    navigator.clipboard.writeText('https://ahfoixzdnpswuqavbmgf.supabase.co/functions/v1/whatsapp-webhook');
+                    navigator.clipboard.writeText('https://rugbunseyblzapwzevqh.supabase.co/functions/v1/whatsapp-webhook');
                   }}
                 >
                   Copiar

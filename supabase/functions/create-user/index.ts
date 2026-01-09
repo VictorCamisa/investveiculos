@@ -16,7 +16,9 @@ serve(async (req) => {
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
-    // Create admin client
+    console.log("[create-user] Starting...");
+
+    // Create admin client with service role key
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
@@ -26,35 +28,40 @@ serve(async (req) => {
 
     // Get the requesting user's auth token
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
+      console.log("[create-user] No authorization header");
       return new Response(JSON.stringify({ error: "No authorization header" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    // Verify the requesting user
-    const { data: { user: requestingUser } } = await supabaseAdmin.auth.getUser(
-      authHeader.replace("Bearer ", "")
-    );
-
-    if (!requestingUser) {
+    // Validate the JWT using admin client's getUser
+    const token = authHeader.replace("Bearer ", "");
+    const { data: { user: requestingUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
+    
+    if (userError || !requestingUser) {
+      console.error("[create-user] JWT validation error:", userError);
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    console.log("[create-user] Requesting user:", requestingUser.id, requestingUser.email);
+
     // Check if requesting user is a gerente (admin)
-    const { data: roleData } = await supabaseAdmin
+    const { data: roleData, error: roleCheckError } = await supabaseAdmin
       .from("user_roles")
       .select("role")
       .eq("user_id", requestingUser.id)
       .eq("role", "gerente")
       .maybeSingle();
 
+    console.log("[create-user] Role check:", { roleData, roleCheckError });
+
     if (!roleData) {
-      return new Response(JSON.stringify({ error: "Apenas Administradores podem criar usuários" }), {
+      return new Response(JSON.stringify({ error: "Apenas gerentes podem criar usuários" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
@@ -62,6 +69,8 @@ serve(async (req) => {
 
     // Get request body
     const { email, password, full_name, role } = await req.json();
+
+    console.log("[create-user] Creating user:", { email, full_name, role });
 
     if (!email || !password || !full_name || !role) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -79,12 +88,14 @@ serve(async (req) => {
     });
 
     if (createError) {
+      console.error("[create-user] Error creating user:", createError);
       return new Response(JSON.stringify({ error: createError.message }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    console.log("[create-user] User created:", newUser.user.id);
 
     // Ensure profile exists
     const now = new Date().toISOString();
@@ -102,7 +113,7 @@ serve(async (req) => {
       );
 
     if (profileError) {
-      console.error("Error creating profile:", profileError);
+      console.error("[create-user] Error creating profile:", profileError);
     }
 
     // Assign the role
@@ -111,9 +122,10 @@ serve(async (req) => {
       .insert({ user_id: newUser.user.id, role });
 
     if (roleError) {
-      console.error("Error assigning role:", roleError);
+      console.error("[create-user] Error assigning role:", roleError);
     }
 
+    console.log("[create-user] Success!");
 
     return new Response(
       JSON.stringify({ 
@@ -130,7 +142,7 @@ serve(async (req) => {
       }
     );
   } catch (error: unknown) {
-    console.error("Error:", error);
+    console.error("[create-user] Error:", error);
     const errorMessage = error instanceof Error ? error.message : "Unknown error";
     return new Response(JSON.stringify({ error: errorMessage }), {
       status: 500,
