@@ -10,6 +10,12 @@ import { startOfMonth, endOfMonth, subMonths, isWithinInterval, format, differen
 import { ptBR } from 'date-fns/locale';
 import { Tables } from '@/integrations/supabase/types';
 
+export interface DRECategoryDetail {
+  category: string;
+  subcategory?: string;
+  amount: number;
+}
+
 export interface DREData {
   period: string;
   receitaBruta: number;
@@ -28,6 +34,13 @@ export interface DREData {
   margemBruta: number;
   margemLiquida: number;
   qtdVendas: number;
+  // Detalhes por categoria
+  custosVeiculoDetails: DRECategoryDetail[];
+  custosVendaDetails: DRECategoryDetail[];
+  despesasComerciaisDetails: DRECategoryDetail[];
+  despesasAdministrativasDetails: DRECategoryDetail[];
+  despesasOperacionaisDetails: DRECategoryDetail[];
+  outrasDespesasDetails: DRECategoryDetail[];
 }
 
 export interface CashFlowItem {
@@ -184,6 +197,7 @@ export function useFinancialDashboard() {
 export function useDREData(months: number = 6) {
   const { data: profitReports, isLoading: loadingReports } = useSaleProfitReports();
   const { data: transactions, isLoading: loadingTransactions } = useFinancialTransactionsData();
+  const { data: vehicleCosts } = useAllVehicleCosts();
 
   const isLoading = loadingReports || loadingTransactions;
 
@@ -213,13 +227,38 @@ export function useDREData(months: number = 6) {
       const cac = monthSales.reduce((sum, s) => sum + (s.lead_cac || 0), 0);
       const lucroBruto = monthSales.reduce((sum, s) => sum + (s.gross_profit || 0), 0);
 
+      // Detalhar custos de veículo por categoria
+      const vehicleIds = monthSales.map(s => s.vehicle_id).filter(Boolean);
+      const monthVehicleCosts = vehicleCosts?.filter((c: any) => vehicleIds.includes(c.vehicle_id)) || [];
+      const custosVeiculoDetails: DRECategoryDetail[] = [];
+      const vehicleCostsByCategory: Record<string, number> = {};
+      monthVehicleCosts.forEach((c: any) => {
+        const cat = c.category || 'Outros';
+        vehicleCostsByCategory[cat] = (vehicleCostsByCategory[cat] || 0) + (Number(c.amount) || 0);
+      });
+      Object.entries(vehicleCostsByCategory).forEach(([category, amount]) => {
+        custosVeiculoDetails.push({ category, amount });
+      });
+
+      // Detalhar custos de venda
+      const custosVendaDetails: DRECategoryDetail[] = [];
+      let docTotal = 0, transTotal = 0, outrosVenda = 0;
+      monthSales.forEach(s => {
+        docTotal += (s as any).documentation_cost || 0;
+        transTotal += (s as any).transfer_cost || 0;
+        outrosVenda += (s as any).other_sale_costs || 0;
+      });
+      if (docTotal > 0) custosVendaDetails.push({ category: 'Documentação', amount: docTotal });
+      if (transTotal > 0) custosVendaDetails.push({ category: 'Transferência', amount: transTotal });
+      if (outrosVenda > 0) custosVendaDetails.push({ category: 'Outros Custos Venda', amount: outrosVenda });
+
       // Despesas operacionais do período (de financial_transactions)
       const monthTransactions = transactions?.filter((t: any) => {
         const tDate = new Date(t.transaction_date);
         return t.type === 'despesa' && isWithinInterval(tDate, { start, end });
       }) || [];
 
-      // Categorizar despesas
+      // Categorizar despesas com detalhes
       const categorizeExpense = (category: string) => {
         const cat = category?.toLowerCase() || '';
         if (cat.includes('marketing') || cat.includes('publicidade') || cat.includes('propaganda')) {
@@ -251,17 +290,40 @@ export function useDREData(months: number = 6) {
       let despesasOperacionais = 0;
       let outrasDespesas = 0;
 
+      const comerciaisMap: Record<string, number> = {};
+      const administrativasMap: Record<string, number> = {};
+      const operacionaisMap: Record<string, number> = {};
+      const outrasMap: Record<string, number> = {};
+
       monthTransactions.forEach((t: any) => {
         const tipo = categorizeExpense(t.category);
         const amount = Number(t.amount) || 0;
+        const cat = t.category || 'Outros';
         switch (tipo) {
-          case 'comercial': despesasComerciais += amount; break;
-          case 'administrativo': despesasAdministrativas += amount; break;
-          case 'operacional': despesasOperacionais += amount; break;
-          case 'outras': outrasDespesas += amount; break;
+          case 'comercial':
+            despesasComerciais += amount;
+            comerciaisMap[cat] = (comerciaisMap[cat] || 0) + amount;
+            break;
+          case 'administrativo':
+            despesasAdministrativas += amount;
+            administrativasMap[cat] = (administrativasMap[cat] || 0) + amount;
+            break;
+          case 'operacional':
+            despesasOperacionais += amount;
+            operacionaisMap[cat] = (operacionaisMap[cat] || 0) + amount;
+            break;
+          case 'outras':
+            outrasDespesas += amount;
+            outrasMap[cat] = (outrasMap[cat] || 0) + amount;
+            break;
           default: break;
         }
       });
+
+      const despesasComerciaisDetails = Object.entries(comerciaisMap).map(([category, amount]) => ({ category, amount }));
+      const despesasAdministrativasDetails = Object.entries(administrativasMap).map(([category, amount]) => ({ category, amount }));
+      const despesasOperacionaisDetails = Object.entries(operacionaisMap).map(([category, amount]) => ({ category, amount }));
+      const outrasDespesasDetails = Object.entries(outrasMap).map(([category, amount]) => ({ category, amount }));
 
       const lucroOperacional = lucroBruto - despesasComerciais - despesasAdministrativas - despesasOperacionais;
       const lucroLiquido = lucroOperacional - outrasDespesas;
@@ -284,15 +346,21 @@ export function useDREData(months: number = 6) {
         margemBruta: receitaBruta > 0 ? (lucroBruto / receitaBruta) * 100 : 0,
         margemLiquida: receitaBruta > 0 ? (lucroLiquido / receitaBruta) * 100 : 0,
         qtdVendas: monthSales.length,
+        custosVeiculoDetails,
+        custosVendaDetails,
+        despesasComerciaisDetails,
+        despesasAdministrativasDetails,
+        despesasOperacionaisDetails,
+        outrasDespesasDetails,
       });
     }
 
     return data;
-  }, [profitReports, transactions, months]);
+  }, [profitReports, transactions, vehicleCosts, months]);
 
-  // Consolidated totals
+  // Consolidated totals with details
   const totals = useMemo(() => {
-    return dreData.reduce((acc, d) => ({
+    const base = dreData.reduce((acc, d) => ({
       receitaBruta: acc.receitaBruta + d.receitaBruta,
       custoAquisicao: acc.custoAquisicao + d.custoAquisicao,
       custosVeiculo: acc.custosVeiculo + d.custosVeiculo,
@@ -323,6 +391,27 @@ export function useDREData(months: number = 6) {
       lucroLiquido: 0,
       qtdVendas: 0,
     });
+
+    // Aggregate details across all periods
+    const aggregateDetails = (key: keyof Pick<DREData, 'custosVeiculoDetails' | 'custosVendaDetails' | 'despesasComerciaisDetails' | 'despesasAdministrativasDetails' | 'despesasOperacionaisDetails' | 'outrasDespesasDetails'>) => {
+      const map: Record<string, number> = {};
+      dreData.forEach(d => {
+        d[key].forEach(detail => {
+          map[detail.category] = (map[detail.category] || 0) + detail.amount;
+        });
+      });
+      return Object.entries(map).map(([category, amount]) => ({ category, amount }));
+    };
+
+    return {
+      ...base,
+      custosVeiculoDetails: aggregateDetails('custosVeiculoDetails'),
+      custosVendaDetails: aggregateDetails('custosVendaDetails'),
+      despesasComerciaisDetails: aggregateDetails('despesasComerciaisDetails'),
+      despesasAdministrativasDetails: aggregateDetails('despesasAdministrativasDetails'),
+      despesasOperacionaisDetails: aggregateDetails('despesasOperacionaisDetails'),
+      outrasDespesasDetails: aggregateDetails('outrasDespesasDetails'),
+    };
   }, [dreData]);
 
   return { dreData, totals, isLoading };

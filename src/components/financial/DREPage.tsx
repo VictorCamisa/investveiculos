@@ -1,5 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { useDREData } from '@/hooks/useFinancial';
+import { useDREData, DRECategoryDetail } from '@/hooks/useFinancial';
 import { 
   Table, 
   TableBody, 
@@ -21,11 +21,101 @@ import {
 } from 'recharts';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useState } from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, ChevronDown, ChevronRight } from 'lucide-react';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { cn } from '@/lib/utils';
+
+interface ExpandableRowProps {
+  label: string;
+  values: number[];
+  total: number;
+  details: DRECategoryDetail[];
+  periodDetails: DRECategoryDetail[][];
+  formatCurrency: (value: number) => string;
+  isExpanded: boolean;
+  onToggle: () => void;
+  indent?: number;
+}
+
+function ExpandableRow({ 
+  label, 
+  values, 
+  total, 
+  details, 
+  periodDetails,
+  formatCurrency, 
+  isExpanded, 
+  onToggle,
+  indent = 6 
+}: ExpandableRowProps) {
+  const hasDetails = details.length > 0;
+
+  return (
+    <>
+      <TableRow 
+        className={cn(
+          hasDetails && "cursor-pointer hover:bg-muted/50 transition-colors",
+          isExpanded && "bg-muted/30"
+        )}
+        onClick={hasDetails ? onToggle : undefined}
+      >
+        <TableCell className={`pl-${indent} flex items-center gap-2`}>
+          {hasDetails ? (
+            isExpanded ? (
+              <ChevronDown className="h-4 w-4 text-muted-foreground" />
+            ) : (
+              <ChevronRight className="h-4 w-4 text-muted-foreground" />
+            )
+          ) : (
+            <span className="w-4" />
+          )}
+          <span>{label}</span>
+          {hasDetails && (
+            <span className="text-xs text-muted-foreground ml-1">
+              ({details.length} {details.length === 1 ? 'categoria' : 'categorias'})
+            </span>
+          )}
+        </TableCell>
+        {values.map((value, idx) => (
+          <TableCell key={idx} className="text-right text-muted-foreground">
+            {formatCurrency(value)}
+          </TableCell>
+        ))}
+        <TableCell className="text-right">{formatCurrency(total)}</TableCell>
+      </TableRow>
+      
+      {isExpanded && details.map((detail, detailIdx) => (
+        <TableRow key={detailIdx} className="bg-muted/20">
+          <TableCell className="pl-12 text-sm text-muted-foreground">
+            └ {detail.category}
+          </TableCell>
+          {periodDetails.map((pd, periodIdx) => {
+            const periodDetail = pd.find(d => d.category === detail.category);
+            return (
+              <TableCell key={periodIdx} className="text-right text-sm text-muted-foreground">
+                {formatCurrency(periodDetail?.amount || 0)}
+              </TableCell>
+            );
+          })}
+          <TableCell className="text-right text-sm text-muted-foreground">
+            {formatCurrency(detail.amount)}
+          </TableCell>
+        </TableRow>
+      ))}
+    </>
+  );
+}
 
 export function DREPage() {
   const [period, setPeriod] = useState('6');
   const { dreData, totals, isLoading } = useDREData(parseInt(period));
+  
+  // Estado para controlar linhas expandidas
+  const [expandedRows, setExpandedRows] = useState<Record<string, boolean>>({});
+
+  const toggleRow = (rowKey: string) => {
+    setExpandedRows(prev => ({ ...prev, [rowKey]: !prev[rowKey] }));
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -114,12 +204,13 @@ export function DREPage() {
       <Card>
         <CardHeader>
           <CardTitle>DRE por Período</CardTitle>
+          <p className="text-sm text-muted-foreground">Clique nas linhas com categorias para expandir os detalhes</p>
         </CardHeader>
         <CardContent className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead className="w-[200px]">Conta</TableHead>
+                <TableHead className="w-[250px]">Conta</TableHead>
                 {dreData.map(d => (
                   <TableHead key={d.period} className="text-right">{d.period}</TableHead>
                 ))}
@@ -127,6 +218,7 @@ export function DREPage() {
               </TableRow>
             </TableHeader>
             <TableBody>
+              {/* Receita Bruta */}
               <TableRow className="bg-primary/5">
                 <TableCell className="font-semibold">Receita Bruta</TableCell>
                 {dreData.map(d => (
@@ -136,6 +228,8 @@ export function DREPage() {
                 ))}
                 <TableCell className="text-right font-bold">{formatCurrency(totals.receitaBruta)}</TableCell>
               </TableRow>
+
+              {/* Custo Aquisição */}
               <TableRow>
                 <TableCell className="pl-6">(-) Custo Aquisição</TableCell>
                 {dreData.map(d => (
@@ -145,6 +239,8 @@ export function DREPage() {
                 ))}
                 <TableCell className="text-right">{formatCurrency(totals.custoAquisicao)}</TableCell>
               </TableRow>
+
+              {/* Lucro Bruto */}
               <TableRow className="bg-blue-500/5">
                 <TableCell className="font-semibold">= Lucro Bruto</TableCell>
                 {dreData.map(d => (
@@ -154,26 +250,37 @@ export function DREPage() {
                 ))}
                 <TableCell className="text-right font-bold text-blue-600">{formatCurrency(totals.lucroBruto)}</TableCell>
               </TableRow>
+
+              {/* Custos Veículo - Expandível */}
+              <ExpandableRow
+                label="(-) Custos Veículo"
+                values={dreData.map(d => d.custosVeiculo)}
+                total={totals.custosVeiculo}
+                details={totals.custosVeiculoDetails}
+                periodDetails={dreData.map(d => d.custosVeiculoDetails)}
+                formatCurrency={formatCurrency}
+                isExpanded={expandedRows['custosVeiculo'] || false}
+                onToggle={() => toggleRow('custosVeiculo')}
+              />
+
+              {/* Custos Venda - Expandível */}
+              <ExpandableRow
+                label="(-) Custos Venda"
+                values={dreData.map(d => d.custosVenda)}
+                total={totals.custosVenda}
+                details={totals.custosVendaDetails}
+                periodDetails={dreData.map(d => d.custosVendaDetails)}
+                formatCurrency={formatCurrency}
+                isExpanded={expandedRows['custosVenda'] || false}
+                onToggle={() => toggleRow('custosVenda')}
+              />
+
+              {/* Comissões */}
               <TableRow>
-                <TableCell className="pl-6">(-) Custos Veículo</TableCell>
-                {dreData.map(d => (
-                  <TableCell key={d.period} className="text-right text-muted-foreground">
-                    {formatCurrency(d.custosVeiculo)}
-                  </TableCell>
-                ))}
-                <TableCell className="text-right">{formatCurrency(totals.custosVeiculo)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="pl-6">(-) Custos Venda</TableCell>
-                {dreData.map(d => (
-                  <TableCell key={d.period} className="text-right text-muted-foreground">
-                    {formatCurrency(d.custosVenda)}
-                  </TableCell>
-                ))}
-                <TableCell className="text-right">{formatCurrency(totals.custosVenda)}</TableCell>
-              </TableRow>
-              <TableRow>
-                <TableCell className="pl-6">(-) Comissões</TableCell>
+                <TableCell className="pl-6 flex items-center gap-2">
+                  <span className="w-4" />
+                  (-) Comissões
+                </TableCell>
                 {dreData.map(d => (
                   <TableCell key={d.period} className="text-right text-muted-foreground">
                     {formatCurrency(d.comissoes)}
@@ -181,8 +288,13 @@ export function DREPage() {
                 ))}
                 <TableCell className="text-right">{formatCurrency(totals.comissoes)}</TableCell>
               </TableRow>
+
+              {/* CAC */}
               <TableRow>
-                <TableCell className="pl-6">(-) CAC (Leads)</TableCell>
+                <TableCell className="pl-6 flex items-center gap-2">
+                  <span className="w-4" />
+                  (-) CAC (Leads)
+                </TableCell>
                 {dreData.map(d => (
                   <TableCell key={d.period} className="text-right text-muted-foreground">
                     {formatCurrency(d.cac)}
@@ -190,6 +302,67 @@ export function DREPage() {
                 ))}
                 <TableCell className="text-right">{formatCurrency(totals.cac)}</TableCell>
               </TableRow>
+
+              {/* Despesas Comerciais - Expandível */}
+              <ExpandableRow
+                label="(-) Despesas Comerciais"
+                values={dreData.map(d => d.despesasComerciais)}
+                total={totals.despesasComerciais}
+                details={totals.despesasComerciaisDetails}
+                periodDetails={dreData.map(d => d.despesasComerciaisDetails)}
+                formatCurrency={formatCurrency}
+                isExpanded={expandedRows['despesasComerciais'] || false}
+                onToggle={() => toggleRow('despesasComerciais')}
+              />
+
+              {/* Despesas Administrativas - Expandível */}
+              <ExpandableRow
+                label="(-) Despesas Administrativas"
+                values={dreData.map(d => d.despesasAdministrativas)}
+                total={totals.despesasAdministrativas}
+                details={totals.despesasAdministrativasDetails}
+                periodDetails={dreData.map(d => d.despesasAdministrativasDetails)}
+                formatCurrency={formatCurrency}
+                isExpanded={expandedRows['despesasAdministrativas'] || false}
+                onToggle={() => toggleRow('despesasAdministrativas')}
+              />
+
+              {/* Despesas Operacionais - Expandível */}
+              <ExpandableRow
+                label="(-) Despesas Operacionais"
+                values={dreData.map(d => d.despesasOperacionais)}
+                total={totals.despesasOperacionais}
+                details={totals.despesasOperacionaisDetails}
+                periodDetails={dreData.map(d => d.despesasOperacionaisDetails)}
+                formatCurrency={formatCurrency}
+                isExpanded={expandedRows['despesasOperacionais'] || false}
+                onToggle={() => toggleRow('despesasOperacionais')}
+              />
+
+              {/* Lucro Operacional */}
+              <TableRow className="bg-amber-500/5">
+                <TableCell className="font-semibold">= Lucro Operacional</TableCell>
+                {dreData.map(d => (
+                  <TableCell key={d.period} className={`text-right font-semibold ${d.lucroOperacional >= 0 ? 'text-amber-600' : 'text-red-600'}`}>
+                    {formatCurrency(d.lucroOperacional)}
+                  </TableCell>
+                ))}
+                <TableCell className={`text-right font-bold ${totals.lucroOperacional >= 0 ? 'text-amber-600' : 'text-red-600'}`}>
+                  {formatCurrency(totals.lucroOperacional)}
+                </TableCell>
+              </TableRow>
+
+              {/* Outras Despesas - Expandível */}
+              <ExpandableRow
+                label="(-) Outras Despesas"
+                values={dreData.map(d => d.outrasDespesas)}
+                total={totals.outrasDespesas}
+                details={totals.outrasDespesasDetails}
+                periodDetails={dreData.map(d => d.outrasDespesasDetails)}
+                formatCurrency={formatCurrency}
+                isExpanded={expandedRows['outrasDespesas'] || false}
+                onToggle={() => toggleRow('outrasDespesas')}
+              />
             </TableBody>
             <TableFooter>
               <TableRow className={totals.lucroLiquido >= 0 ? 'bg-green-500/10' : 'bg-red-500/10'}>
