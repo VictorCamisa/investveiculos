@@ -2,11 +2,11 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useSaleProfitReports, useSales } from './useSales';
 import { useSaleCommissions } from './useCommissionsComplete';
-import { useAllVehicleDRE } from './useVehicles';
+import { useAllVehicleDRE, useVehicles } from './useVehicles';
 import { useNegotiations } from './useNegotiations';
 import { useLeads } from './useLeads';
-import { useMemo } from 'react';
-import { startOfMonth, endOfMonth, subMonths, isWithinInterval, format, differenceInDays, addMonths } from 'date-fns';
+import { useMemo, useState } from 'react';
+import { startOfMonth, endOfMonth, subMonths, isWithinInterval, format, differenceInDays, addMonths, startOfWeek, endOfWeek, startOfQuarter, endOfQuarter, startOfYear, endOfYear, subDays } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { Tables } from '@/integrations/supabase/types';
 
@@ -18,7 +18,12 @@ export interface DREData {
   custosVenda: number;
   comissoes: number;
   cac: number;
+  despesasComerciais: number;
+  despesasAdministrativas: number;
+  despesasOperacionais: number;
+  outrasDespesas: number;
   lucroBruto: number;
+  lucroOperacional: number;
   lucroLiquido: number;
   margemBruta: number;
   margemLiquida: number;
@@ -33,6 +38,12 @@ export interface CashFlowItem {
   category: string;
   value: number;
   status: 'realizado' | 'previsto';
+}
+
+export interface CashFlowFilters {
+  startDate: Date;
+  endDate: Date;
+  granularity: 'daily' | 'weekly' | 'monthly';
 }
 
 export interface ProfitabilityData {
@@ -58,24 +69,57 @@ export interface FinancialAlert {
   createdAt: Date;
 }
 
+// Hook para buscar transações financeiras
+function useFinancialTransactionsData() {
+  return useQuery({
+    queryKey: ['financial-transactions-all'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('financial_transactions')
+        .select('*')
+        .order('transaction_date', { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
+// Hook para buscar custos de veículos
+function useAllVehicleCosts() {
+  return useQuery({
+    queryKey: ['vehicle-costs-all'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('vehicle_costs')
+        .select('*');
+      if (error) throw error;
+      return data || [];
+    },
+  });
+}
+
 export function useFinancialDashboard() {
   const { data: profitReports, isLoading: loadingReports } = useSaleProfitReports();
   const { data: sales, isLoading: loadingSales } = useSales();
   const { data: commissions, isLoading: loadingCommissions } = useSaleCommissions();
   const { data: vehicleDRE, isLoading: loadingVehicles } = useAllVehicleDRE();
   const { data: negotiations, isLoading: loadingNegotiations } = useNegotiations();
+  const { data: transactions } = useFinancialTransactionsData();
 
   const isLoading = loadingReports || loadingSales || loadingCommissions || loadingVehicles || loadingNegotiations;
 
   const kpis = useMemo(() => {
-    if (!profitReports) return null;
-
-    const completedSales = profitReports.filter(r => r.status === 'concluida');
-    const pendingSales = profitReports.filter(r => r.status === 'pendente');
+    // Usar dados de transações financeiras quando disponível
+    const completedSales = sales?.filter(s => s.status === 'concluida') || [];
+    const pendingSales = sales?.filter(s => s.status === 'pendente') || [];
     
-    const totalRevenue = completedSales.reduce((sum, r) => sum + (r.sale_price || 0), 0);
-    const totalGrossProfit = completedSales.reduce((sum, r) => sum + (r.gross_profit || 0), 0);
-    const totalNetProfit = completedSales.reduce((sum, r) => sum + (r.net_profit || 0), 0);
+    // Calcular de transações financeiras se disponível
+    const receitas = transactions?.filter((t: any) => t.type === 'receita' && t.status === 'pago') || [];
+    const despesas = transactions?.filter((t: any) => t.type === 'despesa' && t.status === 'pago') || [];
+    
+    const totalRevenue = receitas.reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0);
+    const totalExpenses = despesas.reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0);
+    const totalNetProfit = totalRevenue - totalExpenses;
     const avgMargin = totalRevenue > 0 ? (totalNetProfit / totalRevenue) * 100 : 0;
     
     const pendingCommissions = commissions?.filter(c => !c.paid).reduce((sum, c) => sum + c.final_amount, 0) || 0;
@@ -107,11 +151,16 @@ export function useFinancialDashboard() {
     });
     
     const thisMonthRevenue = thisMonthSales.reduce((sum, s) => sum + (s.sale_price || 0), 0);
-    const thisMonthProfit = thisMonthSales.reduce((sum, s) => sum + (s.net_profit || 0), 0);
+    const thisMonthProfit = receitas
+      .filter((t: any) => isWithinInterval(new Date(t.transaction_date), { start: monthStart, end: monthEnd }))
+      .reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0) -
+      despesas
+      .filter((t: any) => isWithinInterval(new Date(t.transaction_date), { start: monthStart, end: monthEnd }))
+      .reduce((sum: number, t: any) => sum + (Number(t.amount) || 0), 0);
 
     return {
       totalRevenue,
-      totalGrossProfit,
+      totalGrossProfit: totalRevenue - totalExpenses,
       totalNetProfit,
       avgMargin,
       pendingCommissions,
@@ -127,13 +176,16 @@ export function useFinancialDashboard() {
       thisMonthProfit,
       thisMonthSalesCount: thisMonthSales.length,
     };
-  }, [profitReports, commissions, vehicleDRE, negotiations]);
+  }, [sales, commissions, vehicleDRE, negotiations, transactions]);
 
   return { kpis, isLoading, profitReports, commissions, vehicleDRE, negotiations };
 }
 
 export function useDREData(months: number = 6) {
-  const { data: profitReports, isLoading } = useSaleProfitReports();
+  const { data: profitReports, isLoading: loadingReports } = useSaleProfitReports();
+  const { data: transactions, isLoading: loadingTransactions } = useFinancialTransactionsData();
+
+  const isLoading = loadingReports || loadingTransactions;
 
   const dreData = useMemo(() => {
     if (!profitReports) return [];
@@ -152,6 +204,7 @@ export function useDREData(months: number = 6) {
         return isWithinInterval(saleDate, { start, end });
       });
 
+      // Receitas e custos diretos das vendas
       const receitaBruta = monthSales.reduce((sum, s) => sum + (s.sale_price || 0), 0);
       const custoAquisicao = monthSales.reduce((sum, s) => sum + (s.vehicle_purchase_price || 0), 0);
       const custosVeiculo = monthSales.reduce((sum, s) => sum + (s.vehicle_total_costs || 0), 0);
@@ -159,7 +212,59 @@ export function useDREData(months: number = 6) {
       const comissoes = monthSales.reduce((sum, s) => sum + (s.total_commissions || 0), 0);
       const cac = monthSales.reduce((sum, s) => sum + (s.lead_cac || 0), 0);
       const lucroBruto = monthSales.reduce((sum, s) => sum + (s.gross_profit || 0), 0);
-      const lucroLiquido = monthSales.reduce((sum, s) => sum + (s.net_profit || 0), 0);
+
+      // Despesas operacionais do período (de financial_transactions)
+      const monthTransactions = transactions?.filter((t: any) => {
+        const tDate = new Date(t.transaction_date);
+        return t.type === 'despesa' && isWithinInterval(tDate, { start, end });
+      }) || [];
+
+      // Categorizar despesas
+      const categorizeExpense = (category: string) => {
+        const cat = category?.toLowerCase() || '';
+        if (cat.includes('marketing') || cat.includes('publicidade') || cat.includes('propaganda')) {
+          return 'comercial';
+        }
+        if (cat.includes('aluguel') || cat.includes('salario') || cat.includes('salário') || 
+            cat.includes('contabil') || cat.includes('contador') || cat.includes('encargo') ||
+            cat.includes('administrativ')) {
+          return 'administrativo';
+        }
+        if (cat.includes('energia') || cat.includes('água') || cat.includes('internet') ||
+            cat.includes('telefon') || cat.includes('material') || cat.includes('operacion')) {
+          return 'operacional';
+        }
+        if (cat.includes('imposto') || cat.includes('taxa') || cat.includes('seguro') ||
+            cat.includes('bancaria') || cat.includes('bancária') || cat.includes('juros')) {
+          return 'outras';
+        }
+        // Ignorar custos de veículos e comissões já contabilizados
+        if (cat.includes('aquisi') || cat.includes('veículo') || cat.includes('veiculo') ||
+            cat.includes('comiss') || cat.includes('venda')) {
+          return 'ignore';
+        }
+        return 'outras';
+      };
+
+      let despesasComerciais = 0;
+      let despesasAdministrativas = 0;
+      let despesasOperacionais = 0;
+      let outrasDespesas = 0;
+
+      monthTransactions.forEach((t: any) => {
+        const tipo = categorizeExpense(t.category);
+        const amount = Number(t.amount) || 0;
+        switch (tipo) {
+          case 'comercial': despesasComerciais += amount; break;
+          case 'administrativo': despesasAdministrativas += amount; break;
+          case 'operacional': despesasOperacionais += amount; break;
+          case 'outras': outrasDespesas += amount; break;
+          default: break;
+        }
+      });
+
+      const lucroOperacional = lucroBruto - despesasComerciais - despesasAdministrativas - despesasOperacionais;
+      const lucroLiquido = lucroOperacional - outrasDespesas;
 
       data.push({
         period: format(date, 'MMM/yy', { locale: ptBR }),
@@ -169,7 +274,12 @@ export function useDREData(months: number = 6) {
         custosVenda,
         comissoes,
         cac,
+        despesasComerciais,
+        despesasAdministrativas,
+        despesasOperacionais,
+        outrasDespesas,
         lucroBruto,
+        lucroOperacional,
         lucroLiquido,
         margemBruta: receitaBruta > 0 ? (lucroBruto / receitaBruta) * 100 : 0,
         margemLiquida: receitaBruta > 0 ? (lucroLiquido / receitaBruta) * 100 : 0,
@@ -178,7 +288,7 @@ export function useDREData(months: number = 6) {
     }
 
     return data;
-  }, [profitReports, months]);
+  }, [profitReports, transactions, months]);
 
   // Consolidated totals
   const totals = useMemo(() => {
@@ -189,7 +299,12 @@ export function useDREData(months: number = 6) {
       custosVenda: acc.custosVenda + d.custosVenda,
       comissoes: acc.comissoes + d.comissoes,
       cac: acc.cac + d.cac,
+      despesasComerciais: acc.despesasComerciais + d.despesasComerciais,
+      despesasAdministrativas: acc.despesasAdministrativas + d.despesasAdministrativas,
+      despesasOperacionais: acc.despesasOperacionais + d.despesasOperacionais,
+      outrasDespesas: acc.outrasDespesas + d.outrasDespesas,
       lucroBruto: acc.lucroBruto + d.lucroBruto,
+      lucroOperacional: acc.lucroOperacional + d.lucroOperacional,
       lucroLiquido: acc.lucroLiquido + d.lucroLiquido,
       qtdVendas: acc.qtdVendas + d.qtdVendas,
     }), {
@@ -199,7 +314,12 @@ export function useDREData(months: number = 6) {
       custosVenda: 0,
       comissoes: 0,
       cac: 0,
+      despesasComerciais: 0,
+      despesasAdministrativas: 0,
+      despesasOperacionais: 0,
+      outrasDespesas: 0,
       lucroBruto: 0,
+      lucroOperacional: 0,
       lucroLiquido: 0,
       qtdVendas: 0,
     });
@@ -208,45 +328,51 @@ export function useDREData(months: number = 6) {
   return { dreData, totals, isLoading };
 }
 
-export function useCashFlow() {
-  const { data: profitReports } = useSaleProfitReports();
+export function useCashFlow(filters?: CashFlowFilters) {
+  const { data: transactions } = useFinancialTransactionsData();
   const { data: commissions } = useSaleCommissions();
   const { data: vehicleDRE } = useAllVehicleDRE();
 
   const cashFlowData = useMemo(() => {
     const items: CashFlowItem[] = [];
-
-    // Realized sales (entries)
-    profitReports?.filter(r => r.status === 'concluida').forEach(sale => {
+    const now = new Date();
+    
+    // Usar transações financeiras reais
+    transactions?.forEach((t: any) => {
+      const transactionDate = new Date(t.transaction_date);
+      
+      // Aplicar filtro de data se fornecido
+      if (filters) {
+        if (transactionDate < filters.startDate || transactionDate > filters.endDate) {
+          return;
+        }
+      }
+      
       items.push({
-        id: `sale-${sale.id}`,
-        date: sale.sale_date,
-        description: `Venda: ${sale.brand} ${sale.model}`,
-        type: 'entrada',
-        category: 'Vendas',
-        value: sale.sale_price || 0,
-        status: 'realizado',
+        id: `trans-${t.id}`,
+        date: t.transaction_date,
+        description: t.description,
+        type: t.type === 'receita' ? 'entrada' : 'saida',
+        category: t.category,
+        value: Number(t.amount) || 0,
+        status: t.status === 'pago' ? 'realizado' : 'previsto',
       });
     });
 
-    // Paid commissions (exits)
-    commissions?.filter(c => c.paid && c.paid_at).forEach(comm => {
-      items.push({
-        id: `comm-paid-${comm.id}`,
-        date: comm.paid_at!,
-        description: `Comissão paga`,
-        type: 'saida',
-        category: 'Comissões',
-        value: comm.final_amount,
-        status: 'realizado',
-      });
-    });
-
-    // Pending commissions (projected exits)
+    // Adicionar comissões pendentes como projeções
     commissions?.filter(c => !c.paid && c.status === 'approved').forEach(comm => {
+      const dueDate = comm.payment_due_date || format(addMonths(now, 1), 'yyyy-MM-dd');
+      
+      if (filters) {
+        const commDate = new Date(dueDate);
+        if (commDate < filters.startDate || commDate > filters.endDate) {
+          return;
+        }
+      }
+      
       items.push({
         id: `comm-pending-${comm.id}`,
-        date: comm.payment_due_date || format(addMonths(new Date(), 1), 'yyyy-MM-dd'),
+        date: dueDate,
         description: `Comissão a pagar`,
         type: 'saida',
         category: 'Comissões',
@@ -255,24 +381,11 @@ export function useCashFlow() {
       });
     });
 
-    // Vehicle purchases (exits) - from available vehicles
-    vehicleDRE?.filter(v => v.purchase_date && v.purchase_price).forEach(vehicle => {
-      items.push({
-        id: `vehicle-${vehicle.id}`,
-        date: vehicle.purchase_date!,
-        description: `Compra: ${vehicle.brand} ${vehicle.model}`,
-        type: 'saida',
-        category: 'Aquisição Veículos',
-        value: vehicle.purchase_price || 0,
-        status: 'realizado',
-      });
-    });
-
     // Sort by date
     items.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
 
     return items;
-  }, [profitReports, commissions, vehicleDRE]);
+  }, [transactions, commissions, vehicleDRE, filters]);
 
   // Calculate running balance
   const balanceData = useMemo(() => {
@@ -304,8 +417,36 @@ export function useCashFlow() {
   return { cashFlowData, balanceData, summary };
 }
 
+// Funções auxiliares para filtros de período
+export function getDateRangeFromPeriod(period: string): { startDate: Date; endDate: Date } {
+  const now = new Date();
+  
+  switch (period) {
+    case 'today':
+      return { startDate: now, endDate: now };
+    case 'week':
+      return { startDate: startOfWeek(now, { locale: ptBR }), endDate: endOfWeek(now, { locale: ptBR }) };
+    case 'month':
+      return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
+    case 'quarter':
+      return { startDate: startOfQuarter(now), endDate: endOfQuarter(now) };
+    case 'year':
+      return { startDate: startOfYear(now), endDate: endOfYear(now) };
+    case 'last30':
+      return { startDate: subDays(now, 30), endDate: now };
+    case 'last90':
+      return { startDate: subDays(now, 90), endDate: now };
+    case 'last12months':
+      return { startDate: subMonths(now, 12), endDate: now };
+    default:
+      return { startDate: startOfMonth(now), endDate: endOfMonth(now) };
+  }
+}
+
 export function useProfitabilityAnalysis() {
-  const { data: profitReports } = useSaleProfitReports();
+  const { data: sales } = useSales();
+  const { data: vehicles } = useVehicles();
+  const { data: vehicleCosts } = useAllVehicleCosts();
   const { data: profiles } = useQuery({
     queryKey: ['profiles'],
     queryFn: async () => {
@@ -317,13 +458,35 @@ export function useProfitabilityAnalysis() {
   const { data: leads } = useLeads();
 
   const analysis = useMemo(() => {
-    if (!profitReports) return { byVehicle: [], bySalesperson: [], bySource: [], byCategory: [] };
+    if (!sales || !vehicles) return { byVehicle: [], bySalesperson: [], bySource: [], byCategory: [] };
 
-    const completedSales = profitReports.filter(r => r.status === 'concluida');
+    const completedSales = sales.filter(r => r.status === 'concluida');
+
+    // Calcular lucro real para cada venda
+    const salesWithProfit = completedSales.map(sale => {
+      const vehicle = vehicles.find(v => v.id === sale.vehicle_id);
+      const costs = vehicleCosts?.filter(c => c.vehicle_id === sale.vehicle_id) || [];
+      const totalVehicleCosts = costs.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+      const purchasePrice = vehicle?.purchase_price || 0;
+      const salePrice = sale.sale_price || 0;
+      const saleCosts = (sale.documentation_cost || 0) + (sale.transfer_cost || 0) + (sale.other_sale_costs || 0);
+      
+      const totalCost = purchasePrice + totalVehicleCosts + saleCosts;
+      const profit = salePrice - totalCost;
+      const margin = salePrice > 0 ? (profit / salePrice) * 100 : 0;
+
+      return {
+        ...sale,
+        vehicle,
+        totalCost,
+        profit,
+        margin,
+      };
+    });
 
     // By Salesperson
     const salespersonMap = new Map<string, ProfitabilityData>();
-    completedSales.forEach(sale => {
+    salesWithProfit.forEach(sale => {
       if (!sale.salesperson_id) return;
       const profile = profiles?.find(p => p.id === sale.salesperson_id);
       const existing = salespersonMap.get(sale.salesperson_id) || {
@@ -337,8 +500,8 @@ export function useProfitabilityAnalysis() {
         count: 0,
       };
       existing.revenue += sale.sale_price || 0;
-      existing.cost += sale.vehicle_total_investment || 0;
-      existing.profit += sale.net_profit || 0;
+      existing.cost += sale.totalCost;
+      existing.profit += sale.profit;
       existing.count += 1;
       existing.margin = existing.revenue > 0 ? (existing.profit / existing.revenue) * 100 : 0;
       salespersonMap.set(sale.salesperson_id, existing);
@@ -346,7 +509,7 @@ export function useProfitabilityAnalysis() {
 
     // By Lead Source
     const sourceMap = new Map<string, ProfitabilityData>();
-    completedSales.forEach(sale => {
+    salesWithProfit.forEach(sale => {
       const lead = leads?.find(l => l.id === sale.lead_id);
       const source = lead?.source || 'direto';
       const existing = sourceMap.get(source) || {
@@ -360,8 +523,8 @@ export function useProfitabilityAnalysis() {
         count: 0,
       };
       existing.revenue += sale.sale_price || 0;
-      existing.cost += sale.vehicle_total_investment || 0;
-      existing.profit += sale.net_profit || 0;
+      existing.cost += sale.totalCost;
+      existing.profit += sale.profit;
       existing.count += 1;
       existing.margin = existing.revenue > 0 ? (existing.profit / existing.revenue) * 100 : 0;
       sourceMap.set(source, existing);
@@ -369,8 +532,8 @@ export function useProfitabilityAnalysis() {
 
     // By Vehicle Brand (Category)
     const brandMap = new Map<string, ProfitabilityData>();
-    completedSales.forEach(sale => {
-      const brand = sale.brand || 'Outros';
+    salesWithProfit.forEach(sale => {
+      const brand = sale.vehicle?.brand || 'Outros';
       const existing = brandMap.get(brand) || {
         id: brand,
         name: brand,
@@ -382,29 +545,29 @@ export function useProfitabilityAnalysis() {
         count: 0,
       };
       existing.revenue += sale.sale_price || 0;
-      existing.cost += sale.vehicle_total_investment || 0;
-      existing.profit += sale.net_profit || 0;
+      existing.cost += sale.totalCost;
+      existing.profit += sale.profit;
       existing.count += 1;
       existing.margin = existing.revenue > 0 ? (existing.profit / existing.revenue) * 100 : 0;
       brandMap.set(brand, existing);
     });
 
     return {
-      byVehicle: completedSales.map(s => ({
+      byVehicle: salesWithProfit.map(s => ({
         id: s.id || '',
-        name: `${s.brand} ${s.model} - ${s.plate || 'S/P'}`,
+        name: `${s.vehicle?.brand || ''} ${s.vehicle?.model || ''} - ${s.vehicle?.plate || 'S/P'}`,
         type: 'veiculo' as const,
         revenue: s.sale_price || 0,
-        cost: s.vehicle_total_investment || 0,
-        profit: s.net_profit || 0,
-        margin: s.sale_price ? ((s.net_profit || 0) / s.sale_price) * 100 : 0,
+        cost: s.totalCost,
+        profit: s.profit,
+        margin: s.margin,
         count: 1,
       })).sort((a, b) => b.profit - a.profit),
       bySalesperson: Array.from(salespersonMap.values()).sort((a, b) => b.profit - a.profit),
       bySource: Array.from(sourceMap.values()).sort((a, b) => b.profit - a.profit),
       byCategory: Array.from(brandMap.values()).sort((a, b) => b.profit - a.profit),
     };
-  }, [profitReports, profiles, leads]);
+  }, [sales, vehicles, vehicleCosts, profiles, leads]);
 
   return analysis;
 }

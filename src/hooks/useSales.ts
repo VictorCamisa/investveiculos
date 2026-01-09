@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
 import type { Sale, SaleProfitReport, PaymentMethod, SaleStatus } from '@/types/sales';
+import { syncSaleRevenue } from './useFinancialSync';
 
 // Shared query options - reduced caching for better real-time updates
 const salesQueryOptions = {
@@ -139,6 +140,26 @@ export function useCreateSale() {
         .single();
 
       if (error) throw error;
+      
+      // Se a venda já está concluída, sincronizar receita
+      if (data && (input.status === 'concluida' || !input.status)) {
+        const { data: vehicle } = await (supabase as any)
+          .from('vehicles')
+          .select('brand, model')
+          .eq('id', input.vehicle_id)
+          .maybeSingle();
+        
+        if (data.status === 'concluida') {
+          await syncSaleRevenue({
+            id: data.id,
+            sale_price: input.sale_price,
+            sale_date: input.sale_date || new Date().toISOString().split('T')[0],
+            status: data.status,
+            vehicle_id: input.vehicle_id,
+          }, vehicle);
+        }
+      }
+      
       return data;
     },
     onSuccess: () => {
@@ -146,6 +167,7 @@ export function useCreateSale() {
       queryClient.invalidateQueries({ queryKey: ['sale-profit-reports'] });
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       toast({ title: 'Venda registrada com sucesso!' });
     },
     onError: (error: Error) => {
@@ -184,12 +206,31 @@ export function useUpdateSale() {
         .single();
 
       if (error) throw error;
+      
+      // Se a venda foi marcada como concluída, sincronizar receita
+      if (data && data.status === 'concluida') {
+        const { data: vehicle } = await (supabase as any)
+          .from('vehicles')
+          .select('brand, model')
+          .eq('id', data.vehicle_id)
+          .maybeSingle();
+        
+        await syncSaleRevenue({
+          id: data.id,
+          sale_price: data.sale_price,
+          sale_date: data.sale_date,
+          status: data.status,
+          vehicle_id: data.vehicle_id,
+        }, vehicle);
+      }
+      
       return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['sale-profit-reports'] });
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       toast({ title: 'Venda atualizada com sucesso!' });
     },
     onError: (error: Error) => {
