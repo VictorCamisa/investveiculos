@@ -72,10 +72,10 @@ export function useCompleteLeadOrigin(dateRange: DateRange, viewMode: 'source' |
       const fromDate = format(dateRange.from, 'yyyy-MM-dd');
       const toDate = format(dateRange.to, 'yyyy-MM-dd');
 
-      // Fetch all leads with source
+      // Fetch all leads with source and meta_campaign_id
       const { data: leads } = await supabase
         .from('leads')
-        .select('id, source, qualification_status, created_at')
+        .select('id, source, qualification_status, created_at, meta_campaign_id')
         .gte('created_at', `${fromDate}T00:00:00`)
         .lte('created_at', `${toDate}T23:59:59`) as { data: AnyData[] | null };
 
@@ -104,13 +104,17 @@ export function useCompleteLeadOrigin(dateRange: DateRange, viewMode: 'source' |
         .from('marketing_campaigns')
         .select('id, name, platform, spent, budget') as { data: AnyData[] | null };
 
+      // Fetch Meta campaigns (for leads with meta_campaign_id)
+      const { data: metaCampaigns } = await supabase
+        .from('meta_campaigns')
+        .select('id, name, meta_campaign_id, daily_budget, lifetime_budget') as { data: AnyData[] | null };
+
       // Fetch Meta insights for investment
       const { data: metaInsights } = await supabase
         .from('meta_insights')
-        .select('spend')
+        .select('spend, entity_id, entity_type')
         .gte('date_start', fromDate)
-        .lte('date_stop', toDate)
-        .eq('entity_type', 'account') as { data: AnyData[] | null };
+        .lte('date_stop', toDate) as { data: AnyData[] | null };
 
       // Fetch Google insights
       const { data: googleInsights } = await supabase
@@ -120,7 +124,7 @@ export function useCompleteLeadOrigin(dateRange: DateRange, viewMode: 'source' |
         .lte('date_stop', toDate)
         .eq('entity_type', 'account') as { data: AnyData[] | null };
 
-      const totalMetaSpend = metaInsights?.reduce((sum: number, i: AnyData) => sum + (i.spend || 0), 0) || 0;
+      const totalMetaSpend = metaInsights?.filter(i => i.entity_type === 'account')?.reduce((sum: number, i: AnyData) => sum + (i.spend || 0), 0) || 0;
       const totalGoogleSpend = googleInsights?.reduce((sum: number, i: AnyData) => sum + ((i.cost_micros || 0) / 1000000), 0) || 0;
 
       // Create maps for quick lookups
@@ -134,6 +138,22 @@ export function useCompleteLeadOrigin(dateRange: DateRange, viewMode: 'source' |
       const campaignMap = new Map<string, { name: string; platform: string; spent: number }>();
       campaigns?.forEach(c => {
         campaignMap.set(c.id, { name: c.name, platform: c.platform, spent: c.spent || 0 });
+      });
+
+      // Create meta campaigns map (keyed by internal id)
+      const metaCampaignMap = new Map<string, { id: string; name: string; metaCampaignId: string; spent: number }>();
+      metaCampaigns?.forEach(mc => {
+        // Calculate spend from meta_insights for this campaign
+        const campaignSpend = metaInsights
+          ?.filter(i => i.entity_type === 'campaign' && i.entity_id === mc.id)
+          ?.reduce((sum: number, i: AnyData) => sum + (i.spend || 0), 0) || 0;
+        
+        metaCampaignMap.set(mc.id, { 
+          id: mc.id, 
+          name: mc.name, 
+          metaCampaignId: mc.meta_campaign_id,
+          spent: campaignSpend || (mc.daily_budget || mc.lifetime_budget || 0)
+        });
       });
 
       // Build source metrics
@@ -194,24 +214,41 @@ export function useCompleteLeadOrigin(dateRange: DateRange, viewMode: 'source' |
           metrics.revenue += leadSales.reduce((sum, s) => sum + (s.sale_price || 0), 0);
         }
 
-        // Track by campaign if applicable
-        if (leadCostInfo && campaignMap.has(leadCostInfo.campaignId)) {
-          const campaignId = leadCostInfo.campaignId;
-          const campaign = campaignMap.get(campaignId)!;
+        // Track by campaign - check lead_costs first, then meta_campaign_id
+        let campaignInfo: { id: string; name: string; platform: string; spent: number } | null = null;
 
-          if (!campaignMetricsMap.has(campaignId)) {
-            campaignMetricsMap.set(campaignId, {
-              campaignId,
-              campaignName: campaign.name,
-              platform: campaign.platform,
-              channel: campaign.platform,
-              channelLabel: campaign.name,
+        if (leadCostInfo && campaignMap.has(leadCostInfo.campaignId)) {
+          const campaign = campaignMap.get(leadCostInfo.campaignId)!;
+          campaignInfo = { 
+            id: leadCostInfo.campaignId, 
+            name: campaign.name, 
+            platform: campaign.platform,
+            spent: campaign.spent 
+          };
+        } else if (lead.meta_campaign_id && metaCampaignMap.has(lead.meta_campaign_id)) {
+          const metaCampaign = metaCampaignMap.get(lead.meta_campaign_id)!;
+          campaignInfo = { 
+            id: metaCampaign.id, 
+            name: metaCampaign.name, 
+            platform: 'Facebook/Meta',
+            spent: metaCampaign.spent 
+          };
+        }
+
+        if (campaignInfo) {
+          if (!campaignMetricsMap.has(campaignInfo.id)) {
+            campaignMetricsMap.set(campaignInfo.id, {
+              campaignId: campaignInfo.id,
+              campaignName: campaignInfo.name,
+              platform: campaignInfo.platform,
+              channel: campaignInfo.platform,
+              channelLabel: campaignInfo.name,
               leads: 0,
               qualifiedLeads: 0,
               appointments: 0,
               sales: 0,
               revenue: 0,
-              investment: campaign.spent,
+              investment: campaignInfo.spent,
               cpl: 0,
               cpa: 0,
               conversionRate: 0,
@@ -220,7 +257,7 @@ export function useCompleteLeadOrigin(dateRange: DateRange, viewMode: 'source' |
             });
           }
 
-          const campaignMetrics = campaignMetricsMap.get(campaignId)!;
+          const campaignMetrics = campaignMetricsMap.get(campaignInfo.id)!;
           campaignMetrics.leads++;
           if (lead.qualification_status === 'qualificado') campaignMetrics.qualifiedLeads++;
           if (leadNegotiations.some(n => n.appointment_date)) campaignMetrics.appointments++;
