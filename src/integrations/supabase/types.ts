@@ -2064,6 +2064,66 @@ export type Database = {
           },
         ]
       }
+      sale_payment_methods: {
+        Row: {
+          amount: number
+          created_at: string | null
+          details: string | null
+          financing_bank: string | null
+          financing_entry_value: number | null
+          financing_financed_value: number | null
+          financing_installment_value: number | null
+          financing_installments: number | null
+          financing_interest_rate: number | null
+          id: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          sale_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          details?: string | null
+          financing_bank?: string | null
+          financing_entry_value?: number | null
+          financing_financed_value?: number | null
+          financing_installment_value?: number | null
+          financing_installments?: number | null
+          financing_interest_rate?: number | null
+          id?: string
+          payment_method: Database["public"]["Enums"]["payment_method"]
+          sale_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          details?: string | null
+          financing_bank?: string | null
+          financing_entry_value?: number | null
+          financing_financed_value?: number | null
+          financing_installment_value?: number | null
+          financing_installments?: number | null
+          financing_interest_rate?: number | null
+          id?: string
+          payment_method?: Database["public"]["Enums"]["payment_method"]
+          sale_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sale_payment_methods_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sale_profit_report"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_payment_methods_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       sales: {
         Row: {
           created_at: string

@@ -26,26 +26,38 @@ export function useSalesTeamMetrics() {
   return useQuery({
     queryKey: ['sales-team-metrics'],
     queryFn: async (): Promise<SalespersonMetrics[]> => {
-      const { data: profiles } = await (supabase as any)
+      // First, get only users with 'vendedor' role
+      const { data: vendedorRoles } = await supabase
+        .from('user_roles')
+        .select('user_id')
+        .eq('role', 'vendedor') as { data: { user_id: string }[] | null };
+
+      if (!vendedorRoles || vendedorRoles.length === 0) return [];
+
+      const vendedorIds = vendedorRoles.map(r => r.user_id);
+
+      // Get profiles only for vendedores
+      const { data: profiles } = await supabase
         .from('profiles')
-        .select('id, full_name');
+        .select('id, full_name')
+        .in('id', vendedorIds) as { data: { id: string; full_name: string | null }[] | null };
 
       if (!profiles) return [];
 
       // Get all data we need
       const [negotiationsRes, interactionsRes, leadsRes, salesRes] = await Promise.all([
-        (supabase as any).from('negotiations').select('id, salesperson_id, status, estimated_value'),
-        (supabase as any).from('lead_interactions').select('id, user_id, type'),
-        (supabase as any).from('leads').select('id, assigned_to, status'),
-        (supabase as any).from('sales').select('id, salesperson_id, status, sale_price'),
+        supabase.from('negotiations').select('id, salesperson_id, status, estimated_value'),
+        supabase.from('lead_interactions').select('id, user_id, type'),
+        supabase.from('leads').select('id, assigned_to, status'),
+        supabase.from('sales').select('id, salesperson_id, status, sale_price'),
       ]);
 
-      const negotiations = negotiationsRes.data || [];
-      const interactions = interactionsRes.data || [];
-      const leads = leadsRes.data || [];
-      const sales = salesRes.data || [];
+      const negotiations = (negotiationsRes.data || []) as any[];
+      const interactions = (interactionsRes.data || []) as any[];
+      const leads = (leadsRes.data || []) as any[];
+      const sales = (salesRes.data || []) as any[];
 
-      // Calculate metrics per salesperson
+      // Calculate metrics per salesperson (only vendedores)
       const metrics: SalespersonMetrics[] = profiles.map(profile => {
         const userNegotiations = negotiations.filter(n => n.salesperson_id === profile.id);
         const userInteractions = interactions.filter(i => i.user_id === profile.id);
