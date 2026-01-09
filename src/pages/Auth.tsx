@@ -121,12 +121,14 @@ const AnimatedDots = () => {
 export default function Auth() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [fullName, setFullName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [pendingRedirect, setPendingRedirect] = useState(false);
+  const [isSignUp, setIsSignUp] = useState(false);
 
-  const { signIn, user, session } = useAuth();
+  const { signIn, signUp, user, session } = useAuth();
   const { isLoading: permissionsLoading, getFirstAccessibleRoute } = usePermissions();
   const navigate = useNavigate();
   const { toast } = useToast();
@@ -146,20 +148,39 @@ export default function Auth() {
     e.preventDefault();
     setIsLoading(true);
 
-    const { error } = await signIn(email, password);
-    if (error) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro ao entrar',
-        description: error.message === 'Invalid login credentials'
-          ? 'Email ou senha incorretos'
-          : error.message,
-      });
-      setIsLoading(false);
+    if (isSignUp) {
+      const { error } = await signUp(email, password, fullName);
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao cadastrar',
+          description: error.message,
+        });
+        setIsLoading(false);
+      } else {
+        toast({
+          title: 'Conta criada!',
+          description: 'Verifique seu email para confirmar o cadastro.',
+        });
+        setIsSignUp(false);
+        setIsLoading(false);
+      }
     } else {
-      // Set pending redirect - will redirect once permissions are loaded
-      setPendingRedirect(true);
-      // Keep loading state until redirect happens
+      const { error } = await signIn(email, password);
+      if (error) {
+        toast({
+          variant: 'destructive',
+          title: 'Erro ao entrar',
+          description: error.message === 'Invalid login credentials'
+            ? 'Email ou senha incorretos'
+            : error.message,
+        });
+        setIsLoading(false);
+      } else {
+        // Set pending redirect - will redirect once permissions are loaded
+        setPendingRedirect(true);
+        // Keep loading state until redirect happens
+      }
     }
   };
 
@@ -260,10 +281,10 @@ export default function Auth() {
             className="mb-10"
           >
             <h2 className="text-3xl font-semibold text-zinc-900 tracking-tight">
-              Bem-vindo
+              {isSignUp ? 'Criar conta' : 'Bem-vindo'}
             </h2>
             <p className="mt-2 text-zinc-500">
-              Entre com suas credenciais
+              {isSignUp ? 'Preencha os dados para cadastrar' : 'Entre com suas credenciais'}
             </p>
           </motion.div>
 
@@ -275,6 +296,21 @@ export default function Auth() {
             onSubmit={handleSubmit}
             className="space-y-5"
           >
+            {isSignUp && (
+              <div>
+                <label className="block text-sm font-medium text-zinc-700 mb-2">
+                  Nome completo
+                </label>
+                <input
+                  type="text"
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  placeholder="Seu nome"
+                  required
+                  className="w-full h-12 px-4 bg-zinc-50 border border-zinc-200 text-zinc-900 placeholder:text-zinc-400 rounded-xl outline-none focus:border-zinc-900 focus:ring-2 focus:ring-zinc-900/5 transition-all"
+                />
+              </div>
+            )}
 
             <div>
               <label className="block text-sm font-medium text-zinc-700 mb-2">
@@ -334,7 +370,7 @@ export default function Auth() {
                     />
                   ) : (
                     <>
-                      Entrar
+                      {isSignUp ? 'Criar conta' : 'Entrar'}
                       <motion.span
                         animate={{ x: isHovered ? 4 : 0 }}
                         transition={{ type: 'spring', stiffness: 400 }}
@@ -347,13 +383,23 @@ export default function Auth() {
               </motion.button>
             </motion.div>
 
-            <div className="text-center">
+            <div className="text-center space-y-3">
               <button
                 type="button"
-                className="text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+                onClick={() => setIsSignUp(!isSignUp)}
+                className="text-sm text-zinc-900 font-medium hover:underline transition-colors"
               >
-                Esqueceu a senha?
+                {isSignUp ? 'Já tem conta? Entrar' : 'Não tem conta? Criar agora'}
               </button>
+              
+              {!isSignUp && (
+                <button
+                  type="button"
+                  className="block w-full text-sm text-zinc-500 hover:text-zinc-900 transition-colors"
+                >
+                  Esqueceu a senha?
+                </button>
+              )}
             </div>
           </motion.form>
 
