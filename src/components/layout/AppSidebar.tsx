@@ -78,6 +78,7 @@ export function AppSidebar() {
       items: [
         { label: 'Comissões', href: '/comissoes', icon: Wallet, requiredModule: 'comissoes' },
         { label: 'Marketing', href: '/marketing', icon: Megaphone, requiredModule: 'marketing' },
+        { label: 'Relatórios', href: '/relatorios', icon: FileText, requiredModule: 'marketing' },
         { label: 'WhatsApp', href: '/whatsapp', icon: MessageSquare, requiredModule: 'configuracoes' },
       ],
     },
