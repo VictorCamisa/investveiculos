@@ -142,8 +142,27 @@ export function useWhatsAppInstances() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as WhatsAppInstance[];
+      
+      // Sync status from Evolution API for all instances
+      const instances = (data || []) as WhatsAppInstance[];
+      for (const instance of instances) {
+        if (instance.status !== 'connected') {
+          try {
+            const { data: statusData } = await supabase.functions.invoke('whatsapp-instance', {
+              body: { action: 'status', instanceId: instance.id },
+            });
+            if (statusData?.mappedStatus) {
+              instance.status = statusData.mappedStatus;
+            }
+          } catch (err) {
+            console.log('Error syncing instance status:', err);
+          }
+        }
+      }
+      
+      return instances;
     },
+    refetchInterval: 10000, // Auto-refresh every 10 seconds
   });
 }
 
@@ -306,6 +325,25 @@ export function useWhatsAppInstanceAction() {
     },
     onError: (error: Error) => {
       toast.error(`Erro: ${error.message}`);
+    },
+  });
+}
+
+// Sync instance status from Evolution API
+export function useSyncInstanceStatus() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (instanceId: string) => {
+      const { data, error } = await supabase.functions.invoke('whatsapp-instance', {
+        body: { action: 'status', instanceId },
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
     },
   });
 }
