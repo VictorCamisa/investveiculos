@@ -21,6 +21,8 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ApiConfig {
+  metaAppId: string;
+  metaAppSecret: string;
   metaAccessToken: string;
   metaAdAccountId: string;
   googleClientId: string;
@@ -34,12 +36,15 @@ interface ApiConfig {
 
 export default function MarketingSettingsPage() {
   const [showMetaToken, setShowMetaToken] = useState(false);
+  const [showMetaSecret, setShowMetaSecret] = useState(false);
   const [showGoogleSecret, setShowGoogleSecret] = useState(false);
   const [isTestingMeta, setIsTestingMeta] = useState(false);
   const [isTestingGoogle, setIsTestingGoogle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
   const [config, setConfig] = useState<ApiConfig>({
+    metaAppId: '',
+    metaAppSecret: '',
     metaAccessToken: '',
     metaAdAccountId: '',
     googleClientId: '',
@@ -273,6 +278,47 @@ export default function MarketingSettingsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="metaAppId">App ID</Label>
+              <Input
+                id="metaAppId"
+                placeholder="123456789012345"
+                value={config.metaAppId}
+                onChange={(e) => setConfig(prev => ({ ...prev, metaAppId: e.target.value }))}
+              />
+              <p className="text-xs text-muted-foreground">
+                ID do aplicativo Meta/Facebook
+              </p>
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="metaAppSecret">App Secret</Label>
+              <div className="relative">
+                <Input
+                  id="metaAppSecret"
+                  type={showMetaSecret ? "text" : "password"}
+                  placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                  value={config.metaAppSecret}
+                  onChange={(e) => setConfig(prev => ({ ...prev, metaAppSecret: e.target.value }))}
+                  className="pr-10"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="absolute right-0 top-0 h-full px-3"
+                  onClick={() => setShowMetaSecret(!showMetaSecret)}
+                >
+                  {showMetaSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </Button>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Chave secreta do aplicativo
+              </p>
+            </div>
+          </div>
+
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="metaAccessToken">Token de Acesso</Label>
