@@ -51,7 +51,7 @@ export function AppSidebar() {
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(false);
 
-  // Definição completa de navegação com módulos requeridos
+  // Definição de navegação - vendedor só vê Dashboard, CRM e Estoque
   const allSections: NavSection[] = [
     {
       title: 'Principal',
@@ -74,6 +74,7 @@ export function AppSidebar() {
     },
     {
       title: 'Gestão',
+      requiredModules: ['marketing', 'configuracoes'],
       items: [
         { label: 'Comissões', href: '/comissoes', icon: Wallet, requiredModule: 'comissoes' },
         { label: 'Marketing', href: '/marketing', icon: Megaphone, requiredModule: 'marketing' },
