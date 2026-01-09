@@ -1,5 +1,6 @@
 import { NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
+import { usePermissions } from '@/hooks/usePermissions';
 import {
   LayoutDashboard,
   Users,
@@ -9,21 +10,23 @@ import {
   Megaphone,
   Coins,
 } from 'lucide-react';
+import type { ModuleName } from '@/types/users';
 
 interface NavItem {
   path: string;
   label: string;
   icon: React.ReactNode;
+  requiredModule?: ModuleName;
 }
 
-const navItems: NavItem[] = [
+const allNavItems: NavItem[] = [
   { path: '/dashboard', label: 'Dashboard', icon: <LayoutDashboard className="h-4 w-4" /> },
-  { path: '/crm', label: 'CRM', icon: <Users className="h-4 w-4" /> },
-  { path: '/estoque', label: 'Estoque', icon: <Car className="h-4 w-4" /> },
-  { path: '/vendas', label: 'Vendas', icon: <ShoppingCart className="h-4 w-4" /> },
-  { path: '/comissoes', label: 'Comissões', icon: <Coins className="h-4 w-4" /> },
-  { path: '/financeiro', label: 'Financeiro', icon: <DollarSign className="h-4 w-4" /> },
-  { path: '/marketing', label: 'Marketing', icon: <Megaphone className="h-4 w-4" /> },
+  { path: '/crm', label: 'CRM', icon: <Users className="h-4 w-4" />, requiredModule: 'crm' },
+  { path: '/estoque', label: 'Estoque', icon: <Car className="h-4 w-4" />, requiredModule: 'estoque' },
+  { path: '/vendas', label: 'Vendas', icon: <ShoppingCart className="h-4 w-4" />, requiredModule: 'vendas' },
+  { path: '/comissoes', label: 'Comissões', icon: <Coins className="h-4 w-4" />, requiredModule: 'comissoes' },
+  { path: '/financeiro', label: 'Financeiro', icon: <DollarSign className="h-4 w-4" />, requiredModule: 'financeiro' },
+  { path: '/marketing', label: 'Marketing', icon: <Megaphone className="h-4 w-4" />, requiredModule: 'marketing' },
 ];
 
 interface MainNavProps {
@@ -33,6 +36,13 @@ interface MainNavProps {
 
 export function MainNav({ vertical = false, onItemClick }: MainNavProps) {
   const location = useLocation();
+  const { hasModuleAccess } = usePermissions();
+
+  // Filtra itens baseado nas permissões do usuário
+  const navItems = allNavItems.filter(item => {
+    if (!item.requiredModule) return true; // Dashboard sempre visível
+    return hasModuleAccess(item.requiredModule);
+  });
 
   return (
     <nav className={cn(
