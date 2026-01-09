@@ -2,8 +2,9 @@ import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { MessageCircle, QrCode, Loader2, Unplug, CheckCircle2 } from 'lucide-react';
-import { useUserWhatsAppInstance, useActivateUserWhatsApp, useDisconnectUserWhatsApp, useSyncUserWhatsAppStatus } from '@/hooks/useWhatsApp';
+import { useUserWhatsAppInstance, useDisconnectUserWhatsApp, useSyncUserWhatsAppStatus } from '@/hooks/useWhatsApp';
 import { WhatsAppQRDialog } from './WhatsAppQRDialog';
+import { WhatsAppInstanceSelector } from './WhatsAppInstanceSelector';
 import type { UserWithRoles } from '@/types/users';
 
 interface UserWhatsAppButtonProps {
@@ -12,8 +13,8 @@ interface UserWhatsAppButtonProps {
 
 export function UserWhatsAppButton({ user }: UserWhatsAppButtonProps) {
   const [showQrDialog, setShowQrDialog] = useState(false);
+  const [showSelectorDialog, setShowSelectorDialog] = useState(false);
   const { data: instance, isLoading, refetch } = useUserWhatsAppInstance(user.id);
-  const activateWhatsApp = useActivateUserWhatsApp();
   const disconnectWhatsApp = useDisconnectUserWhatsApp();
   const syncStatus = useSyncUserWhatsAppStatus();
 
@@ -24,18 +25,20 @@ export function UserWhatsAppButton({ user }: UserWhatsAppButtonProps) {
     }
   }, [user.id, instance?.id]);
 
-  const handleActivate = async () => {
-    try {
-      const result = await activateWhatsApp.mutateAsync(user.id);
-      // If already connected, just refetch
-      if (result.status === 'connected') {
-        refetch();
-      } else {
-        setShowQrDialog(true);
-      }
-    } catch (error) {
-      console.error('Error activating WhatsApp:', error);
-    }
+  const handleActivate = () => {
+    setShowSelectorDialog(true);
+  };
+
+  const handleInstanceConnected = () => {
+    refetch();
+    // If instance was created, show QR dialog
+    setTimeout(() => {
+      refetch().then((result) => {
+        if (result.data?.status === 'qr_code') {
+          setShowQrDialog(true);
+        }
+      });
+    }, 500);
   };
 
   const handleDisconnect = async () => {
@@ -108,15 +111,18 @@ export function UserWhatsAppButton({ user }: UserWhatsAppButtonProps) {
         variant="outline"
         className="h-7 gap-1"
         onClick={handleActivate}
-        disabled={activateWhatsApp.isPending}
       >
-        {activateWhatsApp.isPending ? (
-          <Loader2 className="h-3 w-3 animate-spin" />
-        ) : (
-          <MessageCircle className="h-3 w-3" />
-        )}
+        <MessageCircle className="h-3 w-3" />
         Ativar WhatsApp
       </Button>
+      
+      <WhatsAppInstanceSelector
+        userId={user.id}
+        open={showSelectorDialog}
+        onOpenChange={setShowSelectorDialog}
+        onInstanceConnected={handleInstanceConnected}
+      />
+      
       {showQrDialog && instance && (
         <WhatsAppQRDialog
           userId={user.id}
