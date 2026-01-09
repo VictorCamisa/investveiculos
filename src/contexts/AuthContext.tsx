@@ -28,25 +28,38 @@ function isRefreshTokenNotFound(error: unknown): boolean {
   return anyErr.code === 'refresh_token_not_found' || (anyErr.message ?? '').includes('Refresh Token Not Found');
 }
 
+// Prioridade dos roles - gerente é o mais alto
+const ROLE_PRIORITY: Record<string, number> = {
+  gerente: 3,
+  marketing: 2,
+  vendedor: 1,
+};
+
 async function fetchUserRole(userId: string): Promise<AppRole | null> {
   console.log('[AuthContext] Fetching role for user:', userId);
   try {
+    // Busca TODOS os roles do usuário (pode ter mais de um)
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
       .from('user_roles')
       .select('role')
-      .eq('user_id', userId)
-      .maybeSingle();
+      .eq('user_id', userId);
     
     console.log('[AuthContext] Role query result:', { data, error });
     
-    if (error || !data) {
+    if (error || !data || data.length === 0) {
       if (error) console.error('[AuthContext] Error fetching user role:', error);
       return null;
     }
     
-    console.log('[AuthContext] User role found:', data.role);
-    return data.role as AppRole;
+    // Se tiver múltiplos roles, pega o de maior prioridade (gerente > marketing > vendedor)
+    const roles = data.map((r: { role: string }) => r.role);
+    const highestRole = roles.sort((a: string, b: string) => 
+      (ROLE_PRIORITY[b] || 0) - (ROLE_PRIORITY[a] || 0)
+    )[0];
+    
+    console.log('[AuthContext] User roles found:', roles, '- Using highest:', highestRole);
+    return highestRole as AppRole;
   } catch (err) {
     console.error('[AuthContext] Error fetching user role:', err);
     return null;
