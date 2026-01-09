@@ -79,16 +79,42 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
     remoteJidToStore,
     fromMe,
     phone,
+    pushName,
     content: content?.substring(0, 50),
     messageId,
   });
 
-  // Find lead by phone (best-effort) to allow inbound-first conversations to appear in the lead chat.
-  let matchedLeadId: string | null = null;
+  // Skip outgoing messages for lead creation
+  if (fromMe) {
+    await processOutgoingMessage(supabase, message, instanceName, phone, remoteJidToStore, content, messageId);
+    return;
+  }
+
+  // ===== INCOMING MESSAGE: Process lead and contact =====
+  
+  // Find or create lead by phone
+  let leadId: string | null = null;
   let contact: { id: string; lead_id?: string; unread_count?: number; phone?: string } | null = null;
 
   if (phone) {
-    matchedLeadId = await findLeadIdByPhone(supabase, phone);
+    // Try to find existing lead
+    leadId = await findLeadIdByPhone(supabase, phone);
+
+    if (!leadId) {
+      // Create new lead with Round Robin assignment
+      console.log('Creating new lead for phone:', phone, 'name:', pushName);
+      leadId = await createLeadWithRoundRobin(supabase, phone, pushName || 'WhatsApp');
+      console.log('Created lead:', leadId);
+    } else {
+      // Update existing lead's last contact
+      console.log('Updating existing lead:', leadId);
+      await supabase
+        .from('leads')
+        .update({ 
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', leadId);
+    }
 
     // Find contact by phone
     const { data: existingContact } = await supabase
@@ -100,14 +126,12 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
     contact = existingContact;
   }
 
-  // If no contact found by phone but we have a lead from pushName or other sources,
-  // try to find existing contact by lead_id
-  if (!contact && matchedLeadId) {
-    contact = await findContactByLeadId(supabase, matchedLeadId);
+  // If no contact found by phone but we have a lead, try to find existing contact by lead_id
+  if (!contact && leadId) {
+    contact = await findContactByLeadId(supabase, leadId);
   }
 
   // If still no phone and no contact, check if remoteJid looks like LID mode
-  // and try to find contact by the exact remoteJid stored previously
   if (!contact && !phone && remoteJid) {
     const { data: contactByJid } = await supabase
       .from('whatsapp_contacts')
@@ -132,9 +156,9 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
       .insert({
         phone: effectivePhone,
         name: pushName,
-        lead_id: matchedLeadId || null,
+        lead_id: leadId || null,
         last_message_at: new Date().toISOString(),
-        unread_count: fromMe ? 0 : 1,
+        unread_count: 1,
       })
       .select()
       .single();
@@ -146,14 +170,14 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
       .from('whatsapp_contacts')
       .update({
         last_message_at: new Date().toISOString(),
-        unread_count: fromMe ? 0 : currentUnread + 1,
-        // if the contact wasn't linked yet, try to link it now
-        lead_id: contact.lead_id || matchedLeadId || null,
+        unread_count: currentUnread + 1,
+        lead_id: contact.lead_id || leadId || null,
+        name: pushName || undefined,
       })
       .eq('id', contact.id);
 
-    if (!contact.lead_id && matchedLeadId) {
-      contact.lead_id = matchedLeadId;
+    if (!contact.lead_id && leadId) {
+      contact.lead_id = leadId;
     }
   }
 
@@ -170,19 +194,20 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
     contact_id: contact?.id,
     remote_jid: remoteJidToStore || remoteJid || `${phone}@s.whatsapp.net`,
     message_id: messageId,
-    direction: fromMe ? 'outgoing' : 'incoming',
+    direction: 'incoming',
     message_type: 'text',
     content,
-    status: fromMe ? 'sent' : 'delivered',
-    lead_id: contact?.lead_id,
+    status: 'delivered',
+    lead_id: contact?.lead_id || leadId,
   });
 
   // Create notification for incoming messages
-  if (!fromMe && contact?.lead_id) {
+  if (contact?.lead_id || leadId) {
+    const finalLeadId = contact?.lead_id || leadId;
     const { data: lead } = await supabase
       .from('leads')
       .select('assigned_to, name')
-      .eq('id', contact.lead_id)
+      .eq('id', finalLeadId)
       .single();
 
     if (lead?.assigned_to) {
@@ -195,6 +220,202 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
       });
     }
   }
+
+  // Create lead interaction record
+  if (leadId) {
+    await supabase.from('lead_interactions').insert({
+      lead_id: leadId,
+      type: 'whatsapp',
+      description: `Mensagem recebida via WhatsApp: ${content.substring(0, 200)}`,
+    });
+  }
+}
+
+// Process outgoing messages (sent by us)
+async function processOutgoingMessage(
+  supabase: any,
+  message: any,
+  instanceName: string,
+  phone: string | null,
+  remoteJidToStore: string | undefined,
+  content: string,
+  messageId: string
+) {
+  const remoteJid = message.key?.remoteJid;
+  
+  let contact: { id: string; lead_id?: string } | null = null;
+
+  if (phone) {
+    const { data: existingContact } = await supabase
+      .from('whatsapp_contacts')
+      .select('id, lead_id')
+      .eq('phone', phone)
+      .single();
+    contact = existingContact;
+  }
+
+  if (!contact && !phone && remoteJid) {
+    const { data: contactByJid } = await supabase
+      .from('whatsapp_contacts')
+      .select('id, lead_id')
+      .eq('phone', remoteJid.split('@')[0])
+      .single();
+    contact = contactByJid;
+  }
+
+  // Get instance
+  const { data: instance } = await supabase
+    .from('whatsapp_instances')
+    .select('id')
+    .eq('instance_name', instanceName)
+    .single();
+
+  // Save message
+  await supabase.from('whatsapp_messages').insert({
+    instance_id: instance?.id,
+    contact_id: contact?.id,
+    remote_jid: remoteJidToStore || remoteJid,
+    message_id: messageId,
+    direction: 'outgoing',
+    message_type: 'text',
+    content,
+    status: 'sent',
+    lead_id: contact?.lead_id,
+  });
+
+  // Reset unread count when we send a message
+  if (contact) {
+    await supabase
+      .from('whatsapp_contacts')
+      .update({ unread_count: 0 })
+      .eq('id', contact.id);
+  }
+}
+
+// Create lead and assign via Round Robin
+async function createLeadWithRoundRobin(
+  supabase: any,
+  phone: string,
+  name: string
+): Promise<string | null> {
+  // Get next salesperson from Round Robin
+  const assignedTo = await getNextRoundRobinSalesperson(supabase);
+  
+  console.log('Round Robin assigned to:', assignedTo);
+
+  // Create lead
+  const { data: lead, error: leadError } = await supabase
+    .from('leads')
+    .insert({
+      phone,
+      name,
+      source: 'whatsapp',
+      status: 'novo',
+      assigned_to: assignedTo,
+    })
+    .select()
+    .single();
+
+  if (leadError) {
+    console.error('Error creating lead:', leadError);
+    return null;
+  }
+
+  // Create lead assignment record
+  if (assignedTo) {
+    await supabase.from('lead_assignments').insert({
+      lead_id: lead.id,
+      salesperson_id: assignedTo,
+      assignment_type: 'round_robin',
+      notes: 'Atribuído automaticamente via Round Robin (WhatsApp)',
+    });
+
+    // Update round robin config
+    await supabase
+      .from('round_robin_config')
+      .update({
+        last_assigned_at: new Date().toISOString(),
+        total_leads_assigned: supabase.rpc ? undefined : undefined, // Will increment via separate query
+        current_leads_today: supabase.rpc ? undefined : undefined,
+      })
+      .eq('salesperson_id', assignedTo);
+
+    // Increment counters
+    await supabase.rpc('increment_round_robin_counters', { p_salesperson_id: assignedTo });
+  }
+
+  // Create negotiation
+  if (assignedTo) {
+    const { error: negError } = await supabase.from('negotiations').insert({
+      lead_id: lead.id,
+      salesperson_id: assignedTo,
+      status: 'contato_inicial',
+      notes: 'Negociação criada automaticamente a partir de mensagem WhatsApp',
+    });
+
+    if (negError) {
+      console.error('Error creating negotiation:', negError);
+    } else {
+      console.log('Created negotiation for lead:', lead.id);
+    }
+  }
+
+  // Create notification for assigned salesperson
+  if (assignedTo) {
+    await supabase.from('notifications').insert({
+      user_id: assignedTo,
+      type: 'new_lead',
+      title: 'Novo Lead Atribuído',
+      message: `Um novo lead foi atribuído a você: ${name} (${phone})`,
+      link: '/leads',
+    });
+  }
+
+  return lead.id;
+}
+
+// Get next salesperson using Round Robin algorithm
+async function getNextRoundRobinSalesperson(supabase: any): Promise<string | null> {
+  // Get all active round robin configs ordered by last_assigned_at (oldest first)
+  const { data: configs, error } = await supabase
+    .from('round_robin_config')
+    .select('*')
+    .eq('is_active', true)
+    .order('last_assigned_at', { ascending: true, nullsFirst: true });
+
+  if (error || !configs || configs.length === 0) {
+    console.log('No active round robin configs found');
+    return null;
+  }
+
+  // Find the next eligible salesperson
+  // Check if they haven't exceeded their daily limit
+  const today = new Date().toISOString().split('T')[0];
+  
+  for (const config of configs) {
+    // If max_leads_per_day is set, check if limit reached
+    if (config.max_leads_per_day !== null) {
+      // Check if last_assigned_at is from today
+      const lastAssignedDate = config.last_assigned_at 
+        ? new Date(config.last_assigned_at).toISOString().split('T')[0]
+        : null;
+      
+      // Reset counter if it's a new day
+      if (lastAssignedDate !== today) {
+        config.current_leads_today = 0;
+      }
+
+      if (config.current_leads_today >= config.max_leads_per_day) {
+        continue; // Skip this salesperson, they've reached their limit
+      }
+    }
+
+    // This salesperson is eligible
+    return config.salesperson_id;
+  }
+
+  // If all salespeople reached their limits, return the first one (least recently assigned)
+  return configs[0]?.salesperson_id || null;
 }
 
 async function handleMessageUpdate(supabase: any, data: any) {
