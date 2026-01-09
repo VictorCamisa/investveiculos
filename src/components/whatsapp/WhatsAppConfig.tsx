@@ -66,21 +66,27 @@ export function WhatsAppConfig() {
               <Label>URL do Webhook</Label>
               <div className="flex gap-2">
                 <Input 
-                  value="https://rugbunseyblzapwzevqh.supabase.co/functions/v1/whatsapp-webhook"
+                  value={`${import.meta.env.VITE_SUPABASE_URL || '[CONFIGURE O SUPABASE]'}/functions/v1/whatsapp-webhook`}
                   readOnly
                   className="font-mono text-sm"
                 />
                 <Button 
                   variant="outline"
                   onClick={() => {
-                    navigator.clipboard.writeText('https://rugbunseyblzapwzevqh.supabase.co/functions/v1/whatsapp-webhook');
+                    const url = import.meta.env.VITE_SUPABASE_URL;
+                    if (url) {
+                      navigator.clipboard.writeText(`${url}/functions/v1/whatsapp-webhook`);
+                    }
                   }}
+                  disabled={!import.meta.env.VITE_SUPABASE_URL}
                 >
                   Copiar
                 </Button>
               </div>
               <p className="text-xs text-muted-foreground">
-                Configure esta URL no painel da Evolution API para receber eventos
+                {import.meta.env.VITE_SUPABASE_URL 
+                  ? 'Configure esta URL no painel da Evolution API para receber eventos'
+                  : 'Conecte o Supabase para gerar a URL do webhook'}
               </p>
             </div>
 

@@ -1,8 +1,12 @@
 import { createClient } from '@supabase/supabase-js';
 import type { Database } from '@/types/database';
 
-const SUPABASE_URL = 'https://rugbunseyblzapwzevqh.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2J1bnNleWJsemFwd3pldnFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5Nzg5ODIsImV4cCI6MjA4MzU1NDk4Mn0.1_DRJ9LU6IMZjrb418FktcYywDZ9HV2QJj-vM4Ga9bA';
+const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL || '';
+const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY || '';
+
+if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
+  console.warn('Supabase não configurado. Conecte o projeto ao Supabase para habilitar funcionalidades de backend.');
+}
 
 export const supabase = createClient<Database>(SUPABASE_URL, SUPABASE_ANON_KEY, {
   auth: {

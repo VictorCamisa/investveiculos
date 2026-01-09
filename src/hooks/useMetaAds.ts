@@ -10,8 +10,13 @@ export function useMetaAdsSync() {
 
   return useMutation({
     mutationFn: async () => {
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      if (!supabaseUrl) {
+        throw new Error('Supabase não configurado. Conecte o projeto ao Supabase primeiro.');
+      }
+      
       const response = await fetch(
-        'https://rugbunseyblzapwzevqh.supabase.co/functions/v1/meta-ads-sync',
+        `${supabaseUrl}/functions/v1/meta-ads-sync`,
         {
           method: 'POST',
           headers: {
