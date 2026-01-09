@@ -19,7 +19,7 @@ const PERMISSIONS_BY_ROLE: Record<string, { modules: ModuleName[]; permissions: 
 };
 
 export function usePermissions() {
-  const { user, role, loading: authLoading } = useAuth();
+  const { user, role, loading: authLoading, roleLoading } = useAuth();
 
   // Determina permissões baseado no role
   const permissionsData = useMemo(() => {
@@ -76,9 +76,11 @@ export function usePermissions() {
   const isVendedor = useMemo(() => role === 'vendedor', [role]);
   const isGerente = useMemo(() => role === 'gerente', [role]);
 
+  const isLoading = authLoading || roleLoading;
+
   return useMemo(() => ({
     isActive: !!user,
-    isLoading: authLoading,
+    isLoading,
     hasPermission,
     hasModuleAccess,
     getAccessibleModules,
@@ -86,5 +88,5 @@ export function usePermissions() {
     role,
     isVendedor,
     isGerente,
-  }), [user, authLoading, hasPermission, hasModuleAccess, getAccessibleModules, getFirstAccessibleRoute, role, isVendedor, isGerente]);
+  }), [user, isLoading, hasPermission, hasModuleAccess, getAccessibleModules, getFirstAccessibleRoute, role, isVendedor, isGerente]);
 }

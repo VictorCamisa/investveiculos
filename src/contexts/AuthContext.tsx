@@ -9,6 +9,7 @@ interface AuthContextType {
   session: Session | null;
   role: AppRole | null;
   loading: boolean;
+  roleLoading: boolean;
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signUp: (email: string, password: string, fullName: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
@@ -54,33 +55,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
+  const [roleLoading, setRoleLoading] = useState(false);
 
   useEffect(() => {
     let initialLoadComplete = false;
+    let isMounted = true;
+
+    const handleAuthChange = async (nextSession: Session | null) => {
+      const sanitized = sanitizeSession(nextSession);
+      
+      if (!isMounted) return;
+      
+      setSession(sanitized);
+      setUser(sanitized?.user ?? null);
+
+      if (sanitized?.user) {
+        setRoleLoading(true);
+        // Fetch real role from database
+        const userRole = await fetchUserRole(sanitized.user.id);
+        if (isMounted) {
+          setRole(userRole);
+          setRoleLoading(false);
+        }
+      } else {
+        setRole(null);
+        setRoleLoading(false);
+      }
+
+      if (!initialLoadComplete && isMounted) {
+        initialLoadComplete = true;
+        setLoading(false);
+      }
+    };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
       if ((event as unknown as string) === 'TOKEN_REFRESH_FAILED') {
         setTimeout(() => {
           supabase.auth.signOut().catch(() => {});
         }, 0);
+        return;
       }
 
-      const sanitized = sanitizeSession(nextSession);
-      setSession(sanitized);
-      setUser(sanitized?.user ?? null);
-
-      if (sanitized?.user) {
-        // Fetch real role from database
-        const userRole = await fetchUserRole(sanitized.user.id);
-        setRole(userRole);
-      } else {
-        setRole(null);
-      }
-
-      if (!initialLoadComplete) {
-        initialLoadComplete = true;
-        setLoading(false);
-      }
+      await handleAuthChange(nextSession);
     });
 
     supabase.auth.getSession().then(async ({ data: { session: currentSession }, error }) => {
@@ -93,25 +109,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      const sanitized = sanitizeSession(currentSession ?? null);
-      setSession(sanitized);
-      setUser(sanitized?.user ?? null);
-
-      if (sanitized?.user) {
-        // Fetch real role from database
-        const userRole = await fetchUserRole(sanitized.user.id);
-        setRole(userRole);
-      } else {
-        setRole(null);
-      }
-
-      if (!initialLoadComplete) {
-        initialLoadComplete = true;
-        setLoading(false);
-      }
+      await handleAuthChange(currentSession ?? null);
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
   }, []);
 
   const signIn = async (email: string, password: string) => {
@@ -149,7 +153,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, role, loading, signIn, signUp, signOut }}>
+    <AuthContext.Provider value={{ user, session, role, loading, roleLoading, signIn, signUp, signOut }}>
       {children}
     </AuthContext.Provider>
   );
