@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Plus, Calendar, Gauge, Car, DollarSign, Clock, TrendingUp, TrendingDown, AlertTriangle, Globe, EyeOff, Image, Share2, Copy, FileText, Bookmark } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Plus, Calendar, Gauge, Car, DollarSign, Clock, TrendingUp, TrendingDown, AlertTriangle, Globe, EyeOff, Image, Share2, Copy, FileText, Bookmark, CircleCheck, CircleDashed, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -26,6 +26,12 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Skeleton } from '@/components/ui/skeleton';
 import { VehicleForm } from '@/components/inventory/VehicleForm';
 import { VehicleCostForm } from '@/components/inventory/VehicleCostForm';
@@ -33,7 +39,7 @@ import { useVehicle, useVehicleDRE, useVehicleCosts, useUpdateVehicle, useDelete
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { vehicleStatusLabels, vehicleStatusColors, vehicleCostTypeLabels, fuelTypeLabels, transmissionLabels } from '@/types/inventory';
-import type { VehicleDRE } from '@/types/inventory';
+import type { VehicleDRE, VehicleStatus } from '@/types/inventory';
 import { toast } from 'sonner';
 
 export default function VehicleDetails() {
@@ -112,9 +118,17 @@ export default function VehicleDetails() {
     updateVehicle.mutate({ id: vehicle.id, featured: !vehicle.featured });
   };
 
-  const handleToggleReserved = () => {
-    const newStatus = vehicle.status === 'reservado' ? 'disponivel' : 'reservado';
+  const handleChangeStatus = (newStatus: VehicleStatus) => {
     updateVehicle.mutate({ id: vehicle.id, status: newStatus });
+  };
+
+  const getStatusIcon = (status: VehicleStatus) => {
+    switch (status) {
+      case 'disponivel': return <CircleDashed className="h-4 w-4" />;
+      case 'reservado': return <Bookmark className="h-4 w-4" />;
+      case 'vendido': return <CircleCheck className="h-4 w-4" />;
+      case 'em_manutencao': return <Wrench className="h-4 w-4" />;
+    }
   };
 
   const handleShareWhatsApp = () => {
@@ -293,15 +307,50 @@ export default function VehicleDetails() {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap gap-2">
-            <Button
-              variant={vehicle.status === 'reservado' ? 'default' : 'outline'}
-              size="sm"
-              onClick={handleToggleReserved}
-              disabled={updateVehicle.isPending}
-            >
-              <Bookmark className="h-4 w-4 mr-2" />
-              {vehicle.status === 'reservado' ? 'Remover Reserva' : 'Marcar Reservado'}
-            </Button>
+            {/* Dropdown de Status */}
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={updateVehicle.isPending}
+                >
+                  {getStatusIcon(vehicle.status)}
+                  <span className="ml-2">Status: {vehicleStatusLabels[vehicle.status]}</span>
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent>
+                <DropdownMenuItem 
+                  onClick={() => handleChangeStatus('disponivel')}
+                  className={vehicle.status === 'disponivel' ? 'bg-accent' : ''}
+                >
+                  <CircleDashed className="h-4 w-4 mr-2 text-green-600" />
+                  Disponível
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleChangeStatus('reservado')}
+                  className={vehicle.status === 'reservado' ? 'bg-accent' : ''}
+                >
+                  <Bookmark className="h-4 w-4 mr-2 text-yellow-600" />
+                  Reservado
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleChangeStatus('vendido')}
+                  className={vehicle.status === 'vendido' ? 'bg-accent' : ''}
+                >
+                  <CircleCheck className="h-4 w-4 mr-2 text-blue-600" />
+                  Vendido
+                </DropdownMenuItem>
+                <DropdownMenuItem 
+                  onClick={() => handleChangeStatus('em_manutencao')}
+                  className={vehicle.status === 'em_manutencao' ? 'bg-accent' : ''}
+                >
+                  <Wrench className="h-4 w-4 mr-2 text-orange-600" />
+                  Em Manutenção
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+
             <Button variant="outline" size="sm" onClick={handleShareWhatsApp}>
               <Share2 className="h-4 w-4 mr-2" />
               Enviar WhatsApp
