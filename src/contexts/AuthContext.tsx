@@ -29,6 +29,7 @@ function isRefreshTokenNotFound(error: unknown): boolean {
 }
 
 async function fetchUserRole(userId: string): Promise<AppRole | null> {
+  console.log('[AuthContext] Fetching role for user:', userId);
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const { data, error } = await (supabase as any)
@@ -37,14 +38,17 @@ async function fetchUserRole(userId: string): Promise<AppRole | null> {
       .eq('user_id', userId)
       .maybeSingle();
     
+    console.log('[AuthContext] Role query result:', { data, error });
+    
     if (error || !data) {
-      if (error) console.error('Error fetching user role:', error);
+      if (error) console.error('[AuthContext] Error fetching user role:', error);
       return null;
     }
     
+    console.log('[AuthContext] User role found:', data.role);
     return data.role as AppRole;
   } catch (err) {
-    console.error('Error fetching user role:', err);
+    console.error('[AuthContext] Error fetching user role:', err);
     return null;
   }
 }
@@ -59,34 +63,42 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     let isMounted = true;
+    console.log('[AuthContext] Initializing...');
 
-    const processSession = async (newSession: Session | null) => {
+    const processSession = async (newSession: Session | null, source: string) => {
+      console.log(`[AuthContext] processSession from ${source}:`, !!newSession?.user);
       const sanitized = sanitizeSession(newSession);
       
-      if (!isMounted) return;
+      if (!isMounted) {
+        console.log('[AuthContext] Component unmounted, skipping...');
+        return;
+      }
       
       setSession(sanitized);
       setUser(sanitized?.user ?? null);
 
       if (sanitized?.user) {
+        console.log('[AuthContext] User found, fetching role...');
         setRoleLoading(true);
         const userRole = await fetchUserRole(sanitized.user.id);
+        console.log('[AuthContext] Role fetched:', userRole);
         if (isMounted) {
           setRole(userRole);
           setRoleLoading(false);
+          setLoading(false);
+          console.log('[AuthContext] State updated - roleLoading: false, loading: false');
         }
       } else {
+        console.log('[AuthContext] No user, clearing state...');
         setRole(null);
         setRoleLoading(false);
-      }
-      
-      if (isMounted) {
         setLoading(false);
       }
     };
 
     // Set up the auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      console.log('[AuthContext] onAuthStateChange event:', event);
       if ((event as unknown as string) === 'TOKEN_REFRESH_FAILED') {
         supabase.auth.signOut().catch(() => {});
         return;
@@ -94,14 +106,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Use setTimeout to defer and avoid Supabase deadlock
       setTimeout(() => {
-        processSession(newSession);
+        processSession(newSession, 'onAuthStateChange');
       }, 0);
     });
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
+      console.log('[AuthContext] getSession result:', !!currentSession, error);
       if (error) {
-        console.error('Error getting session:', error);
+        console.error('[AuthContext] Error getting session:', error);
         if (isRefreshTokenNotFound(error)) {
           supabase.auth.signOut().catch(() => {});
         }
@@ -109,7 +122,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       
-      processSession(currentSession);
+      processSession(currentSession, 'getSession');
     });
 
     return () => {
