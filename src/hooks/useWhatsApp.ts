@@ -143,24 +143,7 @@ export function useWhatsAppInstances() {
 
       if (error) throw error;
       
-      // Sync status from Evolution API for all instances
-      const instances = (data || []) as WhatsAppInstance[];
-      for (const instance of instances) {
-        if (instance.status !== 'connected') {
-          try {
-            const { data: statusData } = await supabase.functions.invoke('whatsapp-instance', {
-              body: { action: 'status', instanceId: instance.id },
-            });
-            if (statusData?.mappedStatus) {
-              instance.status = statusData.mappedStatus;
-            }
-          } catch (err) {
-            console.log('Error syncing instance status:', err);
-          }
-        }
-      }
-      
-      return instances;
+      return (data || []) as WhatsAppInstance[];
     },
     refetchInterval: 10000, // Auto-refresh every 10 seconds
   });
@@ -224,6 +207,7 @@ export function useCreateWhatsAppInstance() {
         .insert({
           ...input,
           created_by: user?.id,
+          status: 'disconnected', // Always start as disconnected
         })
         .select()
         .single();
@@ -233,7 +217,7 @@ export function useCreateWhatsAppInstance() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
-      toast.success('Instância criada com sucesso!');
+      toast.success('Instância criada! Clique em "Gerar QR Code" para conectar.');
     },
     onError: (error: Error) => {
       toast.error(`Erro ao criar instância: ${error.message}`);
