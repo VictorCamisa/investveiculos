@@ -33,6 +33,7 @@ const FollowUps = lazy(() => import("./pages/FollowUps"));
 const LostNegotiations = lazy(() => import("./pages/LostNegotiations"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
+const Reports = lazy(() => import("./pages/Reports"));
 
 // Lazy load layouts
 const CRMLayout = lazy(() => import("@/components/crm/CRMLayout").then(m => ({ default: m.CRMLayout })));
@@ -201,26 +202,23 @@ const App = () => (
                     <Route path="alertas" element={<AlertsPage />} />
                   </Route>
                   
-                  {/* Marketing Routes */}
+                  {/* Marketing Routes - Simplified */}
                   <Route path="/marketing" element={
                     <ProtectedRoute requiredModule="marketing">
                       <Suspense fallback={<PageLoader />}>
                         <MarketingLayout />
                       </Suspense>
                     </ProtectedRoute>
-                  }>
-                    <Route index element={<MarketingCockpit />} />
-                    <Route path="origem-leads" element={<LeadOriginPanel />} />
-                    <Route path="comparativo" element={<ComparativeDashboard />} />
-                    <Route path="calendario" element={<CampaignCalendar />} />
-                    <Route path="utm-builder" element={<UTMBuilder />} />
-                    <Route path="alertas" element={<MarketingAlertsCenter />} />
-                    <Route path="relatorios" element={<MarketingReportsPage />} />
-                    <Route path="meta-ads" element={<MarketingDashboard />} />
-                    <Route path="google-ads" element={<GoogleAdsDashboard />} />
-                    <Route path="campanhas" element={<MarketingCampaignsPage />} />
-                    <Route path="configuracoes" element={<MarketingSettingsPage />} />
-                  </Route>
+                  } />
+                  
+                  {/* Reports Module with AI */}
+                  <Route path="/relatorios" element={
+                    <ProtectedRoute requiredModule="marketing">
+                      <Suspense fallback={<PageLoader />}>
+                        <Reports />
+                      </Suspense>
+                    </ProtectedRoute>
+                  } />
                   
                   {/* Commission Routes */}
                   <Route path="/comissoes" element={
