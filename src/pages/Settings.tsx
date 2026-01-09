@@ -4,14 +4,13 @@ import { WhatsAppInstances } from '@/components/whatsapp/WhatsAppInstances';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { UserManagement } from '@/components/users';
 import { ActivityLogsPage } from '@/components/users/ActivityLogsPage';
-import { useAuth } from '@/contexts/AuthContext';
-
-// ID do Matheus - único administrador
-const ADMIN_USER_ID = '6c6e6c96-41d1-4ccc-a8d7-bbe1d1e62336';
+import { usePermissions } from '@/hooks/usePermissions';
 
 export default function Settings() {
-  const { user } = useAuth();
-  const isAdmin = user?.id === ADMIN_USER_ID;
+  const { isGerente, hasModuleAccess } = usePermissions();
+  
+  // Gerentes e quem tem acesso ao módulo de usuários podem gerenciar
+  const canManageUsers = isGerente || hasModuleAccess('usuarios');
 
   return (
     <div className="space-y-6">
@@ -22,9 +21,9 @@ export default function Settings() {
         </p>
       </div>
 
-      <Tabs defaultValue={isAdmin ? 'usuarios' : 'whatsapp'} className="space-y-4">
+      <Tabs defaultValue={canManageUsers ? 'usuarios' : 'whatsapp'} className="space-y-4">
         <TabsList>
-          {isAdmin && (
+          {canManageUsers && (
             <>
               <TabsTrigger value="usuarios" className="flex items-center gap-2">
                 <Users className="h-4 w-4" />
@@ -46,7 +45,7 @@ export default function Settings() {
           </TabsTrigger>
         </TabsList>
 
-        {isAdmin && (
+        {canManageUsers && (
           <>
             <TabsContent value="usuarios">
               <UserManagement />
