@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -12,7 +12,7 @@ import {
 } from '@/hooks/useMarketingCockpit';
 import { 
   DollarSign, Users, Target, TrendingUp, Clock, AlertTriangle,
-  CheckCircle, Info, ArrowRight, Calendar, Phone, UserCheck
+  CheckCircle, Info, ArrowRight, Calendar, Phone, UserCheck, X
 } from 'lucide-react';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -29,11 +29,18 @@ export function MarketingCockpit() {
   const presets = useDatePresets();
   const [dateRange, setDateRange] = useState(presets.last30Days);
   const [activePreset, setActivePreset] = useState<string>('last30Days');
+  const [dismissedInsights, setDismissedInsights] = useState<Set<string>>(new Set());
 
   const { data: kpis, isLoading: kpisLoading } = useCockpitKPIs(dateRange);
   const { data: funnel, isLoading: funnelLoading } = useFunnelData(dateRange);
   const { data: leadOps, isLoading: leadOpsLoading } = useLeadOpsMetrics(dateRange);
   const { data: insights } = useAutoInsights(kpis, leadOps);
+
+  const dismissInsight = useCallback((title: string) => {
+    setDismissedInsights(prev => new Set([...prev, title]));
+  }, []);
+
+  const visibleInsights = insights?.filter(insight => !dismissedInsights.has(insight.title)) || [];
 
   const handlePresetChange = (preset: string) => {
     setActivePreset(preset);
@@ -70,24 +77,32 @@ export function MarketingCockpit() {
       </div>
 
       {/* Auto Insights */}
-      {insights && insights.length > 0 && (
+      {visibleInsights.length > 0 && (
         <div className="grid gap-3">
-          {insights.map((insight, i) => (
+          {visibleInsights.map((insight, i) => (
             <div
               key={i}
               className={`p-4 rounded-lg border flex items-start gap-3 ${
-                insight.type === 'warning' ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20' :
-                insight.type === 'success' ? 'bg-green-50 border-green-200 dark:bg-green-900/20' :
-                'bg-blue-50 border-blue-200 dark:bg-blue-900/20'
+                insight.type === 'warning' ? 'bg-yellow-50 border-yellow-200 dark:bg-yellow-900/20 dark:border-yellow-800' :
+                insight.type === 'success' ? 'bg-green-50 border-green-200 dark:bg-green-900/20 dark:border-green-800' :
+                'bg-blue-50 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800'
               }`}
             >
-              {insight.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />}
-              {insight.type === 'success' && <CheckCircle className="h-5 w-5 text-green-600 mt-0.5" />}
-              {insight.type === 'info' && <Info className="h-5 w-5 text-blue-600 mt-0.5" />}
-              <div>
+              {insight.type === 'warning' && <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5 flex-shrink-0" />}
+              {insight.type === 'success' && <CheckCircle className="h-5 w-5 text-green-600 mt-0.5 flex-shrink-0" />}
+              {insight.type === 'info' && <Info className="h-5 w-5 text-blue-600 mt-0.5 flex-shrink-0" />}
+              <div className="flex-1 min-w-0">
                 <p className="font-medium">{insight.title}</p>
                 <p className="text-sm text-muted-foreground">{insight.message}</p>
               </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 flex-shrink-0 opacity-60 hover:opacity-100"
+                onClick={() => dismissInsight(insight.title)}
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </div>
           ))}
         </div>
