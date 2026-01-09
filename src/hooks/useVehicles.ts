@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Vehicle, VehicleCost, VehicleDRE, VehicleStatus, VehicleCostType } from '@/types/inventory';
 import { toast } from 'sonner';
+import { syncVehiclePurchase, syncVehicleCost } from './useFinancialSync';
 
 // Shared query options for better caching
 const vehicleQueryOptions = {
@@ -151,6 +152,18 @@ export function useCreateVehicle() {
         .single();
 
       if (error) throw error;
+      
+      // Sincronizar compra como despesa financeira
+      if (data && input.purchase_price && input.purchase_price > 0) {
+        await syncVehiclePurchase({
+          id: data.id,
+          brand: input.brand,
+          model: input.model,
+          purchase_price: input.purchase_price,
+          purchase_date: input.purchase_date,
+        });
+      }
+      
       return data;
     },
     onSuccess: () => {
@@ -158,6 +171,7 @@ export function useCreateVehicle() {
       queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
       queryClient.invalidateQueries({ queryKey: ['public-vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['featured-vehicles'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       toast.success('Veículo cadastrado com sucesso!');
     },
     onError: (error: Error) => {
@@ -246,11 +260,32 @@ export function useCreateVehicleCost() {
         .single();
 
       if (error) throw error;
+      
+      // Buscar info do veículo para descrição
+      const { data: vehicle } = await (supabase as any)
+        .from('vehicles')
+        .select('brand, model')
+        .eq('id', input.vehicle_id)
+        .maybeSingle();
+      
+      // Sincronizar custo como despesa financeira
+      if (data) {
+        await syncVehicleCost({
+          id: data.id,
+          vehicle_id: input.vehicle_id,
+          cost_type: input.cost_type,
+          description: input.description,
+          amount: input.amount,
+          cost_date: input.cost_date,
+        }, vehicle);
+      }
+      
       return data;
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['vehicle-costs', variables.vehicle_id] });
       queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
+      queryClient.invalidateQueries({ queryKey: ['financial-transactions'] });
       toast.success('Custo adicionado com sucesso!');
     },
     onError: (error: Error) => {
