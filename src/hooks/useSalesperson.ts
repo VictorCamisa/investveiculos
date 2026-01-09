@@ -43,6 +43,19 @@ export interface SalespersonStats {
   visitsCount: number;
 }
 
+interface ProfileRow {
+  id: string;
+  full_name: string | null;
+  email: string | null;
+  avatar_url: string | null;
+  is_active: boolean;
+  created_at: string;
+}
+
+interface RoleRow {
+  role: string;
+}
+
 export function useSalespersonDetail(userId: string | undefined) {
   return useQuery({
     queryKey: ['salesperson-detail', userId],
@@ -51,11 +64,13 @@ export function useSalespersonDetail(userId: string | undefined) {
       
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select('id, full_name, email, avatar_url, is_active, created_at')
         .eq('id', userId)
         .single();
       
       if (profileError || !profile) throw profileError || new Error('Profile not found');
+      
+      const typedProfile = profile as ProfileRow;
       
       const { data: roleData } = await supabase
         .from('user_roles')
@@ -63,14 +78,16 @@ export function useSalespersonDetail(userId: string | undefined) {
         .eq('user_id', userId)
         .maybeSingle();
       
+      const typedRole = roleData as RoleRow | null;
+      
       return {
-        id: profile.id,
-        full_name: profile.full_name,
-        email: profile.email,
-        avatar_url: profile.avatar_url,
-        is_active: profile.is_active,
-        created_at: profile.created_at,
-        role: roleData?.role ?? null,
+        id: typedProfile.id,
+        full_name: typedProfile.full_name,
+        email: typedProfile.email,
+        avatar_url: typedProfile.avatar_url,
+        is_active: typedProfile.is_active,
+        created_at: typedProfile.created_at,
+        role: typedRole?.role ?? null,
       };
     },
     enabled: !!userId,

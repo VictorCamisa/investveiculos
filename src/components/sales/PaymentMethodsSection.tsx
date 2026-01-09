@@ -9,6 +9,8 @@ import { Plus, Trash2, ChevronDown, ChevronUp, Building2 } from 'lucide-react';
 import { paymentMethodLabels } from '@/types/sales';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
+export type PaymentMethod = PaymentMethodEntry;
+
 export interface PaymentMethodEntry {
   id: string;
   payment_method: string;
