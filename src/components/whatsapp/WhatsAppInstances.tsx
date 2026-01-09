@@ -56,6 +56,18 @@ export function WhatsAppInstances() {
     signature_template: '👤 {nome} está te atendendo',
   });
 
+  // Pre-fill URL and API Key from existing instances when dialog opens
+  React.useEffect(() => {
+    if (dialogOpen && instances?.length) {
+      const firstInstance = instances[0];
+      setFormData(prev => ({
+        ...prev,
+        api_url: firstInstance.api_url || '',
+        api_key: firstInstance.api_key || '',
+      }));
+    }
+  }, [dialogOpen, instances]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -69,8 +81,8 @@ export function WhatsAppInstances() {
     setFormData({
       name: '',
       instance_name: '',
-      api_url: '',
-      api_key: '',
+      api_url: instances?.[0]?.api_url || '',
+      api_key: instances?.[0]?.api_key || '',
       is_default: false,
       is_shared: false,
       signature_template: '👤 {nome} está te atendendo',
