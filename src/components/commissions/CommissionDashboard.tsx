@@ -10,14 +10,18 @@ import {
   AlertTriangle,
   ArrowRight,
   Target,
-  Trophy
+  Trophy,
+  Check,
+  Banknote
 } from 'lucide-react';
 import { 
   useCommissionStats, 
   useSaleCommissions, 
   useCommissionProjections,
   useCurrentGoals,
-  useSalespersonRanking
+  useSalespersonRanking,
+  useApproveCommission,
+  usePayCommission
 } from '@/hooks/useCommissionsComplete';
 import { commissionStatusLabels, commissionStatusColors } from '@/types/commissions';
 import { format } from 'date-fns';
@@ -34,6 +38,8 @@ export function CommissionDashboard() {
   const { data: projections } = useCommissionProjections();
   const { data: goals } = useCurrentGoals();
   const { data: ranking } = useSalespersonRanking();
+  const approveCommission = useApproveCommission();
+  const payCommission = usePayCommission();
 
   const pendingApproval = commissions?.filter(c => c.status === 'pending') || [];
   const topSellers = ranking?.slice(0, 3) || [];
@@ -153,11 +159,41 @@ export function CommissionDashboard() {
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="font-bold text-lg">{formatCurrency(comm.final_amount)}</p>
-                      <Badge className={commissionStatusColors[comm.status]} variant="outline">
-                        {commissionStatusLabels[comm.status]}
-                      </Badge>
+                    <div className="flex items-center gap-3">
+                      <div className="text-right">
+                        <p className="font-bold text-lg">{formatCurrency(comm.final_amount)}</p>
+                        <Badge className={commissionStatusColors[comm.status]} variant="outline">
+                          {commissionStatusLabels[comm.status]}
+                        </Badge>
+                      </div>
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-green-500/50 text-green-500 hover:bg-green-500/10"
+                          onClick={() => approveCommission.mutate({ id: comm.id })}
+                          disabled={approveCommission.isPending}
+                        >
+                          <Check className="h-4 w-4 mr-1" />
+                          Aprovar
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="bg-green-600 hover:bg-green-700"
+                          onClick={() => {
+                            approveCommission.mutate({ id: comm.id }, {
+                              onSuccess: () => {
+                                payCommission.mutate(comm.id);
+                              }
+                            });
+                          }}
+                          disabled={approveCommission.isPending || payCommission.isPending}
+                        >
+                          <Banknote className="h-4 w-4 mr-1" />
+                          Pagar
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 ))}
