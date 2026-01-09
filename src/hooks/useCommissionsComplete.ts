@@ -782,6 +782,12 @@ export function useCalculateCommission() {
         case 'mista':
           amount = (profit * ((rule.percentage_value || 0) / 100)) + (rule.fixed_value || 0);
           break;
+        default:
+          // Handle percentual_venda or other future types
+          if ((rule as any).commission_type === 'percentual_venda') {
+            amount = salePrice * ((rule.percentage_value || 0) / 100);
+          }
+          break;
       }
 
       // Apply lead source bonus if applicable

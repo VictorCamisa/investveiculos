@@ -6,7 +6,6 @@ import {
   FileText,
   Target,
   Trophy,
-  Calendar,
   History,
   Calculator,
 } from 'lucide-react';
@@ -16,7 +15,6 @@ const navItems = [
   { path: '/comissoes/regras', label: 'Regras', icon: <FileText className="h-4 w-4" /> },
   { path: '/comissoes/metas', label: 'Metas', icon: <Target className="h-4 w-4" /> },
   { path: '/comissoes/ranking', label: 'Ranking', icon: <Trophy className="h-4 w-4" /> },
-  { path: '/comissoes/calendario', label: 'Calendário', icon: <Calendar className="h-4 w-4" /> },
   { path: '/comissoes/historico', label: 'Histórico', icon: <History className="h-4 w-4" /> },
   { path: '/comissoes/simulador', label: 'Simulador', icon: <Calculator className="h-4 w-4" /> },
 ];
