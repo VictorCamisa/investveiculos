@@ -124,14 +124,14 @@ export function CommissionSection({
           <div className="space-y-2">
             <Label className="text-sm">Regra de Comissão</Label>
             <Select 
-              value={commissionRuleId || ''} 
-              onValueChange={(value) => onCommissionRuleChange(value || null)}
+              value={commissionRuleId || 'auto'} 
+              onValueChange={(value) => onCommissionRuleChange(value === 'auto' ? null : value)}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione a regra" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">Automático (maior prioridade)</SelectItem>
+                <SelectItem value="auto">Automático (maior prioridade)</SelectItem>
                 {commissionRules?.map((rule) => (
                   <SelectItem key={rule.id} value={rule.id}>
                     {rule.name} ({rule.commission_type === 'valor_fixo' 
