@@ -58,10 +58,11 @@ export function UserManagement() {
     });
   };
 
-  // ID do Matheus - único administrador
-  const ADMIN_USER_ID = '6c6e6c96-41d1-4ccc-a8d7-bbe1d1e62336';
-
-  const isUserAdmin = (userId: string) => userId === ADMIN_USER_ID;
+  // Verifica se o usuário é gerente (não pode ser editado/excluído por outros)
+  const isUserAdmin = (userId: string) => {
+    const userInList = users?.find(u => u.id === userId);
+    return userInList?.roles?.includes('gerente') ?? false;
+  };
 
   if (isLoading) {
     return (
