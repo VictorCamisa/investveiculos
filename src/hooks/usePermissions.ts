@@ -1,68 +1,52 @@
-import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import type { ModuleName, PermissionType } from '@/types/users';
 import { useMemo, useCallback } from 'react';
 
-const ALL_MODULES: ModuleName[] = [
-  'crm',
-  'vendas',
-  'estoque',
-  'financeiro',
-  'marketing',
-  'comissoes',
-  'configuracoes',
-  'usuarios',
-];
-
-const ALL_PERMISSIONS: PermissionType[] = ['view', 'create', 'edit', 'delete', 'manage'];
-
-interface UserPermissionsData {
-  isActive: boolean;
-  permissions: { module: ModuleName; permission: PermissionType }[];
-}
+// Permissões por role
+const PERMISSIONS_BY_ROLE: Record<string, { modules: ModuleName[]; permissions: PermissionType[] }> = {
+  gerente: {
+    modules: ['crm', 'vendas', 'estoque', 'financeiro', 'marketing', 'comissoes', 'configuracoes', 'usuarios'],
+    permissions: ['view', 'create', 'edit', 'delete', 'manage'],
+  },
+  vendedor: {
+    modules: ['crm', 'estoque', 'comissoes'],
+    permissions: ['view', 'create', 'edit'],
+  },
+  marketing: {
+    modules: ['crm', 'marketing', 'estoque'],
+    permissions: ['view', 'create', 'edit'],
+  },
+};
 
 export function usePermissions() {
-  const { user, session } = useAuth();
+  const { user, role, loading: authLoading } = useAuth();
 
-  const { data, isLoading } = useQuery({
-    queryKey: ['my-permissions', user?.id],
-    queryFn: async (): Promise<UserPermissionsData> => {
-      // No restrictions: any authenticated user has full access to all modules/actions.
-      const permissions = ALL_MODULES.flatMap((module) =>
-        ALL_PERMISSIONS.map((permission) => ({ module, permission }))
-      );
-
-      return {
-        isActive: true,
-        permissions,
-      };
-    },
-    enabled: !!user?.id && !!session?.access_token,
-    staleTime: 0,
-    gcTime: 1000 * 60 * 5,
-    refetchOnWindowFocus: true,
-    refetchOnMount: 'always',
-    retry: 1,
-  });
+  // Determina permissões baseado no role
+  const permissionsData = useMemo(() => {
+    if (!user || !role) {
+      return { modules: [] as ModuleName[], permissions: [] as PermissionType[] };
+    }
+    
+    return PERMISSIONS_BY_ROLE[role] || { modules: [], permissions: [] };
+  }, [user, role]);
 
   const hasPermission = useCallback((module: ModuleName, permission: PermissionType): boolean => {
-    if (!data) return false;
-    return data.permissions.some(
-      (p) => p.module === module && p.permission === permission
-    );
-  }, [data]);
+    if (!role) return false;
+    const rolePerms = PERMISSIONS_BY_ROLE[role];
+    if (!rolePerms) return false;
+    return rolePerms.modules.includes(module) && rolePerms.permissions.includes(permission);
+  }, [role]);
 
   const hasModuleAccess = useCallback((module: ModuleName): boolean => {
-    if (!data) return false;
-    return data.permissions.some((p) => p.module === module);
-  }, [data]);
+    if (!role) return false;
+    const rolePerms = PERMISSIONS_BY_ROLE[role];
+    if (!rolePerms) return false;
+    return rolePerms.modules.includes(module);
+  }, [role]);
 
   const getAccessibleModules = useCallback((): ModuleName[] => {
-    if (!data) return [];
-    const modules = new Set<ModuleName>();
-    data.permissions.forEach((p) => modules.add(p.module));
-    return Array.from(modules);
-  }, [data]);
+    return permissionsData.modules;
+  }, [permissionsData]);
 
   const getFirstAccessibleRoute = useCallback((): string => {
     const modules = getAccessibleModules();
@@ -89,12 +73,18 @@ export function usePermissions() {
     return '/dashboard';
   }, [getAccessibleModules]);
 
+  const isVendedor = useMemo(() => role === 'vendedor', [role]);
+  const isGerente = useMemo(() => role === 'gerente', [role]);
+
   return useMemo(() => ({
-    isActive: data?.isActive ?? true,
-    isLoading,
+    isActive: !!user,
+    isLoading: authLoading,
     hasPermission,
     hasModuleAccess,
     getAccessibleModules,
     getFirstAccessibleRoute,
-  }), [data, isLoading, hasPermission, hasModuleAccess, getAccessibleModules, getFirstAccessibleRoute]);
+    role,
+    isVendedor,
+    isGerente,
+  }), [user, authLoading, hasPermission, hasModuleAccess, getAccessibleModules, getFirstAccessibleRoute, role, isVendedor, isGerente]);
 }

@@ -2,6 +2,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { Link, useNavigate } from 'react-router-dom';
 import { BentoCard } from '@/components/ui/bento-card';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { SalespersonDashboard } from '@/components/dashboard/SalespersonDashboard';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -104,6 +105,10 @@ export default function Dashboard() {
   const { user, role } = useAuth();
   const navigate = useNavigate();
   
+  // Se for vendedor, mostra dashboard simplificado
+  if (role === 'vendedor') {
+    return <SalespersonDashboard />;
+  }
   // Fetch all data
   const { kpis, isLoading: loadingKpis, vehicleDRE, negotiations, profitReports } = useFinancialDashboard();
   const { dreData, isLoading: loadingDRE } = useDREData(6);

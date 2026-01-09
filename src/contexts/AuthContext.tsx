@@ -17,7 +17,6 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 function sanitizeSession(session: Session | null): Session | null {
-  // Safety: if tokens are missing/corrupted, treat as signed out.
   if (!session?.access_token) return null;
   return session;
 }
@@ -28,6 +27,27 @@ function isRefreshTokenNotFound(error: unknown): boolean {
   return anyErr.code === 'refresh_token_not_found' || (anyErr.message ?? '').includes('Refresh Token Not Found');
 }
 
+async function fetchUserRole(userId: string): Promise<AppRole | null> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { data, error } = await (supabase as any)
+      .from('user_roles')
+      .select('role')
+      .eq('user_id', userId)
+      .maybeSingle();
+    
+    if (error || !data) {
+      if (error) console.error('Error fetching user role:', error);
+      return null;
+    }
+    
+    return data.role as AppRole;
+  } catch (err) {
+    console.error('Error fetching user role:', err);
+    return null;
+  }
+}
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const queryClient = useQueryClient();
   const [user, setUser] = useState<User | null>(null);
@@ -35,17 +55,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
 
-
   useEffect(() => {
     let initialLoadComplete = false;
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      // NOTE: never call supabase methods synchronously inside this callback.
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
       if ((event as unknown as string) === 'TOKEN_REFRESH_FAILED') {
         setTimeout(() => {
-          supabase.auth.signOut().catch(() => {
-            // ignore
-          });
+          supabase.auth.signOut().catch(() => {});
         }, 0);
       }
 
@@ -54,8 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(sanitized?.user ?? null);
 
       if (sanitized?.user) {
-        // Sem restrições: todos usuários têm acesso total (UI) — tratar como gerente.
-        setRole('gerente');
+        // Fetch real role from database
+        const userRole = await fetchUserRole(sanitized.user.id);
+        setRole(userRole);
       } else {
         setRole(null);
       }
@@ -66,15 +83,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
     });
 
-    supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
+    supabase.auth.getSession().then(async ({ data: { session: currentSession }, error }) => {
       if (error) {
         console.error('Error getting session:', error);
         if (isRefreshTokenNotFound(error)) {
-          // Clear broken auth state to prevent redirect loops.
           setTimeout(() => {
-            supabase.auth.signOut().catch(() => {
-              // ignore
-            });
+            supabase.auth.signOut().catch(() => {});
           }, 0);
         }
       }
@@ -84,8 +98,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setUser(sanitized?.user ?? null);
 
       if (sanitized?.user) {
-        // Sem restrições: todos usuários têm acesso total (UI) — tratar como gerente.
-        setRole('gerente');
+        // Fetch real role from database
+        const userRole = await fetchUserRole(sanitized.user.id);
+        setRole(userRole);
       } else {
         setRole(null);
       }
@@ -105,7 +120,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       password,
     });
     
-    // Invalidar cache de permissões após login para garantir dados frescos
     if (!error) {
       queryClient.invalidateQueries({ queryKey: ['my-permissions'] });
     }
