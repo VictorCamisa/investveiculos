@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { Plus, QrCode, Wifi, WifiOff, RefreshCw, Trash2, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -30,7 +30,8 @@ import {
   useCreateWhatsAppInstance, 
   useDeleteWhatsAppInstance,
   useUpdateWhatsAppInstance,
-  useWhatsAppInstanceAction
+  useWhatsAppInstanceAction,
+  useSyncInstanceStatus
 } from '@/hooks/useWhatsApp';
 import { instanceStatusLabels, instanceStatusColors } from '@/types/whatsapp';
 import { cn } from '@/lib/utils';
@@ -42,6 +43,7 @@ export function WhatsAppInstances() {
   const deleteInstance = useDeleteWhatsAppInstance();
   const updateInstance = useUpdateWhatsAppInstance();
   const instanceAction = useWhatsAppInstanceAction();
+  const syncStatus = useSyncInstanceStatus();
   
   const [dialogOpen, setDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
@@ -87,12 +89,31 @@ export function WhatsAppInstances() {
   };
 
   const handleCheckStatus = async (instanceId: string) => {
-    await instanceAction.mutateAsync({ action: 'status', instanceId });
+    await syncStatus.mutateAsync(instanceId);
   };
 
   const handleLogout = async (instanceId: string) => {
     await instanceAction.mutateAsync({ action: 'logout', instanceId });
   };
+
+  // Auto-sync status every 5 seconds for instances not connected
+  React.useEffect(() => {
+    if (!instances?.length) return;
+
+    const nonConnectedInstances = instances.filter(
+      (i) => i.status !== 'connected' && i.status !== 'disconnected'
+    );
+
+    if (nonConnectedInstances.length === 0) return;
+
+    const interval = setInterval(() => {
+      nonConnectedInstances.forEach((instance) => {
+        syncStatus.mutate(instance.id);
+      });
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [instances]);
 
   return (
     <div className="space-y-6">
