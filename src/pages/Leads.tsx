@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Plus, LayoutGrid, List, Filter } from 'lucide-react';
+import { Plus, LayoutGrid, List, Filter, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -9,6 +9,16 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import {
   Select,
   SelectContent,
@@ -20,7 +30,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeadCard } from '@/components/crm/LeadCard';
 import { LeadForm } from '@/components/crm/LeadForm';
 import { LeadsPipeline } from '@/components/crm/LeadsPipeline';
-import { useLeads, useCreateLead, useUpdateLead } from '@/hooks/useLeads';
+import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/useLeads';
+import { usePermissions } from '@/hooks/usePermissions';
 import type { Lead, LeadStatus, LeadSource } from '@/types/crm';
 import { leadStatusLabels, leadSourceLabels } from '@/types/crm';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -28,6 +39,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function Leads() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
   const [sourceFilter, setSourceFilter] = useState<LeadSource | 'all'>('all');
@@ -36,6 +48,8 @@ export default function Leads() {
   const { data: leads, isLoading } = useLeads();
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
+  const deleteLead = useDeleteLead();
+  const { isGerente } = usePermissions();
 
   const filteredLeads = leads?.filter((lead) => {
     const matchesSearch =
@@ -205,7 +219,21 @@ export default function Leads() {
       <Dialog open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>Editar Lead</DialogTitle>
+            <div className="flex items-center justify-between">
+              <DialogTitle>Editar Lead</DialogTitle>
+              {isGerente && selectedLead && (
+                <Button
+                  variant="destructive"
+                  size="sm"
+                  onClick={() => {
+                    setLeadToDelete(selectedLead);
+                  }}
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Excluir
+                </Button>
+              )}
+            </div>
           </DialogHeader>
           <div className="mt-4">
             {selectedLead && (
@@ -218,6 +246,37 @@ export default function Leads() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!leadToDelete} onOpenChange={(open) => !open && setLeadToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir Lead</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja excluir o lead <strong>{leadToDelete?.name}</strong>? 
+              Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (leadToDelete) {
+                  deleteLead.mutate(leadToDelete.id, {
+                    onSuccess: () => {
+                      setLeadToDelete(null);
+                      setSelectedLead(null);
+                    },
+                  });
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
