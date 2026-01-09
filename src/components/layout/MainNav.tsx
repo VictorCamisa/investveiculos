@@ -9,6 +9,7 @@ import {
   DollarSign,
   Megaphone,
   Coins,
+  FileText,
 } from 'lucide-react';
 import type { ModuleName } from '@/types/users';
 
@@ -27,6 +28,7 @@ const allNavItems: NavItem[] = [
   { path: '/comissoes', label: 'Comissões', icon: <Coins className="h-4 w-4" />, requiredModule: 'comissoes' },
   { path: '/financeiro', label: 'Financeiro', icon: <DollarSign className="h-4 w-4" />, requiredModule: 'financeiro' },
   { path: '/marketing', label: 'Marketing', icon: <Megaphone className="h-4 w-4" />, requiredModule: 'marketing' },
+  { path: '/relatorios', label: 'Relatórios', icon: <FileText className="h-4 w-4" />, requiredModule: 'marketing' },
 ];
 
 interface MainNavProps {
