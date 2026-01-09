@@ -3237,6 +3237,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      increment_round_robin_counters: {
+        Args: { p_salesperson_id: string }
+        Returns: undefined
+      }
       is_master_user: { Args: { _user_id: string }; Returns: boolean }
       log_activity: {
         Args: {
