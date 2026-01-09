@@ -131,24 +131,16 @@ export default function Auth() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Handle redirect after login based on permissions
+  // Handle redirect after login or when user is already logged in
   useEffect(() => {
-    if (user && session && pendingRedirect && !permissionsLoading) {
+    // Only redirect when we have user, session, and permissions are fully loaded
+    if (user && session && !permissionsLoading) {
       const firstRoute = getFirstAccessibleRoute();
-      navigate(firstRoute);
+      navigate(firstRoute, { replace: true });
       setPendingRedirect(false);
+      setIsLoading(false);
     }
-  }, [user, session, pendingRedirect, permissionsLoading, getFirstAccessibleRoute, navigate]);
-
-  // If user is already logged in, redirect them
-  useEffect(() => {
-    if (user && session && !pendingRedirect) {
-      if (!permissionsLoading) {
-        const firstRoute = getFirstAccessibleRoute();
-        navigate(firstRoute);
-      }
-    }
-  }, [user, session, permissionsLoading, getFirstAccessibleRoute, navigate, pendingRedirect]);
+  }, [user, session, permissionsLoading, getFirstAccessibleRoute, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
