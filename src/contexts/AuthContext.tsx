@@ -132,14 +132,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const signIn = async (email: string, password: string) => {
+    // Limpar todo o cache antes do login para evitar dados de outro usuário
+    queryClient.clear();
+    
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
-    
-    if (!error) {
-      queryClient.invalidateQueries({ queryKey: ['my-permissions'] });
-    }
     
     return { error };
   };
@@ -161,6 +160,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const signOut = async () => {
+    // Limpar todo o cache ao fazer logout
+    queryClient.clear();
     await supabase.auth.signOut();
     setRole(null);
   };
