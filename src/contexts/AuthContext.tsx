@@ -60,67 +60,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
 
-    // First, set up the auth state listener
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
-      if ((event as unknown as string) === 'TOKEN_REFRESH_FAILED') {
-        setTimeout(() => {
-          supabase.auth.signOut().catch(() => {});
-        }, 0);
-        return;
-      }
-
-      const sanitized = sanitizeSession(nextSession);
+    const processSession = async (newSession: Session | null) => {
+      const sanitized = sanitizeSession(newSession);
+      
+      if (!isMounted) return;
+      
       setSession(sanitized);
       setUser(sanitized?.user ?? null);
 
-      // Defer role fetching to avoid deadlock
       if (sanitized?.user) {
         setRoleLoading(true);
-        setTimeout(() => {
-          fetchUserRole(sanitized.user.id).then(userRole => {
-            if (isMounted) {
-              setRole(userRole);
-              setRoleLoading(false);
-            }
-          });
-        }, 0);
+        const userRole = await fetchUserRole(sanitized.user.id);
+        if (isMounted) {
+          setRole(userRole);
+          setRoleLoading(false);
+        }
       } else {
         setRole(null);
         setRoleLoading(false);
       }
+      
+      if (isMounted) {
+        setLoading(false);
+      }
+    };
+
+    // Set up the auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, newSession) => {
+      if ((event as unknown as string) === 'TOKEN_REFRESH_FAILED') {
+        supabase.auth.signOut().catch(() => {});
+        return;
+      }
+      
+      // Use setTimeout to defer and avoid Supabase deadlock
+      setTimeout(() => {
+        processSession(newSession);
+      }, 0);
     });
 
-    // Then check for existing session
+    // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
-      if (!isMounted) return;
-      
       if (error) {
         console.error('Error getting session:', error);
         if (isRefreshTokenNotFound(error)) {
-          setTimeout(() => {
-            supabase.auth.signOut().catch(() => {});
-          }, 0);
+          supabase.auth.signOut().catch(() => {});
         }
+        if (isMounted) setLoading(false);
+        return;
       }
-
-      const sanitized = sanitizeSession(currentSession ?? null);
-      setSession(sanitized);
-      setUser(sanitized?.user ?? null);
-
-      if (sanitized?.user) {
-        setRoleLoading(true);
-        fetchUserRole(sanitized.user.id).then(userRole => {
-          if (isMounted) {
-            setRole(userRole);
-            setRoleLoading(false);
-            setLoading(false);
-          }
-        });
-      } else {
-        setRole(null);
-        setRoleLoading(false);
-        setLoading(false);
-      }
+      
+      processSession(currentSession);
     });
 
     return () => {
