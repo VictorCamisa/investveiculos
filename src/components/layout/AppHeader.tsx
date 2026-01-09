@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import {
@@ -25,7 +26,17 @@ import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
 export function AppHeader() {
   const { user, signOut } = useAuth();
+  const { isGerente, role } = usePermissions();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const getRoleLabel = () => {
+    switch (role) {
+      case 'gerente': return 'Gerente';
+      case 'vendedor': return 'Vendedor';
+      case 'marketing': return 'Marketing';
+      default: return 'Usuário';
+    }
+  };
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
@@ -75,18 +86,20 @@ export function AppHeader() {
                 <div className="flex flex-col">
                   <span>{user?.user_metadata?.full_name || 'Usuário'}</span>
                   <span className="text-xs font-normal text-muted-foreground">
-                    Acesso total
+                    {getRoleLabel()}
                   </span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              <DropdownMenuItem asChild>
-                <Link to="/configuracoes" className="cursor-pointer">
-                  <Settings className="h-4 w-4 mr-2" />
-                  Configurações
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
+              {isGerente && (
+                <DropdownMenuItem asChild>
+                  <Link to="/configuracoes" className="cursor-pointer">
+                    <Settings className="h-4 w-4 mr-2" />
+                    Configurações
+                  </Link>
+                </DropdownMenuItem>
+              )}
+              {isGerente && <DropdownMenuSeparator />}
               <DropdownMenuItem onClick={signOut} className="text-destructive cursor-pointer">
                 <LogOut className="h-4 w-4 mr-2" />
                 Sair
