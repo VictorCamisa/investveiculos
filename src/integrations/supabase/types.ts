@@ -3269,6 +3269,7 @@ export type Database = {
         | "olx"
         | "webmotors"
         | "outros"
+        | "whatsapp"
       lead_status:
         | "novo"
         | "contato_inicial"
@@ -3459,6 +3460,7 @@ export const Constants = {
         "olx",
         "webmotors",
         "outros",
+        "whatsapp",
       ],
       lead_status: [
         "novo",
