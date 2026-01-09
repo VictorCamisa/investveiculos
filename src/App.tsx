@@ -34,6 +34,7 @@ const LostNegotiations = lazy(() => import("./pages/LostNegotiations"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const Reports = lazy(() => import("./pages/Reports"));
+const Documentation = lazy(() => import("./pages/Documentation"));
 
 // Lazy load layouts
 const CRMLayout = lazy(() => import("@/components/crm/CRMLayout").then(m => ({ default: m.CRMLayout })));
@@ -259,6 +260,15 @@ const App = () => (
                     <Route path="instancias" element={<WhatsAppInstances />} />
                     <Route path="config" element={<WhatsAppConfig />} />
                   </Route>
+
+                  {/* Documentation - Manager only */}
+                  <Route path="/documentacao" element={
+                    <ProtectedRoute requiredModule="configuracoes">
+                      <Suspense fallback={<PageLoader />}>
+                        <Documentation />
+                      </Suspense>
+                    </ProtectedRoute>
+                  } />
                 </Route>
                 <Route path="*" element={<NotFound />} />
               </Routes>
