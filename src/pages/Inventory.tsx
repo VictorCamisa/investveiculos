@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, LayoutGrid, List, BarChart3, Car, CheckCircle, Clock, Wrench, DollarSign, Upload } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, BarChart3, Car, CheckCircle, Clock, Wrench, DollarSign, Upload, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -15,6 +15,7 @@ import { VehicleCard } from '@/components/inventory/VehicleCard';
 import { VehicleDRECard } from '@/components/inventory/VehicleDRECard';
 import { VehicleTable } from '@/components/inventory/VehicleTable';
 import { CreateVehicleDialog } from '@/components/inventory/CreateVehicleDialog';
+import { MercadoLivreConfigDialog } from '@/components/inventory/MercadoLivreConfigDialog';
 import { BentoCard } from '@/components/ui/bento-card';
 import { useVehicles, useAllVehicleDRE, useCreateVehicle } from '@/hooks/useVehicles';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -28,6 +29,7 @@ type ViewMode = 'grid' | 'table' | 'dre';
 
 export default function Inventory() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isMercadoLivreDialogOpen, setIsMercadoLivreDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -105,6 +107,15 @@ export default function Inventory() {
 
         {isManager && (
           <div className="flex gap-2">
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => setIsMercadoLivreDialogOpen(true)}
+              className="border-yellow-500/50 hover:bg-yellow-50 dark:hover:bg-yellow-900/20"
+            >
+              <Store className="h-4 w-4 mr-2 text-yellow-600" />
+              Mercado Livre
+            </Button>
             <Link to="/estoque/importar">
               <Button variant="outline" size="lg">
                 <Upload className="h-4 w-4 mr-2" />
@@ -266,6 +277,12 @@ export default function Inventory() {
         onOpenChange={setIsCreateDialogOpen}
         onSubmit={handleCreateVehicle}
         isLoading={createVehicle.isPending}
+      />
+
+      {/* Mercado Livre Config Dialog */}
+      <MercadoLivreConfigDialog
+        open={isMercadoLivreDialogOpen}
+        onOpenChange={setIsMercadoLivreDialogOpen}
       />
     </div>
   );

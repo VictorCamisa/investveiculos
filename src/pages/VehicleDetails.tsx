@@ -1,11 +1,13 @@
 import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, Edit, Trash2, Plus, Calendar, Gauge, Car, DollarSign, Clock, TrendingUp, TrendingDown, AlertTriangle, Globe, EyeOff, Image } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Plus, Calendar, Gauge, Car, DollarSign, Clock, TrendingUp, TrendingDown, AlertTriangle, Globe, EyeOff, Image, Share2, Copy, FileText, Bookmark } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { VehiclePhotosUpload } from '@/components/inventory/VehiclePhotosUpload';
+import { VehicleSaleSimulator } from '@/components/inventory/VehicleSaleSimulator';
+import { VehicleActiveNegotiations } from '@/components/inventory/VehicleActiveNegotiations';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +34,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { vehicleStatusLabels, vehicleStatusColors, vehicleCostTypeLabels, fuelTypeLabels, transmissionLabels } from '@/types/inventory';
 import type { VehicleDRE } from '@/types/inventory';
+import { toast } from 'sonner';
 
 export default function VehicleDetails() {
   const { id } = useParams<{ id: string }>();
@@ -109,7 +112,25 @@ export default function VehicleDetails() {
     updateVehicle.mutate({ id: vehicle.id, featured: !vehicle.featured });
   };
 
+  const handleToggleReserved = () => {
+    const newStatus = vehicle.status === 'reservado' ? 'disponivel' : 'reservado';
+    updateVehicle.mutate({ id: vehicle.id, status: newStatus });
+  };
+
+  const handleShareWhatsApp = () => {
+    const text = `🚗 *${vehicle.brand} ${vehicle.model}*\n${vehicle.version || ''}\n📅 ${vehicle.year_fabrication}/${vehicle.year_model}\n⛽ ${fuelTypeLabels[vehicle.fuel_type]}\n📍 ${vehicle.km.toLocaleString('pt-BR')} km\n💰 ${formatCurrency(vehicle.sale_price)}\n\nEntre em contato para mais informações!`;
+    const url = `https://wa.me/?text=${encodeURIComponent(text)}`;
+    window.open(url, '_blank');
+  };
+
+  const handleCopyLink = () => {
+    const url = `${window.location.origin}/estoque/${vehicle.id}`;
+    navigator.clipboard.writeText(url);
+    toast.success('Link copiado para a área de transferência!');
+  };
+
   // Cálculos DRE
+  const totalCost = dre ? dre.total_investment + dre.holding_cost : (vehicle.purchase_price || 0);
   const potentialMargin = dre && dre.sale_price 
     ? dre.sale_price - dre.total_investment - dre.holding_cost 
     : null;
@@ -209,6 +230,93 @@ export default function VehicleDetails() {
           </div>
         )}
       </div>
+
+      {/* Cards de Resumo: Custo + Simulador + Negociações */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Card de Custo Total Atual */}
+        <Card className="bg-gradient-to-br from-primary/10 to-primary/5 border-primary/30">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <DollarSign className="h-5 w-5 text-primary" />
+              Custo Total Atual
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold text-primary mb-2">
+              {formatCurrency(totalCost)}
+            </p>
+            <div className="space-y-1 text-sm text-muted-foreground">
+              <div className="flex justify-between">
+                <span>Valor de Compra:</span>
+                <span className="font-medium text-foreground">{formatCurrency(vehicle.purchase_price)}</span>
+              </div>
+              {dre && dre.total_real_costs > 0 && (
+                <div className="flex justify-between">
+                  <span>Custos Adicionais:</span>
+                  <span className="font-medium text-foreground">{formatCurrency(dre.total_real_costs)}</span>
+                </div>
+              )}
+              {dre && dre.holding_cost > 0 && (
+                <div className="flex justify-between">
+                  <span>Custo de Capital:</span>
+                  <span className="font-medium text-destructive">{formatCurrency(dre.holding_cost)}</span>
+                </div>
+              )}
+            </div>
+            {dre && (
+              <div className="mt-3 pt-3 border-t flex items-center gap-2 text-sm">
+                <Clock className="h-4 w-4 text-muted-foreground" />
+                <span className={isOverdue ? 'text-destructive font-medium' : 'text-muted-foreground'}>
+                  {dre.days_in_stock} dias em estoque
+                  {dre.expected_sale_days && ` (meta: ${dre.expected_sale_days})`}
+                </span>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Simulador de Venda */}
+        <VehicleSaleSimulator
+          totalCost={totalCost}
+          suggestedPrice={vehicle.sale_price}
+          minimumPrice={vehicle.minimum_price}
+        />
+
+        {/* Negociações Ativas */}
+        <VehicleActiveNegotiations vehicleId={vehicle.id} />
+      </div>
+
+      {/* Funções Úteis */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="text-base">Ações Rápidas</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant={vehicle.status === 'reservado' ? 'default' : 'outline'}
+              size="sm"
+              onClick={handleToggleReserved}
+              disabled={updateVehicle.isPending}
+            >
+              <Bookmark className="h-4 w-4 mr-2" />
+              {vehicle.status === 'reservado' ? 'Remover Reserva' : 'Marcar Reservado'}
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleShareWhatsApp}>
+              <Share2 className="h-4 w-4 mr-2" />
+              Enviar WhatsApp
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleCopyLink}>
+              <Copy className="h-4 w-4 mr-2" />
+              Copiar Link
+            </Button>
+            <Button variant="outline" size="sm" onClick={() => toast.info('Funcionalidade em desenvolvimento')}>
+              <FileText className="h-4 w-4 mr-2" />
+              Gerar Orçamento PDF
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs defaultValue="info" className="w-full">
         <TabsList>
