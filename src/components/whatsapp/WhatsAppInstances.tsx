@@ -315,14 +315,7 @@ export function WhatsAppInstances() {
                       className="w-full h-full object-contain"
                     />
                   </div>
-                ) : instance.status === 'disconnected' ? (
-                  <div className="aspect-square bg-muted/50 rounded-lg flex flex-col items-center justify-center p-4">
-                    <QrCode className="h-12 w-12 text-muted-foreground mb-2" />
-                    <p className="text-sm text-muted-foreground text-center">
-                      Clique em "Gerar QR Code" para conectar
-                    </p>
-                  </div>
-                ) : (
+                ) : instance.status === 'connected' ? (
                   <div className="aspect-square bg-green-50 dark:bg-green-950/30 rounded-lg flex flex-col items-center justify-center p-4">
                     <Wifi className="h-12 w-12 text-green-500 mb-2" />
                     <p className="text-sm text-green-600 dark:text-green-400 font-medium">
@@ -334,17 +327,35 @@ export function WhatsAppInstances() {
                       </p>
                     )}
                   </div>
+                ) : instance.status === 'connecting' ? (
+                  <div className="aspect-square bg-yellow-50 dark:bg-yellow-950/30 rounded-lg flex flex-col items-center justify-center p-4">
+                    <RefreshCw className="h-12 w-12 text-yellow-500 mb-2 animate-spin" />
+                    <p className="text-sm text-yellow-600 dark:text-yellow-400 font-medium">
+                      Conectando...
+                    </p>
+                    <p className="text-xs text-muted-foreground text-center mt-2">
+                      Clique em "Gerar QR Code" para obter o código
+                    </p>
+                  </div>
+                ) : (
+                  <div className="aspect-square bg-muted/50 rounded-lg flex flex-col items-center justify-center p-4">
+                    <QrCode className="h-12 w-12 text-muted-foreground mb-2" />
+                    <p className="text-sm text-muted-foreground text-center">
+                      Clique em "Gerar QR Code" para conectar
+                    </p>
+                  </div>
                 )}
 
                 {/* Actions */}
                 <div className="flex gap-2">
-                  {instance.status === 'disconnected' && (
+                  {(instance.status === 'disconnected' || instance.status === 'connecting') && (
                     <Button 
                       className="flex-1" 
                       onClick={() => handleGenerateQRCode(instance.id)}
+                      disabled={instanceAction.isPending}
                     >
                       <QrCode className="h-4 w-4 mr-2" />
-                      Gerar QR Code
+                      {instanceAction.isPending ? 'Gerando...' : 'Gerar QR Code'}
                     </Button>
                   )}
                   
@@ -353,6 +364,7 @@ export function WhatsAppInstances() {
                       className="flex-1" 
                       variant="outline"
                       onClick={() => handleGenerateQRCode(instance.id)}
+                      disabled={instanceAction.isPending}
                     >
                       <RefreshCw className="h-4 w-4 mr-2" />
                       Atualizar QR
