@@ -55,40 +55,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [role, setRole] = useState<AppRole | null>(null);
   const [loading, setLoading] = useState(true);
-  const [roleLoading, setRoleLoading] = useState(true); // Start as true to prevent premature redirects
+  const [roleLoading, setRoleLoading] = useState(false);
 
   useEffect(() => {
-    let initialLoadComplete = false;
     let isMounted = true;
 
-    const handleAuthChange = async (nextSession: Session | null) => {
-      const sanitized = sanitizeSession(nextSession);
-      
-      if (!isMounted) return;
-      
-      setSession(sanitized);
-      setUser(sanitized?.user ?? null);
-
-      if (sanitized?.user) {
-        setRoleLoading(true);
-        // Fetch real role from database
-        const userRole = await fetchUserRole(sanitized.user.id);
-        if (isMounted) {
-          setRole(userRole);
-          setRoleLoading(false);
-        }
-      } else {
-        setRole(null);
-        setRoleLoading(false);
-      }
-
-      if (!initialLoadComplete && isMounted) {
-        initialLoadComplete = true;
-        setLoading(false);
-      }
-    };
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, nextSession) => {
+    // First, set up the auth state listener
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, nextSession) => {
       if ((event as unknown as string) === 'TOKEN_REFRESH_FAILED') {
         setTimeout(() => {
           supabase.auth.signOut().catch(() => {});
@@ -96,10 +69,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      await handleAuthChange(nextSession);
+      const sanitized = sanitizeSession(nextSession);
+      setSession(sanitized);
+      setUser(sanitized?.user ?? null);
+
+      // Defer role fetching to avoid deadlock
+      if (sanitized?.user) {
+        setRoleLoading(true);
+        setTimeout(() => {
+          fetchUserRole(sanitized.user.id).then(userRole => {
+            if (isMounted) {
+              setRole(userRole);
+              setRoleLoading(false);
+            }
+          });
+        }, 0);
+      } else {
+        setRole(null);
+        setRoleLoading(false);
+      }
     });
 
-    supabase.auth.getSession().then(async ({ data: { session: currentSession }, error }) => {
+    // Then check for existing session
+    supabase.auth.getSession().then(({ data: { session: currentSession }, error }) => {
+      if (!isMounted) return;
+      
       if (error) {
         console.error('Error getting session:', error);
         if (isRefreshTokenNotFound(error)) {
@@ -109,7 +103,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
 
-      await handleAuthChange(currentSession ?? null);
+      const sanitized = sanitizeSession(currentSession ?? null);
+      setSession(sanitized);
+      setUser(sanitized?.user ?? null);
+
+      if (sanitized?.user) {
+        setRoleLoading(true);
+        fetchUserRole(sanitized.user.id).then(userRole => {
+          if (isMounted) {
+            setRole(userRole);
+            setRoleLoading(false);
+            setLoading(false);
+          }
+        });
+      } else {
+        setRole(null);
+        setRoleLoading(false);
+        setLoading(false);
+      }
     });
 
     return () => {
