@@ -261,7 +261,8 @@ export function SalesTeamView() {
                           <Button
                             size="sm"
                             variant="outline"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation();
                               setSelectedUser(person);
                               setNewRole(person.role || '');
                               setRoleDialogOpen(true);
@@ -273,7 +274,8 @@ export function SalesTeamView() {
                           {person.role === 'vendedor' && !person.is_in_round_robin && (
                             <Button
                               size="sm"
-                              onClick={() => {
+                              onClick={(e) => {
+                                e.stopPropagation();
                                 setSelectedUser(person);
                                 setAddDialogOpen(true);
                               }}
