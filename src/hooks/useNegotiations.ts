@@ -20,7 +20,7 @@ export function useNegotiations() {
         .select(`
           *,
           lead:leads(id, name, phone, email, source),
-          vehicle:vehicles(id, brand, model, year_model, plate, sale_price),
+          vehicle:vehicles(id, brand, model, year_model, plate, price_sale),
           customer:customers(id, name, phone, email)
         `)
         .order('updated_at', { ascending: false, nullsFirst: false });
@@ -71,7 +71,7 @@ export function useNegotiation(id: string) {
         .select(`
           *,
           lead:leads(id, name, phone, email, source),
-          vehicle:vehicles(id, brand, model, year_model, plate, sale_price)
+          vehicle:vehicles(id, brand, model, year_model, plate, price_sale)
         `)
         .eq('id', id)
         .maybeSingle();
