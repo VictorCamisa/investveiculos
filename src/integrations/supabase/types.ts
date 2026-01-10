@@ -678,6 +678,110 @@ export type Database = {
           },
         ]
       }
+      lead_qualifications: {
+        Row: {
+          budget_max: number | null
+          budget_min: number | null
+          completeness_score: number | null
+          created_at: string
+          decision_maker: boolean | null
+          down_payment: number | null
+          engagement_score: number | null
+          has_trade_in: boolean | null
+          id: string
+          intent_score: number | null
+          lead_id: string | null
+          max_installment: number | null
+          negotiation_id: string | null
+          notes: string | null
+          payment_method: string | null
+          purchase_timeline: string | null
+          qualified_by: string | null
+          score: number
+          trade_in_value: number | null
+          trade_in_vehicle: string | null
+          updated_at: string
+          vehicle_interest: string | null
+        }
+        Insert: {
+          budget_max?: number | null
+          budget_min?: number | null
+          completeness_score?: number | null
+          created_at?: string
+          decision_maker?: boolean | null
+          down_payment?: number | null
+          engagement_score?: number | null
+          has_trade_in?: boolean | null
+          id?: string
+          intent_score?: number | null
+          lead_id?: string | null
+          max_installment?: number | null
+          negotiation_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          purchase_timeline?: string | null
+          qualified_by?: string | null
+          score?: number
+          trade_in_value?: number | null
+          trade_in_vehicle?: string | null
+          updated_at?: string
+          vehicle_interest?: string | null
+        }
+        Update: {
+          budget_max?: number | null
+          budget_min?: number | null
+          completeness_score?: number | null
+          created_at?: string
+          decision_maker?: boolean | null
+          down_payment?: number | null
+          engagement_score?: number | null
+          has_trade_in?: boolean | null
+          id?: string
+          intent_score?: number | null
+          lead_id?: string | null
+          max_installment?: number | null
+          negotiation_id?: string | null
+          notes?: string | null
+          payment_method?: string | null
+          purchase_timeline?: string | null
+          qualified_by?: string | null
+          score?: number
+          trade_in_value?: number | null
+          trade_in_vehicle?: string | null
+          updated_at?: string
+          vehicle_interest?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lead_qualifications_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_qualifications_negotiation_id_fkey"
+            columns: ["negotiation_id"]
+            isOneToOne: false
+            referencedRelation: "negotiations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_qualifications_qualified_by_fkey"
+            columns: ["qualified_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_qualifications_qualified_by_fkey"
+            columns: ["qualified_by"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       leads: {
         Row: {
           assigned_to: string | null
