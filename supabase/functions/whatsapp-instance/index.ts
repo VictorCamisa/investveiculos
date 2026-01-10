@@ -24,21 +24,25 @@ serve(async (req) => {
 
   try {
     const body = await req.json();
-    const { action, instanceId, userId, serviceKey } = body;
+    const { action, instanceId, userId } = body;
     
-    // Use provided serviceKey or fallback to environment variables
-    const supabaseUrl = Deno.env.get('MY_SUPABASE_URL') ?? Deno.env.get('SUPABASE_URL') ?? 'https://rugbunseyblzapwzevqh.supabase.co';
-    let serviceRoleKey = serviceKey ?? Deno.env.get('MY_SUPABASE_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    // Use authenticated user's token instead of service_role key
+    const authHeader = req.headers.get('Authorization');
+    const supabaseUrl = 'https://rugbunseyblzapwzevqh.supabase.co';
+    const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJ1Z2J1bnNleWJsemFwd3pldnFoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5Nzg5ODIsImV4cCI6MjA4MzU1NDk4Mn0.1_DRJ9LU6IMZjrb418FktcYywDZ9HV2QJj-vM4Ga9bA';
     
-    console.log('Supabase config check:', { 
-      hasUrl: !!supabaseUrl, 
-      hasServiceKey: !!serviceRoleKey,
-      serviceKeyLength: serviceRoleKey.length,
-      serviceKeySource: serviceKey ? 'provided' : 'env',
-      urlPrefix: supabaseUrl.substring(0, 30)
+    console.log('Auth config:', { 
+      hasAuthHeader: !!authHeader,
+      action,
+      userId
     });
     
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    // Create client with user's auth token
+    const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: authHeader ? { Authorization: authHeader } : {}
+      }
+    });
     
     console.log('WhatsApp Instance action:', action, { instanceId, userId });
 
