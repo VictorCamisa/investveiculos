@@ -129,6 +129,25 @@ export function useCreateNegotiation() {
   });
 }
 
+interface QualificationData {
+  vehicle_interest?: string;
+  budget_min?: number | null;
+  budget_max?: number | null;
+  down_payment?: number | null;
+  max_installment?: number | null;
+  payment_method?: string;
+  has_trade_in?: boolean;
+  trade_in_vehicle?: string;
+  trade_in_value?: number | null;
+  purchase_timeline?: string;
+  decision_maker?: boolean;
+  notes?: string;
+  engagement_score: number;
+  intent_score: number;
+  completeness_score: number;
+  score: number;
+}
+
 interface UpdateNegotiationInput {
   id: string;
   vehicle_id?: string | null;
@@ -144,13 +163,14 @@ interface UpdateNegotiationInput {
   appointment_time?: string | null;
   showed_up?: boolean | null;
   objections?: string[];
+  qualificationData?: QualificationData;
 }
 
 export function useUpdateNegotiation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...input }: UpdateNegotiationInput & { salesperson_id?: string | null }) => {
+    mutationFn: async ({ id, qualificationData, ...input }: UpdateNegotiationInput & { salesperson_id?: string | null }) => {
       // If moving to "negociando" (Qualificado), check if we need to assign a salesperson
       if (input.status === 'negociando') {
         // Get current negotiation to check if it has a salesperson
@@ -221,6 +241,43 @@ export function useUpdateNegotiation() {
             toast.warning('Nenhum vendedor disponível no Round Robin');
           }
         }
+      }
+
+      // Save qualification data if provided
+      if (qualificationData && input.status === 'negociando') {
+        // Get current negotiation to get lead_id
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: negData } = await (supabase as any)
+          .from('negotiations')
+          .select('lead_id')
+          .eq('id', id)
+          .single();
+
+        // Get current user
+        const { data: { user } } = await supabase.auth.getUser();
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await (supabase as any).from('lead_qualifications').insert({
+          lead_id: negData?.lead_id,
+          negotiation_id: id,
+          qualified_by: user?.id,
+          score: qualificationData.score,
+          vehicle_interest: qualificationData.vehicle_interest,
+          budget_min: qualificationData.budget_min,
+          budget_max: qualificationData.budget_max,
+          down_payment: qualificationData.down_payment,
+          max_installment: qualificationData.max_installment,
+          payment_method: qualificationData.payment_method,
+          has_trade_in: qualificationData.has_trade_in,
+          trade_in_vehicle: qualificationData.trade_in_vehicle,
+          trade_in_value: qualificationData.trade_in_value,
+          purchase_timeline: qualificationData.purchase_timeline,
+          decision_maker: qualificationData.decision_maker,
+          notes: qualificationData.notes,
+          engagement_score: qualificationData.engagement_score,
+          intent_score: qualificationData.intent_score,
+          completeness_score: qualificationData.completeness_score,
+        });
       }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any

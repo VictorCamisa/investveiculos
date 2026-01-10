@@ -70,14 +70,6 @@ export function StageTransitionModal({
           requireValue: true,
           showProposalDescription: true,
         };
-      case 'negociando':
-        return {
-          title: 'Qualificar Lead',
-          description: 'Ao confirmar, um vendedor será atribuído automaticamente via Round Robin.',
-          requireValue: false,
-          showNotes: true,
-          showRoundRobinWarning: true,
-        };
       case 'perdido':
         return {
           title: 'Marcar como Perdido',

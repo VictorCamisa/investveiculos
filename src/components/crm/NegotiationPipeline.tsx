@@ -7,6 +7,8 @@ import { Plus, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SaleFromNegotiationModal } from '@/components/sales/SaleFromNegotiationModal';
 import { StageTransitionModal, StageTransitionData } from './StageTransitionModal';
+import { QualificationModal } from './QualificationModal';
+import type { QualificationFormData, ScoreBreakdown } from '@/types/qualification';
 
 interface NegotiationPipelineProps {
   negotiations: Negotiation[];
@@ -33,6 +35,10 @@ export function NegotiationPipeline({
     negotiation: Negotiation;
     targetStatus: NegotiationStatus;
   } | null>(null);
+  
+  // Qualification modal state (for 'negociando' / Qualificado stage)
+  const [qualificationModalOpen, setQualificationModalOpen] = useState(false);
+  const [pendingQualification, setPendingQualification] = useState<Negotiation | null>(null);
 
   const getNegotiationsByStatus = (status: NegotiationStatus) => {
     return negotiations.filter(n => n.status === status);
@@ -50,6 +56,10 @@ export function NegotiationPipeline({
 
   // Stages that require transition modal
   const stagesRequiringModal: NegotiationStatus[] = ['proposta_enviada', 'negociando', 'perdido'];
+
+  // Stages that require qualification modal vs transition modal
+  const qualificationStage: NegotiationStatus = 'negociando';
+  const stagesRequiringTransitionModal: NegotiationStatus[] = ['proposta_enviada', 'perdido'];
 
   const handleDrop = (e: React.DragEvent, newStatus: NegotiationStatus) => {
     e.preventDefault();
@@ -69,8 +79,15 @@ export function NegotiationPipeline({
       return;
     }
 
+    // "Qualificado" opens qualification modal
+    if (newStatus === qualificationStage) {
+      setPendingQualification(negotiation);
+      setQualificationModalOpen(true);
+      return;
+    }
+
     // Stages that require transition modal
-    if (stagesRequiringModal.includes(newStatus)) {
+    if (stagesRequiringTransitionModal.includes(newStatus)) {
       setPendingTransition({ negotiation, targetStatus: newStatus });
       setTransitionModalOpen(true);
       return;
@@ -78,6 +95,25 @@ export function NegotiationPipeline({
 
     // Other transitions: direct update
     updateNegotiation.mutate({ id: negotiationId, status: newStatus });
+  };
+
+  const handleQualificationConfirm = (formData: QualificationFormData, score: ScoreBreakdown) => {
+    if (!pendingQualification) return;
+
+    updateNegotiation.mutate({
+      id: pendingQualification.id,
+      status: 'negociando',
+      qualificationData: {
+        ...formData,
+        engagement_score: score.engagement,
+        intent_score: score.intent,
+        completeness_score: score.completeness,
+        score: score.total,
+      },
+    });
+
+    setPendingQualification(null);
+    setQualificationModalOpen(false);
   };
 
   const handleTransitionConfirm = (data: StageTransitionData) => {
@@ -231,6 +267,14 @@ export function NegotiationPipeline({
         negotiation={pendingTransition?.negotiation || null}
         targetStatus={pendingTransition?.targetStatus || null}
         onConfirm={handleTransitionConfirm}
+      />
+
+      {/* Modal de qualificação */}
+      <QualificationModal
+        open={qualificationModalOpen}
+        onOpenChange={setQualificationModalOpen}
+        negotiation={pendingQualification}
+        onConfirm={handleQualificationConfirm}
       />
     </div>
   );

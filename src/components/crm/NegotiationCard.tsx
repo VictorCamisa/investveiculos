@@ -5,6 +5,8 @@ import type { Negotiation } from '@/types/negotiations';
 import { negotiationStatusLabels, negotiationStatusColors } from '@/types/negotiations';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
+import { LeadScoreBadge } from './LeadScoreIndicator';
+import { useLeadQualificationByNegotiation } from '@/hooks/useLeadQualification';
 
 interface NegotiationCardProps {
   negotiation: Negotiation;
@@ -13,6 +15,8 @@ interface NegotiationCardProps {
 }
 
 export function NegotiationCard({ negotiation, onClick, showSalesperson }: NegotiationCardProps) {
+  const { data: qualification } = useLeadQualificationByNegotiation(negotiation.id);
+  
   const formatCurrency = (value: number | null) => {
     if (!value) return '-';
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -36,10 +40,14 @@ export function NegotiationCard({ negotiation, onClick, showSalesperson }: Negot
               </div>
             )}
           </div>
-          <Badge variant="outline" className="text-xs shrink-0">
-            {negotiationStatusLabels[negotiation.status]}
-          </Badge>
-        </div>
+          <div className="flex items-center gap-1.5">
+            {qualification && (
+              <LeadScoreBadge score={qualification.score} />
+            )}
+            <Badge variant="outline" className="text-xs shrink-0">
+              {negotiationStatusLabels[negotiation.status]}
+            </Badge>
+          </div>
 
         {negotiation.customer && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
