@@ -250,12 +250,17 @@ serve(async (req) => {
         if (transmission?.includes('manual')) transmission = 'manual';
         else if (transmission?.includes('auto')) transmission = 'automatico';
 
-        // Check if vehicle exists by plate
+        // Normalize plate (remove hyphens and spaces for comparison)
+        const normalizedPlate = (vehicle.Placa || '').replace(/[-\s]/g, '').toUpperCase();
+        
+        // Check if vehicle exists by plate (try both original and normalized)
         const { data: existingVehicle } = await supabase
           .from('vehicles')
           .select('id')
-          .eq('plate', vehicle.Placa)
+          .or(`plate.eq.${vehicle.Placa},plate.ilike.%${normalizedPlate}%`)
           .maybeSingle();
+        
+        console.log(`  Looking for plate: ${vehicle.Placa} (normalized: ${normalizedPlate}), found: ${existingVehicle?.id || 'none'}`);
 
         // Try multiple price field names using rawVehicle for dynamic access
         const price = vehicle.Preco || rawVehicle.Preco || rawVehicle.preco || 
@@ -374,6 +379,8 @@ serve(async (req) => {
 
             if (photoError) {
               console.error('Error inserting photo:', photoError);
+            } else {
+              console.log(`  Photo ${i + 1} saved: ${photoUrl.substring(0, 50)}...`);
             }
           }
 
@@ -381,10 +388,17 @@ serve(async (req) => {
           const imageUrls = photos.map((p: Record<string, unknown>) => 
             p.URL || p.Url || p.url || p.UrlFoto || p.urlFoto || p.Foto || p.foto || p.Link || p.link
           ).filter((url: unknown) => url != null);
-          await supabase
+          
+          const { error: updateImagesError } = await supabase
             .from('vehicles')
             .update({ images: imageUrls })
             .eq('id', vehicleId);
+          
+          if (updateImagesError) {
+            console.error('Error updating vehicle images array:', updateImagesError);
+          } else {
+            console.log(`  Updated vehicle ${vehicleId} with ${imageUrls.length} image URLs`);
+          }
         } else {
           console.error('Failed to fetch photos:', photosResponse.status);
         }
