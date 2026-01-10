@@ -80,15 +80,18 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Encode credentials for Basic Auth
-    const encoder = new TextEncoder();
-    const data = encoder.encode(`${cleanUsername}:${cleanPassword}`);
-    const authHeader = btoa(String.fromCharCode(...data));
+    // Encode credentials for Basic Auth - using standard btoa encoding
+    const credentials = `${cleanUsername}:${cleanPassword}`;
+    const authHeader = btoa(credentials);
+    
+    console.log('Auth credentials length:', credentials.length);
+    console.log('Auth header (first 20 chars):', authHeader.substring(0, 20) + '...');
     
     const baseUrl = 'https://integracao.autocerto.com';
 
     // Test connection by fetching stock directly (Health endpoint may be blocked)
     console.log('Testing Autocerto connection by fetching stock...');
+    console.log('Full auth header for debugging:', `Basic ${authHeader}`);
     const stockResponse = await autocertoFetch(`${baseUrl}/api/Veiculo/ObterEstoque`, authHeader);
 
     console.log('Autocerto response status:', stockResponse.status);
