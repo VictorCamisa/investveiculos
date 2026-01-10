@@ -223,32 +223,58 @@ export type Database = {
       customers: {
         Row: {
           address: string | null
+          city: string | null
+          cpf_cnpj: string | null
           created_at: string | null
           document: string | null
           email: string | null
           id: string
+          lead_id: string | null
           name: string
+          notes: string | null
           phone: string | null
+          state: string | null
+          updated_at: string | null
         }
         Insert: {
           address?: string | null
+          city?: string | null
+          cpf_cnpj?: string | null
           created_at?: string | null
           document?: string | null
           email?: string | null
           id?: string
+          lead_id?: string | null
           name: string
+          notes?: string | null
           phone?: string | null
+          state?: string | null
+          updated_at?: string | null
         }
         Update: {
           address?: string | null
+          city?: string | null
+          cpf_cnpj?: string | null
           created_at?: string | null
           document?: string | null
           email?: string | null
           id?: string
+          lead_id?: string | null
           name?: string
+          notes?: string | null
           phone?: string | null
+          state?: string | null
+          updated_at?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "customers_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       financial_categories: {
         Row: {
@@ -558,6 +584,9 @@ export type Database = {
         Row: {
           content: string | null
           created_at: string | null
+          description: string | null
+          follow_up_completed: boolean | null
+          follow_up_date: string | null
           id: string
           lead_id: string | null
           type: string | null
@@ -566,6 +595,9 @@ export type Database = {
         Insert: {
           content?: string | null
           created_at?: string | null
+          description?: string | null
+          follow_up_completed?: boolean | null
+          follow_up_date?: string | null
           id?: string
           lead_id?: string | null
           type?: string | null
@@ -574,6 +606,9 @@ export type Database = {
         Update: {
           content?: string | null
           created_at?: string | null
+          description?: string | null
+          follow_up_completed?: boolean | null
+          follow_up_date?: string | null
           id?: string
           lead_id?: string | null
           type?: string | null
@@ -927,6 +962,7 @@ export type Database = {
           actual_close_date: string | null
           appointment_date: string | null
           appointment_time: string | null
+          contact_attempts: number | null
           created_at: string | null
           customer_id: string | null
           estimated_value: number | null
@@ -934,6 +970,7 @@ export type Database = {
           id: string
           lead_id: string | null
           loss_reason: string | null
+          no_show_count: number | null
           notes: string | null
           objections: string[] | null
           probability: number | null
@@ -941,6 +978,8 @@ export type Database = {
           showed_up: boolean | null
           status: string | null
           structured_loss_reason: string | null
+          test_drive_completed: boolean | null
+          test_drive_scheduled: boolean | null
           updated_at: string | null
           value_offered: number | null
           vehicle_id: string | null
@@ -949,6 +988,7 @@ export type Database = {
           actual_close_date?: string | null
           appointment_date?: string | null
           appointment_time?: string | null
+          contact_attempts?: number | null
           created_at?: string | null
           customer_id?: string | null
           estimated_value?: number | null
@@ -956,6 +996,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           loss_reason?: string | null
+          no_show_count?: number | null
           notes?: string | null
           objections?: string[] | null
           probability?: number | null
@@ -963,6 +1004,8 @@ export type Database = {
           showed_up?: boolean | null
           status?: string | null
           structured_loss_reason?: string | null
+          test_drive_completed?: boolean | null
+          test_drive_scheduled?: boolean | null
           updated_at?: string | null
           value_offered?: number | null
           vehicle_id?: string | null
@@ -971,6 +1014,7 @@ export type Database = {
           actual_close_date?: string | null
           appointment_date?: string | null
           appointment_time?: string | null
+          contact_attempts?: number | null
           created_at?: string | null
           customer_id?: string | null
           estimated_value?: number | null
@@ -978,6 +1022,7 @@ export type Database = {
           id?: string
           lead_id?: string | null
           loss_reason?: string | null
+          no_show_count?: number | null
           notes?: string | null
           objections?: string[] | null
           probability?: number | null
@@ -985,6 +1030,8 @@ export type Database = {
           showed_up?: boolean | null
           status?: string | null
           structured_loss_reason?: string | null
+          test_drive_completed?: boolean | null
+          test_drive_scheduled?: boolean | null
           updated_at?: string | null
           value_offered?: number | null
           vehicle_id?: string | null
@@ -1055,6 +1102,7 @@ export type Database = {
           email: string | null
           full_name: string | null
           id: string
+          is_active: boolean
           is_master: boolean | null
           updated_at: string | null
         }
@@ -1064,6 +1112,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id: string
+          is_active?: boolean
           is_master?: boolean | null
           updated_at?: string | null
         }
@@ -1073,6 +1122,7 @@ export type Database = {
           email?: string | null
           full_name?: string | null
           id?: string
+          is_active?: boolean
           is_master?: boolean | null
           updated_at?: string | null
         }
@@ -1309,6 +1359,8 @@ export type Database = {
       user_permissions: {
         Row: {
           created_at: string | null
+          granted_at: string
+          granted_by: string | null
           id: string
           module: string
           permission: string
@@ -1316,6 +1368,8 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
           id?: string
           module: string
           permission: string
@@ -1323,6 +1377,8 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          granted_at?: string
+          granted_by?: string | null
           id?: string
           module?: string
           permission?: string
@@ -1370,26 +1426,38 @@ export type Database = {
       vehicle_costs: {
         Row: {
           amount: number
+          cost_date: string
+          cost_type: string | null
           created_at: string | null
+          created_by: string | null
           date: string | null
           description: string
           id: string
+          receipt_url: string | null
           vehicle_id: string | null
         }
         Insert: {
           amount: number
+          cost_date?: string
+          cost_type?: string | null
           created_at?: string | null
+          created_by?: string | null
           date?: string | null
           description: string
           id?: string
+          receipt_url?: string | null
           vehicle_id?: string | null
         }
         Update: {
           amount?: number
+          cost_date?: string
+          cost_type?: string | null
           created_at?: string | null
+          created_by?: string | null
           date?: string | null
           description?: string
           id?: string
+          receipt_url?: string | null
           vehicle_id?: string | null
         }
         Relationships: [
@@ -1405,7 +1473,10 @@ export type Database = {
       vehicle_images: {
         Row: {
           created_at: string | null
+          display_order: number | null
           id: string
+          image_url: string | null
+          is_cover: boolean | null
           is_main: boolean | null
           order_index: number | null
           url: string
@@ -1413,7 +1484,10 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          display_order?: number | null
           id?: string
+          image_url?: string | null
+          is_cover?: boolean | null
           is_main?: boolean | null
           order_index?: number | null
           url: string
@@ -1421,7 +1495,10 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          display_order?: number | null
           id?: string
+          image_url?: string | null
+          is_cover?: boolean | null
           is_main?: boolean | null
           order_index?: number | null
           url?: string
@@ -1517,65 +1594,146 @@ export type Database = {
         Row: {
           brand: string
           chassis: string | null
+          city: string | null
           color: string | null
           created_at: string | null
+          created_by: string | null
           description: string | null
+          doors: number | null
+          estimated_cleaning: number | null
+          estimated_documentation: number | null
+          estimated_maintenance: number | null
+          estimated_other_costs: number | null
+          expected_margin_percent: number | null
+          expected_sale_days: number | null
+          featured: boolean | null
+          fipe_price_at_purchase: number | null
           fuel_type: string | null
           id: string
+          images: string[] | null
+          km: number | null
+          mercadolibre_id: string | null
           mileage: number | null
+          minimum_price: number | null
+          ml_item_id: string | null
+          ml_listing_type: string | null
+          ml_permalink: string | null
+          ml_published_at: string | null
+          ml_status: string | null
           model: string
+          notes: string | null
           plate: string | null
           price_purchase: number | null
           price_sale: number | null
+          purchase_date: string | null
+          purchase_price: number | null
+          purchase_source: string | null
           renavam: string | null
+          state: string | null
           status: string | null
           transmission: string | null
           updated_at: string | null
           version: string | null
+          year_fabrication: number | null
           year_manufacture: number | null
           year_model: number | null
+          zip_code: string | null
         }
         Insert: {
           brand: string
           chassis?: string | null
+          city?: string | null
           color?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
+          doors?: number | null
+          estimated_cleaning?: number | null
+          estimated_documentation?: number | null
+          estimated_maintenance?: number | null
+          estimated_other_costs?: number | null
+          expected_margin_percent?: number | null
+          expected_sale_days?: number | null
+          featured?: boolean | null
+          fipe_price_at_purchase?: number | null
           fuel_type?: string | null
           id?: string
+          images?: string[] | null
+          km?: number | null
+          mercadolibre_id?: string | null
           mileage?: number | null
+          minimum_price?: number | null
+          ml_item_id?: string | null
+          ml_listing_type?: string | null
+          ml_permalink?: string | null
+          ml_published_at?: string | null
+          ml_status?: string | null
           model: string
+          notes?: string | null
           plate?: string | null
           price_purchase?: number | null
           price_sale?: number | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          purchase_source?: string | null
           renavam?: string | null
+          state?: string | null
           status?: string | null
           transmission?: string | null
           updated_at?: string | null
           version?: string | null
+          year_fabrication?: number | null
           year_manufacture?: number | null
           year_model?: number | null
+          zip_code?: string | null
         }
         Update: {
           brand?: string
           chassis?: string | null
+          city?: string | null
           color?: string | null
           created_at?: string | null
+          created_by?: string | null
           description?: string | null
+          doors?: number | null
+          estimated_cleaning?: number | null
+          estimated_documentation?: number | null
+          estimated_maintenance?: number | null
+          estimated_other_costs?: number | null
+          expected_margin_percent?: number | null
+          expected_sale_days?: number | null
+          featured?: boolean | null
+          fipe_price_at_purchase?: number | null
           fuel_type?: string | null
           id?: string
+          images?: string[] | null
+          km?: number | null
+          mercadolibre_id?: string | null
           mileage?: number | null
+          minimum_price?: number | null
+          ml_item_id?: string | null
+          ml_listing_type?: string | null
+          ml_permalink?: string | null
+          ml_published_at?: string | null
+          ml_status?: string | null
           model?: string
+          notes?: string | null
           plate?: string | null
           price_purchase?: number | null
           price_sale?: number | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          purchase_source?: string | null
           renavam?: string | null
+          state?: string | null
           status?: string | null
           transmission?: string | null
           updated_at?: string | null
           version?: string | null
+          year_fabrication?: number | null
           year_manufacture?: number | null
           year_model?: number | null
+          zip_code?: string | null
         }
         Relationships: []
       }
@@ -1712,7 +1870,69 @@ export type Database = {
       has_role: { Args: { role_name: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      app_role: "gerente" | "vendedor" | "marketing"
+      commission_type:
+        | "percentual_lucro"
+        | "valor_fixo"
+        | "escalonada"
+        | "mista"
+      lead_source:
+        | "website"
+        | "indicacao"
+        | "facebook"
+        | "instagram"
+        | "google_ads"
+        | "olx"
+        | "webmotors"
+        | "outros"
+        | "whatsapp"
+      lead_status:
+        | "novo"
+        | "contato_inicial"
+        | "qualificado"
+        | "proposta"
+        | "negociacao"
+        | "convertido"
+        | "perdido"
+      loss_reason_type:
+        | "sem_entrada"
+        | "sem_credito"
+        | "curioso"
+        | "caro"
+        | "comprou_outro"
+        | "desistiu"
+        | "sem_contato"
+        | "veiculo_vendido"
+        | "outros"
+      negotiation_status:
+        | "em_andamento"
+        | "proposta_enviada"
+        | "negociando"
+        | "ganho"
+        | "perdido"
+        | "pausado"
+      payment_method:
+        | "dinheiro"
+        | "pix"
+        | "cartao_credito"
+        | "cartao_debito"
+        | "financiamento"
+        | "consorcio"
+        | "permuta"
+        | "misto"
+      qualification_status: "nao_qualificado" | "qualificado" | "desqualificado"
+      sale_status: "pendente" | "concluida" | "cancelada"
+      vehicle_cost_type:
+        | "aquisicao"
+        | "documentacao"
+        | "transferencia"
+        | "ipva"
+        | "manutencao"
+        | "limpeza"
+        | "frete"
+        | "comissao_compra"
+        | "outros"
+      vehicle_status: "disponivel" | "reservado" | "vendido" | "em_manutencao"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1839,6 +2059,81 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      app_role: ["gerente", "vendedor", "marketing"],
+      commission_type: [
+        "percentual_lucro",
+        "valor_fixo",
+        "escalonada",
+        "mista",
+      ],
+      lead_source: [
+        "website",
+        "indicacao",
+        "facebook",
+        "instagram",
+        "google_ads",
+        "olx",
+        "webmotors",
+        "outros",
+        "whatsapp",
+      ],
+      lead_status: [
+        "novo",
+        "contato_inicial",
+        "qualificado",
+        "proposta",
+        "negociacao",
+        "convertido",
+        "perdido",
+      ],
+      loss_reason_type: [
+        "sem_entrada",
+        "sem_credito",
+        "curioso",
+        "caro",
+        "comprou_outro",
+        "desistiu",
+        "sem_contato",
+        "veiculo_vendido",
+        "outros",
+      ],
+      negotiation_status: [
+        "em_andamento",
+        "proposta_enviada",
+        "negociando",
+        "ganho",
+        "perdido",
+        "pausado",
+      ],
+      payment_method: [
+        "dinheiro",
+        "pix",
+        "cartao_credito",
+        "cartao_debito",
+        "financiamento",
+        "consorcio",
+        "permuta",
+        "misto",
+      ],
+      qualification_status: [
+        "nao_qualificado",
+        "qualificado",
+        "desqualificado",
+      ],
+      sale_status: ["pendente", "concluida", "cancelada"],
+      vehicle_cost_type: [
+        "aquisicao",
+        "documentacao",
+        "transferencia",
+        "ipva",
+        "manutencao",
+        "limpeza",
+        "frete",
+        "comissao_compra",
+        "outros",
+      ],
+      vehicle_status: ["disponivel", "reservado", "vendido", "em_manutencao"],
+    },
   },
 } as const
