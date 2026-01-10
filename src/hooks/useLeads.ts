@@ -5,10 +5,10 @@ import { toast } from 'sonner';
 
 // Shared query options for better caching
 const leadQueryOptions = {
-  staleTime: 1000 * 60 * 3, // 3 minutes
-  gcTime: 1000 * 60 * 10, // 10 minutes
-  refetchOnWindowFocus: false,
-  refetchOnMount: false,
+  staleTime: 1000 * 60 * 1, // 1 minute
+  gcTime: 1000 * 60 * 5, // 5 minutes
+  refetchOnWindowFocus: true,
+  refetchOnMount: true,
 };
 
 export function useLeads() {
