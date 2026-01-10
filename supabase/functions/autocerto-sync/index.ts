@@ -63,12 +63,18 @@ serve(async (req) => {
   try {
     const { username, password, action } = await req.json();
 
-    if (!username || !password) {
+    // Trim whitespace from credentials to avoid copy/paste errors
+    const cleanUsername = username?.trim();
+    const cleanPassword = password?.trim();
+
+    if (!cleanUsername || !cleanPassword) {
       return new Response(
         JSON.stringify({ error: 'Credenciais são obrigatórias' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    console.log('Attempting auth with username:', cleanUsername);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
@@ -76,7 +82,7 @@ serve(async (req) => {
 
     // Encode credentials for Basic Auth
     const encoder = new TextEncoder();
-    const data = encoder.encode(`${username}:${password}`);
+    const data = encoder.encode(`${cleanUsername}:${cleanPassword}`);
     const authHeader = btoa(String.fromCharCode(...data));
     
     const baseUrl = 'https://integracao.autocerto.com';
