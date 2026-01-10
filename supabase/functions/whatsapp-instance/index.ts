@@ -366,15 +366,19 @@ serve(async (req) => {
     }
 
     // Get instance from database
+    console.log('Fetching instance from DB with ID:', instanceId);
     const { data: instance, error: instanceError } = await supabase
       .from('whatsapp_instances')
       .select('*')
       .eq('id', instanceId)
       .single();
 
+    console.log('Instance query result:', { instance, error: instanceError });
+
     if (instanceError || !instance) {
+      console.error('Instance not found error:', instanceError);
       return new Response(
-        JSON.stringify({ error: 'Instance not found' }),
+        JSON.stringify({ error: 'Instance not found', details: instanceError?.message }),
         { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
