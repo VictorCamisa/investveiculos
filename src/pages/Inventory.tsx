@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Search, LayoutGrid, List, BarChart3, Car, CheckCircle, Clock, Wrench, DollarSign, Store, Link2 } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, BarChart3, Car, CheckCircle, Clock, Wrench, DollarSign, Store } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -16,7 +15,7 @@ import { VehicleDRECard } from '@/components/inventory/VehicleDRECard';
 import { VehicleTable } from '@/components/inventory/VehicleTable';
 import { CreateVehicleDialog } from '@/components/inventory/CreateVehicleDialog';
 import { MercadoLivreConfigDialog } from '@/components/inventory/MercadoLivreConfigDialog';
-import { AutocertoSyncDialog } from '@/components/inventory/AutocertoSyncDialog';
+import { AutocertoSyncButton } from '@/components/inventory/AutocertoSyncDialog';
 import { BentoCard } from '@/components/ui/bento-card';
 import { useVehicles, useAllVehicleDRE, useCreateVehicle } from '@/hooks/useVehicles';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -32,7 +31,7 @@ type ViewMode = 'grid' | 'table' | 'dre';
 export default function Inventory() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isMercadoLivreDialogOpen, setIsMercadoLivreDialogOpen] = useState(false);
-  const [isAutocertoDialogOpen, setIsAutocertoDialogOpen] = useState(false);
+  
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
@@ -120,15 +119,12 @@ export default function Inventory() {
               <Store className="h-4 w-4 mr-2 text-yellow-600" />
               Mercado Livre
             </Button>
-            <Button 
-              variant="outline" 
-              size="lg"
-              onClick={() => setIsAutocertoDialogOpen(true)}
-              className="border-primary/50 hover:bg-primary/10"
-            >
-              <Link2 className="h-4 w-4 mr-2 text-primary" />
-              Conectar Autocerto
-            </Button>
+            <AutocertoSyncButton 
+              onSyncComplete={() => {
+                queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+                queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
+              }}
+            />
             <Button onClick={() => setIsCreateDialogOpen(true)} size="lg">
               <Plus className="h-4 w-4 mr-2" />
               Novo Veículo
@@ -287,15 +283,6 @@ export default function Inventory() {
         onOpenChange={setIsMercadoLivreDialogOpen}
       />
 
-      {/* Autocerto Sync Dialog */}
-      <AutocertoSyncDialog
-        open={isAutocertoDialogOpen}
-        onOpenChange={setIsAutocertoDialogOpen}
-        onSyncComplete={() => {
-          queryClient.invalidateQueries({ queryKey: ['vehicles'] });
-          queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
-        }}
-      />
     </div>
   );
 }

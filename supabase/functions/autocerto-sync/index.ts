@@ -46,10 +46,6 @@ async function autocertoFetch(url: string, authHeader: string): Promise<Response
       'Authorization': `Basic ${authHeader}`,
       'Content-Type': 'application/json',
       'Accept': 'application/json',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-      'Cache-Control': 'no-cache',
-      'Pragma': 'no-cache',
     },
   });
 }
@@ -61,37 +57,36 @@ serve(async (req) => {
   }
 
   try {
-    const { username, password, action } = await req.json();
+    const { action } = await req.json();
 
-    // Trim whitespace from credentials to avoid copy/paste errors
-    const cleanUsername = username?.trim();
-    const cleanPassword = password?.trim();
+    // Get credentials from environment variables
+    const baseUrl = Deno.env.get('AUTOCERTO_BASE_URL') || 'https://integracao.autocerto.com';
+    const username = Deno.env.get('AUTOCERTO_LOGIN');
+    const password = Deno.env.get('AUTOCERTO_PASSWORD');
 
-    if (!cleanUsername || !cleanPassword) {
+    if (!username || !password) {
+      console.error('Missing AUTOCERTO_LOGIN or AUTOCERTO_PASSWORD environment variables');
       return new Response(
-        JSON.stringify({ error: 'Credenciais são obrigatórias' }),
+        JSON.stringify({ error: 'Credenciais do Autocerto não configuradas. Configure os secrets AUTOCERTO_LOGIN e AUTOCERTO_PASSWORD.' }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    console.log('Attempting auth with username:', cleanUsername);
+    console.log('Attempting auth with username:', username);
+    console.log('Base URL:', baseUrl);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Encode credentials for Basic Auth - using standard btoa encoding
-    const credentials = `${cleanUsername}:${cleanPassword}`;
+    // Encode credentials for Basic Auth
+    const credentials = `${username}:${password}`;
     const authHeader = btoa(credentials);
     
     console.log('Auth credentials length:', credentials.length);
-    console.log('Auth header (first 20 chars):', authHeader.substring(0, 20) + '...');
-    
-    const baseUrl = 'https://integracao.autocerto.com';
 
-    // Test connection by fetching stock directly (Health endpoint may be blocked)
-    console.log('Testing Autocerto connection by fetching stock...');
-    console.log('Full auth header for debugging:', `Basic ${authHeader}`);
+    // Test connection by fetching stock
+    console.log('Fetching stock from Autocerto...');
     const stockResponse = await autocertoFetch(`${baseUrl}/api/Veiculo/ObterEstoque`, authHeader);
 
     console.log('Autocerto response status:', stockResponse.status);
@@ -102,20 +97,20 @@ serve(async (req) => {
       
       if (stockResponse.status === 401) {
         return new Response(
-          JSON.stringify({ error: 'Credenciais inválidas. Verifique usuário e senha.' }),
+          JSON.stringify({ error: 'Credenciais inválidas. Verifique os secrets AUTOCERTO_LOGIN e AUTOCERTO_PASSWORD.' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
       if (stockResponse.status === 403) {
         return new Response(
-          JSON.stringify({ error: 'Acesso negado pelo servidor Autocerto. Verifique se as credenciais estão corretas.' }),
+          JSON.stringify({ error: 'Acesso negado pelo servidor Autocerto.' }),
           { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
       
       return new Response(
-        JSON.stringify({ error: `Erro ao conectar: ${stockResponse.status} - ${errorText.substring(0, 200)}` }),
+        JSON.stringify({ error: `Erro ao conectar: ${stockResponse.status}` }),
         { status: stockResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
