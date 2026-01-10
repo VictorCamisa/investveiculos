@@ -4,10 +4,11 @@ import type { Vehicle, VehicleCost, VehicleDRE, VehicleStatus, VehicleCostType }
 import { toast } from 'sonner';
 import { syncVehiclePurchase, syncVehicleCost } from './useFinancialSync';
 
-// Shared query options for better caching
+// staleTime: 0 garante refetch imediato após mutations
 const vehicleQueryOptions = {
-  staleTime: 1000 * 60 * 5, // 5 minutes
-  gcTime: 1000 * 60 * 15, // 15 minutes
+  staleTime: 0,
+  gcTime: 1000 * 60 * 10,
+  refetchOnWindowFocus: true,
 };
 
 // Helper function to map database fields to app types
@@ -209,8 +210,8 @@ export function useCreateVehicle() {
       
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
       queryClient.invalidateQueries({ queryKey: ['public-vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['featured-vehicles'] });
@@ -239,8 +240,8 @@ export function useUpdateVehicle() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
       queryClient.invalidateQueries({ queryKey: ['public-vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['featured-vehicles'] });

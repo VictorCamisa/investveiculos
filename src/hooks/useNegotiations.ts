@@ -3,6 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Negotiation, NegotiationStatus, LossReasonType } from '@/types/negotiations';
 import { toast } from 'sonner';
 
+// staleTime: 0 garante que invalidateQueries sempre dispara refetch
+const negotiationQueryOptions = {
+  staleTime: 0,
+  gcTime: 1000 * 60 * 5,
+  refetchOnWindowFocus: true,
+};
+
 export function useNegotiations() {
   return useQuery({
     queryKey: ['negotiations'],
@@ -50,6 +57,7 @@ export function useNegotiations() {
         salesperson: n.salesperson_id ? profileMap.get(n.salesperson_id) : null,
       })) as Negotiation[];
     },
+    ...negotiationQueryOptions,
   });
 }
 
@@ -111,8 +119,8 @@ export function useCreateNegotiation() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['negotiations'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['negotiations'] });
       toast.success('Negociação criada com sucesso!');
     },
     onError: (error: Error) => {
@@ -154,8 +162,8 @@ export function useUpdateNegotiation() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['negotiations'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['negotiations'] });
       toast.success('Negociação atualizada!');
     },
     onError: (error: Error) => {
@@ -177,8 +185,8 @@ export function useDeleteNegotiation() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['negotiations'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['negotiations'] });
       toast.success('Negociação excluída!');
     },
     onError: (error: Error) => {

@@ -92,10 +92,10 @@ async function syncSaleRevenueInline(sale: {
   }
 }
 
-// Shared query options - reduced caching for better real-time updates
+// staleTime: 0 garante refetch imediato após mutations
 const salesQueryOptions = {
-  staleTime: 1000 * 30, // 30 seconds
-  gcTime: 1000 * 60 * 5, // 5 minutes
+  staleTime: 0,
+  gcTime: 1000 * 60 * 5,
   refetchOnWindowFocus: true,
   refetchOnMount: true,
 };
@@ -252,8 +252,8 @@ export function useCreateSale() {
       
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['sales'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['sales'] });
       queryClient.invalidateQueries({ queryKey: ['sale-profit-reports'] });
       queryClient.invalidateQueries({ queryKey: ['vehicles'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
