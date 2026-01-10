@@ -103,7 +103,9 @@ serve(async (req) => {
   }
 
   try {
-    const { action } = await req.json();
+    const requestUrl = new URL(req.url);
+    const body = await req.json();
+    const { action } = body;
 
     // Get credentials from environment variables
     // Remove trailing slashes from base URL to avoid double slashes in API paths
@@ -197,12 +199,21 @@ serve(async (req) => {
     let updated = 0;
     let errors = 0;
 
+    // Process in batches to avoid timeout (max 150 seconds)
+    // Each vehicle takes ~3-5 seconds to process with photos
+    const BATCH_SIZE = 25; // Process 25 vehicles at a time
+    const offset = parseInt(requestUrl.searchParams.get('offset') || body.offset?.toString() || '0');
+    const vehiclesToProcess = vehicles.slice(offset, offset + BATCH_SIZE);
+    const hasMore = offset + BATCH_SIZE < vehicles.length;
+    
+    console.log(`Processing batch: offset=${offset}, batch_size=${vehiclesToProcess.length}, total=${vehicles.length}, hasMore=${hasMore}`);
+
     // Log first vehicle to understand the API structure
-    if (vehicles.length > 0) {
-      console.log('Sample vehicle from API:', JSON.stringify(vehicles[0], null, 2));
+    if (vehiclesToProcess.length > 0 && offset === 0) {
+      console.log('Sample vehicle from API:', JSON.stringify(vehiclesToProcess[0], null, 2));
     }
 
-    for (const vehicle of vehicles) {
+    for (const vehicle of vehiclesToProcess) {
       try {
         // Log the raw vehicle data to understand its structure
         console.log(`Processing vehicle: Codigo=${vehicle.Codigo}, Placa=${vehicle.Placa}`);
@@ -408,18 +419,23 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Import complete: ${imported} imported, ${updated} updated, ${errors} errors`);
+    console.log(`Batch complete: ${imported} imported, ${updated} updated, ${errors} errors. Offset: ${offset}, HasMore: ${hasMore}`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Sincronização concluída!`,
+        message: hasMore 
+          ? `Lote processado! ${imported + updated} veículos sincronizados. Continue para processar mais.`
+          : `Sincronização concluída!`,
         stats: {
           total: vehicles.length,
+          processed: offset + vehiclesToProcess.length,
           imported,
           updated,
           errors,
         },
+        hasMore,
+        nextOffset: hasMore ? offset + BATCH_SIZE : null,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

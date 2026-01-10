@@ -12,6 +12,7 @@ type SyncStatus = 'idle' | 'syncing' | 'success' | 'error';
 
 interface SyncResult {
   total: number;
+  processed: number;
   imported: number;
   updated: number;
   errors: number;
@@ -20,38 +21,62 @@ interface SyncResult {
 export function AutocertoSyncButton({ onSyncComplete }: AutocertoSyncButtonProps) {
   const [status, setStatus] = useState<SyncStatus>('idle');
   const [syncResult, setSyncResult] = useState<SyncResult | null>(null);
+  const [progress, setProgress] = useState<{ processed: number; total: number } | null>(null);
+
+  const syncBatch = async (offset: number = 0): Promise<void> => {
+    const { data, error } = await supabase.functions.invoke('autocerto-sync', {
+      body: { action: 'sync', offset },
+    });
+
+    if (error) {
+      throw error;
+    }
+
+    if (data.error) {
+      throw new Error(data.error);
+    }
+
+    // Update progress
+    setProgress({ processed: data.stats.processed, total: data.stats.total });
+    
+    // Accumulate results
+    setSyncResult(prev => ({
+      total: data.stats.total,
+      processed: data.stats.processed,
+      imported: (prev?.imported || 0) + data.stats.imported,
+      updated: (prev?.updated || 0) + data.stats.updated,
+      errors: (prev?.errors || 0) + data.stats.errors,
+    }));
+
+    // If there's more to process, continue
+    if (data.hasMore && data.nextOffset !== null) {
+      await syncBatch(data.nextOffset);
+    }
+  };
 
   const handleSync = async () => {
     setStatus('syncing');
     setSyncResult(null);
+    setProgress(null);
 
     try {
-      const { data, error } = await supabase.functions.invoke('autocerto-sync', {
-        body: { action: 'sync' },
-      });
+      await syncBatch(0);
 
-      if (error) {
-        throw error;
-      }
-
-      if (data.error) {
-        throw new Error(data.error);
-      }
-
-      setSyncResult(data.stats);
       setStatus('success');
-      toast.success(`Sincronização concluída! ${data.stats.imported} importados, ${data.stats.updated} atualizados`);
+      toast.success(`Sincronização concluída!`);
       onSyncComplete?.();
 
       // Reset status after 5 seconds
       setTimeout(() => {
         setStatus('idle');
         setSyncResult(null);
+        setProgress(null);
       }, 5000);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Sync error:', error);
       setStatus('error');
-      toast.error(error.message || 'Falha ao sincronizar estoque');
+      const message = error instanceof Error ? error.message : 'Falha ao sincronizar estoque';
+      toast.error(message);
 
       // Reset status after 3 seconds
       setTimeout(() => {
@@ -88,7 +113,7 @@ export function AutocertoSyncButton({ onSyncComplete }: AutocertoSyncButtonProps
       {status === 'syncing' ? (
         <>
           <Loader2 className="h-4 w-4 animate-spin" />
-          Sincronizando...
+          {progress ? `${progress.processed}/${progress.total}...` : 'Sincronizando...'}
         </>
       ) : (
         <>
