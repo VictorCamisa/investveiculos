@@ -23,28 +23,23 @@ serve(async (req) => {
   }
 
   try {
-    // Use custom secrets to bypass reserved remix secrets
-    const supabaseUrl = Deno.env.get('MY_SUPABASE_URL') ?? Deno.env.get('SUPABASE_URL') ?? '';
-    let serviceRoleKey = Deno.env.get('MY_SUPABASE_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    const body = await req.json();
+    const { action, instanceId, userId, serviceKey } = body;
     
-    // Workaround for Lovable secrets truncation issue
-    // The system truncates the key to 219 chars, missing the final 'U'
-    if (serviceRoleKey.length === 219) {
-      serviceRoleKey = serviceRoleKey + 'U';
-      console.log('Applied truncation fix, new length:', serviceRoleKey.length);
-    }
+    // Use provided serviceKey or fallback to environment variables
+    const supabaseUrl = Deno.env.get('MY_SUPABASE_URL') ?? Deno.env.get('SUPABASE_URL') ?? 'https://rugbunseyblzapwzevqh.supabase.co';
+    let serviceRoleKey = serviceKey ?? Deno.env.get('MY_SUPABASE_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     
     console.log('Supabase config check:', { 
       hasUrl: !!supabaseUrl, 
       hasServiceKey: !!serviceRoleKey,
       serviceKeyLength: serviceRoleKey.length,
+      serviceKeySource: serviceKey ? 'provided' : 'env',
       urlPrefix: supabaseUrl.substring(0, 30)
     });
     
     const supabase = createClient(supabaseUrl, serviceRoleKey);
-
-    const body = await req.json();
-    const { action, instanceId, userId } = body;
+    
     console.log('WhatsApp Instance action:', action, { instanceId, userId });
 
     // Global Evolution API config from secrets
