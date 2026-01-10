@@ -25,7 +25,14 @@ serve(async (req) => {
   try {
     // Use custom secrets to bypass reserved remix secrets
     const supabaseUrl = Deno.env.get('MY_SUPABASE_URL') ?? Deno.env.get('SUPABASE_URL') ?? '';
-    const serviceRoleKey = Deno.env.get('MY_SUPABASE_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    let serviceRoleKey = Deno.env.get('MY_SUPABASE_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    
+    // Workaround for Lovable secrets truncation issue
+    // The system truncates the key to 219 chars, missing the final 'U'
+    if (serviceRoleKey.length === 219) {
+      serviceRoleKey = serviceRoleKey + 'U';
+      console.log('Applied truncation fix, new length:', serviceRoleKey.length);
+    }
     
     console.log('Supabase config check:', { 
       hasUrl: !!supabaseUrl, 
