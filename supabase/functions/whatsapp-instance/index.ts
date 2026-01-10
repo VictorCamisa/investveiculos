@@ -406,12 +406,17 @@ serve(async (req) => {
       );
     }
 
-    // Use instance.api_url as primary, only fallback to env if instance has none
+    // Use instance values, but prefer env secrets if they are valid (not placeholders)
     const baseUrl = (instance.api_url || evolutionUrl || '').replace(/\/$/, '');
-    const apiKey = instance.api_key || evolutionKey || '';
+    // Prioritize evolutionKey from env if it's valid (env secret was updated)
+    const apiKey = evolutionKey || instance.api_key || '';
     const instanceName = instance.instance_name;
     
-    console.log('Using Evolution config:', { baseUrl: baseUrl.substring(0, 50), hasApiKey: !!apiKey });
+    console.log('Using Evolution config:', { 
+      baseUrl: baseUrl.substring(0, 50), 
+      hasApiKey: !!apiKey,
+      apiKeySource: evolutionKey ? 'env_secret' : 'database'
+    });
 
     let result;
 
