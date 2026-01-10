@@ -89,7 +89,7 @@ export function SaleForm({ open, onOpenChange, sale }: SaleFormProps) {
       documentation_cost: sale?.documentation_cost || 0,
       transfer_cost: sale?.transfer_cost || 0,
       other_sale_costs: sale?.other_sale_costs || 0,
-      status: sale?.status || 'pendente',
+      status: (sale?.status as 'pendente' | 'concluida' | 'cancelada') || 'pendente',
       notes: sale?.notes || '',
     },
   });

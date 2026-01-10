@@ -43,7 +43,7 @@ export function CommissionRuleForm({ open, onOpenChange, rule }: CommissionRuleF
       name: rule?.name || '',
       description: rule?.description || '',
       commission_type: rule?.commission_type || 'percentual_lucro',
-      percentage_value: rule?.percentage_value || 0,
+      percentage_value: rule?.percentage_value || rule?.percentage || 0,
       fixed_value: rule?.fixed_value || 0,
       min_vehicle_price: rule?.min_vehicle_price || 0,
       max_vehicle_price: rule?.max_vehicle_price || 0,

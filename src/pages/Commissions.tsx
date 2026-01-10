@@ -97,8 +97,8 @@ export default function Commissions() {
                     <p className="text-sm text-muted-foreground">
                       {commissionTypeLabels[rule.commission_type]}
                     </p>
-                    {rule.percentage_value && (
-                      <p className="text-lg font-semibold">{rule.percentage_value}% do lucro</p>
+                    {(rule.percentage_value || rule.percentage) && (
+                      <p className="text-lg font-semibold">{rule.percentage_value || rule.percentage}% do lucro</p>
                     )}
                     {rule.fixed_value && (
                       <p className="text-lg font-semibold">{formatCurrency(rule.fixed_value)}</p>

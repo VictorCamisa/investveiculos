@@ -768,7 +768,7 @@ export function useCalculateCommission() {
 
       switch (rule.commission_type) {
         case 'percentual_lucro':
-          amount = profit * ((rule.percentage_value || 0) / 100);
+          amount = profit * ((rule.percentage_value || rule.percentage || 0) / 100);
           break;
         case 'valor_fixo':
           amount = rule.fixed_value || 0;
@@ -780,12 +780,12 @@ export function useCalculateCommission() {
           }
           break;
         case 'mista':
-          amount = (profit * ((rule.percentage_value || 0) / 100)) + (rule.fixed_value || 0);
+          amount = (profit * ((rule.percentage_value || rule.percentage || 0) / 100)) + (rule.fixed_value || 0);
           break;
         default:
           // Handle percentual_venda or other future types
           if ((rule as any).commission_type === 'percentual_venda') {
-            amount = salePrice * ((rule.percentage_value || 0) / 100);
+            amount = salePrice * ((rule.percentage_value || rule.percentage || 0) / 100);
           }
           break;
       }
