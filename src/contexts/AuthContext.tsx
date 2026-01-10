@@ -38,16 +38,9 @@ const ROLE_PRIORITY: Record<string, number> = {
 async function fetchUserRole(userId: string): Promise<AppRole | null> {
   console.log('[AuthContext] Fetching role for user:', userId);
   
-  // Verificar se Supabase está configurado
-  if (!import.meta.env.VITE_SUPABASE_URL || !import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY) {
-    console.warn('[AuthContext] Supabase não configurado, pulando busca de role');
-    return null;
-  }
-  
   try {
     // Busca TODOS os roles do usuário (pode ter mais de um)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data, error } = await (supabase as any)
+    const { data, error } = await supabase
       .from('user_roles')
       .select('role')
       .eq('user_id', userId);
@@ -84,16 +77,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     let isMounted = true;
     console.log('[AuthContext] Initializing...');
-    
-    // Verificar se Supabase está configurado
-    const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-    const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-    
-    if (!supabaseUrl || !supabaseKey) {
-      console.warn('[AuthContext] Supabase não configurado, finalizando loading');
-      setLoading(false);
-      return;
-    }
 
     const processSession = async (newSession: Session | null, source: string) => {
       console.log(`[AuthContext] processSession from ${source}:`, !!newSession?.user);
