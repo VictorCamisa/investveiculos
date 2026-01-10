@@ -123,7 +123,6 @@ serve(async (req) => {
           id: newUser.user.id,
           email: newUser.user.email,
           full_name,
-          is_active: true,
           updated_at: now,
         },
         { onConflict: "id" }
