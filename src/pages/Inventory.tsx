@@ -16,6 +16,7 @@ import { VehicleDRECard } from '@/components/inventory/VehicleDRECard';
 import { VehicleTable } from '@/components/inventory/VehicleTable';
 import { CreateVehicleDialog } from '@/components/inventory/CreateVehicleDialog';
 import { MercadoLivreConfigDialog } from '@/components/inventory/MercadoLivreConfigDialog';
+import { AutocertoSyncDialog } from '@/components/inventory/AutocertoSyncDialog';
 import { BentoCard } from '@/components/ui/bento-card';
 import { useVehicles, useAllVehicleDRE, useCreateVehicle } from '@/hooks/useVehicles';
 import { usePermissions } from '@/hooks/usePermissions';
@@ -24,17 +25,20 @@ import { vehicleStatusLabels } from '@/types/inventory';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useAuth } from '@/contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 
 type ViewMode = 'grid' | 'table' | 'dre';
 
 export default function Inventory() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isMercadoLivreDialogOpen, setIsMercadoLivreDialogOpen] = useState(false);
+  const [isAutocertoDialogOpen, setIsAutocertoDialogOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<VehicleStatus | 'all'>('all');
   const [viewMode, setViewMode] = useState<ViewMode>('table');
   const navigate = useNavigate();
   const { role } = useAuth();
+  const queryClient = useQueryClient();
 
   const { data: vehicles, isLoading } = useVehicles();
   const { data: dreData, isLoading: dreLoading } = useAllVehicleDRE();
@@ -119,7 +123,7 @@ export default function Inventory() {
             <Button 
               variant="outline" 
               size="lg"
-              onClick={() => window.open('https://integracao.autocerto.com', '_blank')}
+              onClick={() => setIsAutocertoDialogOpen(true)}
               className="border-primary/50 hover:bg-primary/10"
             >
               <Link2 className="h-4 w-4 mr-2 text-primary" />
@@ -281,6 +285,16 @@ export default function Inventory() {
       <MercadoLivreConfigDialog
         open={isMercadoLivreDialogOpen}
         onOpenChange={setIsMercadoLivreDialogOpen}
+      />
+
+      {/* Autocerto Sync Dialog */}
+      <AutocertoSyncDialog
+        open={isAutocertoDialogOpen}
+        onOpenChange={setIsAutocertoDialogOpen}
+        onSyncComplete={() => {
+          queryClient.invalidateQueries({ queryKey: ['vehicles'] });
+          queryClient.invalidateQueries({ queryKey: ['vehicle-dre'] });
+        }}
       />
     </div>
   );
