@@ -607,6 +607,44 @@ serve(async (req) => {
         break;
       }
 
+      case 'delete': {
+        // Delete instance from Evolution API and then from database
+        console.log('Deleting instance from Evolution API:', instanceName);
+        
+        try {
+          // First try to delete from Evolution API
+          const deleteResponse = await fetch(`${baseUrl}/instance/delete/${instanceName}`, {
+            method: 'DELETE',
+            headers: { 'apikey': apiKey },
+          });
+          
+          const deleteResult = await deleteResponse.json();
+          console.log('Evolution delete result:', deleteResult);
+          
+          // Even if Evolution API fails, we still delete from our database
+          if (!deleteResponse.ok) {
+            console.warn('Evolution API delete failed, but continuing with database deletion:', deleteResult);
+          }
+        } catch (evolutionError) {
+          // Log error but continue - we still want to delete from our database
+          console.error('Error deleting from Evolution API:', evolutionError);
+        }
+        
+        // Delete from database
+        const { error: dbError } = await supabase
+          .from('whatsapp_instances')
+          .delete()
+          .eq('id', instanceId);
+        
+        if (dbError) {
+          console.error('Database delete error:', dbError);
+          throw new Error(`Failed to delete from database: ${dbError.message}`);
+        }
+        
+        result = { deleted: true, instanceName };
+        break;
+      }
+
       default:
         return new Response(
           JSON.stringify({ error: 'Invalid action' }),

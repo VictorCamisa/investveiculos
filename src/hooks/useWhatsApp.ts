@@ -256,20 +256,22 @@ export function useDeleteWhatsAppInstance() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { error } = await (supabase as any)
-        .from('whatsapp_instances')
-        .delete()
-        .eq('id', id);
+      // Call edge function to delete from Evolution API and database
+      const { data, error } = await supabase.functions.invoke('whatsapp-instance', {
+        body: { action: 'delete', instanceId: id },
+      });
 
       if (error) throw error;
+      if (data?.error) throw new Error(data.error);
+      
+      return data;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['whatsapp-instances'] });
-      toast.success('Instância removida!');
+      toast.success('Instância removida do sistema e da Evolution API!');
     },
     onError: (error: Error) => {
-      toast.error(`Erro: ${error.message}`);
+      toast.error(`Erro ao remover: ${error.message}`);
     },
   });
 }
