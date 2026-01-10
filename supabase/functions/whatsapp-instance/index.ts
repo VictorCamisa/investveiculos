@@ -46,9 +46,18 @@ serve(async (req) => {
     
     console.log('WhatsApp Instance action:', action, { instanceId, userId });
 
-    // Global Evolution API config from secrets
-    const evolutionUrl = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '');
+    // Global Evolution API config from secrets (validate URL is not a placeholder)
+    const rawEvolutionUrl = Deno.env.get('EVOLUTION_API_URL') ?? '';
+    const evolutionUrl = rawEvolutionUrl.includes('PLACEHOLDER') || !rawEvolutionUrl.startsWith('http') 
+      ? '' 
+      : rawEvolutionUrl.replace(/\/$/, '');
     const evolutionKey = Deno.env.get('EVOLUTION_API_KEY') ?? '';
+    
+    console.log('Evolution config:', { 
+      hasValidUrl: !!evolutionUrl, 
+      hasKey: !!evolutionKey,
+      rawUrlPrefix: rawEvolutionUrl.substring(0, 30)
+    });
 
     // === CHECK STATUS FOR USER (sync status from Evolution API) ===
     if (action === 'checkUserStatus') {
