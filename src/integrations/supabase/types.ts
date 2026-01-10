@@ -47,6 +47,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "activity_logs_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       campaign_events: {
@@ -142,6 +149,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "commission_audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "commission_audit_log_commission_id_fkey"
             columns: ["commission_id"]
             isOneToOne: false
@@ -217,6 +231,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "commission_splits_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -546,6 +567,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "lead_assignments_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       lead_costs: {
@@ -628,6 +656,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lead_interactions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -717,6 +752,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "leads_assigned_to_fkey"
+            columns: ["assigned_to"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
           },
           {
             foreignKeyName: "leads_customer_id_fkey"
@@ -1055,6 +1097,13 @@ export type Database = {
             foreignKeyName: "negotiations_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
+            referencedRelation: "vehicle_dre"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiations_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
             referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
@@ -1092,6 +1141,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "notifications_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1164,6 +1220,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "round_robin_config_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       sale_commissions: {
@@ -1215,6 +1278,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_commissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1310,6 +1380,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "sales_seller_id_fkey"
+            columns: ["seller_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "sales_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_dre"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "sales_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
@@ -1354,6 +1438,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "salesperson_goals_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       user_permissions: {
@@ -1392,6 +1483,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "user_permissions_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
         ]
       }
       user_roles: {
@@ -1420,6 +1518,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "profiles"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "user_roles_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
           },
         ]
       }
@@ -1461,6 +1566,13 @@ export type Database = {
           vehicle_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vehicle_costs_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_dre"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vehicle_costs_vehicle_id_fkey"
             columns: ["vehicle_id"]
@@ -1509,6 +1621,13 @@ export type Database = {
             foreignKeyName: "vehicle_images_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
+            referencedRelation: "vehicle_dre"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "vehicle_images_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
             referencedRelation: "vehicles"
             referencedColumns: ["id"]
           },
@@ -1540,6 +1659,13 @@ export type Database = {
           vehicle_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vehicle_interest_alerts_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_dre"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vehicle_interest_alerts_vehicle_id_fkey"
             columns: ["vehicle_id"]
@@ -1581,6 +1707,13 @@ export type Database = {
           vehicle_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "vehicle_simulations_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_dre"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "vehicle_simulations_vehicle_id_fkey"
             columns: ["vehicle_id"]
@@ -1851,12 +1984,178 @@ export type Database = {
       sale_profit_report: {
         Row: {
           brand: string | null
+          created_at: string | null
+          customer_id: string | null
+          days_in_stock: number | null
+          gross_profit: number | null
           model: string | null
           net_profit: number | null
+          plate: string | null
+          profit: number | null
           sale_date: string | null
           sale_id: string | null
           sale_price: number | null
+          salesperson_id: string | null
+          status: string | null
+          total_commissions: number | null
           total_costs: number | null
+          vehicle_id: string | null
+          vehicle_purchase_price: number | null
+          vehicle_total_costs: number | null
+          vehicle_total_investment: number | null
+          year_model: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "sales_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_seller_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_seller_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "sales_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicle_dre"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sales_vehicle_id_fkey"
+            columns: ["vehicle_id"]
+            isOneToOne: false
+            referencedRelation: "vehicles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      salesperson_ranking: {
+        Row: {
+          avg_profit_per_sale: number | null
+          full_name: string | null
+          revenue_this_month: number | null
+          sales_this_month: number | null
+          total_commissions: number | null
+          total_profit: number | null
+          total_revenue: number | null
+          total_sales: number | null
+          user_id: string | null
+        }
+        Relationships: []
+      }
+      vehicle_dre: {
+        Row: {
+          brand: string | null
+          cost_aquisicao: number | null
+          cost_comissao_compra: number | null
+          cost_documentacao: number | null
+          cost_frete: number | null
+          cost_ipva: number | null
+          cost_limpeza: number | null
+          cost_manutencao: number | null
+          cost_outros: number | null
+          cost_transferencia: number | null
+          created_at: string | null
+          days_in_stock: number | null
+          estimated_cleaning: number | null
+          estimated_documentation: number | null
+          estimated_maintenance: number | null
+          estimated_other_costs: number | null
+          expected_margin_percent: number | null
+          expected_sale_days: number | null
+          holding_cost: number | null
+          id: string | null
+          model: string | null
+          plate: string | null
+          purchase_date: string | null
+          purchase_price: number | null
+          sale_price: number | null
+          status: string | null
+          total_estimated_costs: number | null
+          total_investment: number | null
+          total_real_costs: number | null
+          updated_at: string | null
+          year_model: number | null
+        }
+        Insert: {
+          brand?: string | null
+          cost_aquisicao?: never
+          cost_comissao_compra?: never
+          cost_documentacao?: never
+          cost_frete?: never
+          cost_ipva?: never
+          cost_limpeza?: never
+          cost_manutencao?: never
+          cost_outros?: never
+          cost_transferencia?: never
+          created_at?: string | null
+          days_in_stock?: never
+          estimated_cleaning?: number | null
+          estimated_documentation?: number | null
+          estimated_maintenance?: number | null
+          estimated_other_costs?: number | null
+          expected_margin_percent?: number | null
+          expected_sale_days?: number | null
+          holding_cost?: never
+          id?: string | null
+          model?: string | null
+          plate?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          sale_price?: number | null
+          status?: string | null
+          total_estimated_costs?: never
+          total_investment?: never
+          total_real_costs?: never
+          updated_at?: string | null
+          year_model?: number | null
+        }
+        Update: {
+          brand?: string | null
+          cost_aquisicao?: never
+          cost_comissao_compra?: never
+          cost_documentacao?: never
+          cost_frete?: never
+          cost_ipva?: never
+          cost_limpeza?: never
+          cost_manutencao?: never
+          cost_outros?: never
+          cost_transferencia?: never
+          created_at?: string | null
+          days_in_stock?: never
+          estimated_cleaning?: number | null
+          estimated_documentation?: number | null
+          estimated_maintenance?: number | null
+          estimated_other_costs?: number | null
+          expected_margin_percent?: number | null
+          expected_sale_days?: number | null
+          holding_cost?: never
+          id?: string | null
+          model?: string | null
+          plate?: string | null
+          purchase_date?: string | null
+          purchase_price?: number | null
+          sale_price?: number | null
+          status?: string | null
+          total_estimated_costs?: never
+          total_investment?: never
+          total_real_costs?: never
+          updated_at?: string | null
+          year_model?: number | null
         }
         Relationships: []
       }
@@ -1866,8 +2165,45 @@ export type Database = {
         Args: { check_role: string; check_user_id: string }
         Returns: boolean
       }
+      create_notification: {
+        Args: {
+          p_link?: string
+          p_message: string
+          p_title: string
+          p_type: string
+          p_user_id: string
+        }
+        Returns: string
+      }
       get_my_role: { Args: never; Returns: string }
+      get_next_round_robin_salesperson: { Args: never; Returns: string }
+      get_user_permissions: {
+        Args: { _user_id: string }
+        Returns: {
+          module: string
+          permissions: string[]
+        }[]
+      }
+      has_permission: {
+        Args: { _module: string; _permission: string; _user_id: string }
+        Returns: boolean
+      }
       has_role: { Args: { role_name: string }; Returns: boolean }
+      increment_round_robin_counters: {
+        Args: { p_salesperson_id: string }
+        Returns: undefined
+      }
+      is_master_user: { Args: { _user_id: string }; Returns: boolean }
+      log_activity: {
+        Args: {
+          p_action: string
+          p_details?: Json
+          p_entity_id?: string
+          p_entity_type: string
+        }
+        Returns: string
+      }
+      reset_daily_lead_counts: { Args: never; Returns: undefined }
     }
     Enums: {
       app_role: "gerente" | "vendedor" | "marketing"
