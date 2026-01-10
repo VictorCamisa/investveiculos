@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Plus, Search, LayoutGrid, List, BarChart3, Car, CheckCircle, Clock, Wrench, DollarSign, Upload, Store } from 'lucide-react';
+import { Plus, Search, LayoutGrid, List, BarChart3, Car, CheckCircle, Clock, Wrench, DollarSign, Store, Link2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -116,12 +116,15 @@ export default function Inventory() {
               <Store className="h-4 w-4 mr-2 text-yellow-600" />
               Mercado Livre
             </Button>
-            <Link to="/estoque/importar">
-              <Button variant="outline" size="lg">
-                <Upload className="h-4 w-4 mr-2" />
-                Importar XML
-              </Button>
-            </Link>
+            <Button 
+              variant="outline" 
+              size="lg"
+              onClick={() => window.open('https://integracao.autocerto.com', '_blank')}
+              className="border-primary/50 hover:bg-primary/10"
+            >
+              <Link2 className="h-4 w-4 mr-2 text-primary" />
+              Conectar Autocerto
+            </Button>
             <Button onClick={() => setIsCreateDialogOpen(true)} size="lg">
               <Plus className="h-4 w-4 mr-2" />
               Novo Veículo
@@ -136,7 +139,7 @@ export default function Inventory() {
           title="Total em Estoque"
           value={stats.total}
           subtitle="Veículos cadastrados"
-          colors={["#E53935", "#EF5350", "#E57373"]}
+          colors={["#E8A020", "#F5B740", "#FFD060"]}
           delay={0}
           icon={<Car className="h-5 w-5 text-muted-foreground" />}
         />
@@ -144,7 +147,7 @@ export default function Inventory() {
           title="Disponíveis"
           value={stats.disponivel}
           subtitle="Prontos para venda"
-          colors={["#D32F2F", "#E53935", "#EF5350"]}
+          colors={["#C78A10", "#E8A020", "#F5B740"]}
           delay={0.1}
           icon={<CheckCircle className="h-5 w-5 text-muted-foreground" />}
         />
@@ -152,7 +155,7 @@ export default function Inventory() {
           title="Reservados"
           value={stats.reservado}
           subtitle="Em negociação"
-          colors={["#C62828", "#D32F2F", "#E53935"]}
+          colors={["#8A8A8A", "#9A9A9A", "#AAAAAA"]}
           delay={0.2}
           icon={<Clock className="h-5 w-5 text-muted-foreground" />}
         />
@@ -160,7 +163,7 @@ export default function Inventory() {
           title="Em Manutenção"
           value={stats.emManutencao}
           subtitle="Aguardando reparo"
-          colors={["#B71C1C", "#C62828", "#D32F2F"]}
+          colors={["#6A6A6A", "#7A7A7A", "#8A8A8A"]}
           delay={0.3}
           icon={<Wrench className="h-5 w-5 text-muted-foreground" />}
         />
@@ -168,7 +171,7 @@ export default function Inventory() {
           title="Valor em Estoque"
           value={formatCurrency(totalStockValue)}
           subtitle="Preço de venda"
-          colors={["#E53935", "#EF5350", "#E57373"]}
+          colors={["#E8A020", "#F5B740", "#FFD060"]}
           delay={0.4}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
           className="col-span-2 lg:col-span-1"
