@@ -3,12 +3,11 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Lead, LeadStatus, LeadSource, QualificationStatus } from '@/types/crm';
 import { toast } from 'sonner';
 
-// Shared query options for better caching
+// staleTime: 0 garante que invalidateQueries sempre dispara refetch
 const leadQueryOptions = {
-  staleTime: 1000 * 60 * 1, // 1 minute
+  staleTime: 0,
   gcTime: 1000 * 60 * 5, // 5 minutes
   refetchOnWindowFocus: true,
-  refetchOnMount: true,
 };
 
 export function useLeads() {
@@ -193,8 +192,8 @@ export function useCreateLead() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['leads'] });
       toast.success('Lead criado com sucesso!');
     },
     onError: (error: Error) => {
@@ -234,8 +233,8 @@ export function useUpdateLead() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['leads'] });
       toast.success('Lead atualizado com sucesso!');
     },
     onError: (error: Error) => {
@@ -257,8 +256,8 @@ export function useDeleteLead() {
 
       if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['leads'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['leads'] });
       toast.success('Lead excluído com sucesso!');
     },
     onError: (error: Error) => {

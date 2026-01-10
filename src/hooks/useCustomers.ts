@@ -3,6 +3,13 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Customer } from '@/types/crm';
 import { toast } from 'sonner';
 
+// staleTime: 0 garante refetch imediato após mutations
+const customerQueryOptions = {
+  staleTime: 0,
+  gcTime: 1000 * 60 * 5,
+  refetchOnWindowFocus: true,
+};
+
 export function useCustomers() {
   return useQuery({
     queryKey: ['customers'],
@@ -16,7 +23,7 @@ export function useCustomers() {
       if (error) throw error;
       return (data || []) as Customer[];
     },
-    staleTime: 30000,
+    ...customerQueryOptions,
   });
 }
 
@@ -54,8 +61,8 @@ export function useUpdateCustomer() {
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['customers'] });
       toast.success('Cliente atualizado com sucesso!');
     },
     onError: (error: Error) => {
@@ -91,8 +98,8 @@ export function useCreateCustomer() {
       if (error) throw error;
       return data as Customer;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['customers'] });
       toast.success('Cliente criado com sucesso!');
     },
     onError: (error: Error) => {
