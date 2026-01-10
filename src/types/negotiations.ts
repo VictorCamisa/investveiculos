@@ -51,8 +51,8 @@ export interface Negotiation {
 }
 
 export const negotiationStatusLabels: Record<NegotiationStatus, string> = {
-  em_andamento: 'Em Andamento',
-  proposta_enviada: 'Proposta Enviada',
+  em_andamento: 'Lead',
+  proposta_enviada: 'Em Qualificação',
   negociando: 'Qualificado',
   ganho: 'Ganho',
   perdido: 'Perdido',
