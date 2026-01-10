@@ -2135,6 +2135,7 @@ export type Database = {
           api_key: string | null
           api_url: string | null
           created_at: string | null
+          created_by: string | null
           id: string
           instance_key: string | null
           instance_name: string | null
@@ -2144,6 +2145,7 @@ export type Database = {
           phone_number: string | null
           qr_code: string | null
           qr_code_expires_at: string | null
+          signature_template: string | null
           status: string | null
           updated_at: string | null
           user_id: string | null
@@ -2153,6 +2155,7 @@ export type Database = {
           api_key?: string | null
           api_url?: string | null
           created_at?: string | null
+          created_by?: string | null
           id?: string
           instance_key?: string | null
           instance_name?: string | null
@@ -2162,6 +2165,7 @@ export type Database = {
           phone_number?: string | null
           qr_code?: string | null
           qr_code_expires_at?: string | null
+          signature_template?: string | null
           status?: string | null
           updated_at?: string | null
           user_id?: string | null
@@ -2171,6 +2175,7 @@ export type Database = {
           api_key?: string | null
           api_url?: string | null
           created_at?: string | null
+          created_by?: string | null
           id?: string
           instance_key?: string | null
           instance_name?: string | null
@@ -2180,12 +2185,27 @@ export type Database = {
           phone_number?: string | null
           qr_code?: string | null
           qr_code_expires_at?: string | null
+          signature_template?: string | null
           status?: string | null
           updated_at?: string | null
           user_id?: string | null
           webhook_url?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_instances_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
           {
             foreignKeyName: "whatsapp_instances_user_id_fkey"
             columns: ["user_id"]
