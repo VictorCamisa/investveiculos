@@ -69,17 +69,33 @@ export function WhatsAppInstances() {
       return;
     }
 
-    await createInstance.mutateAsync(formData);
-    setDialogOpen(false);
-    setFormData({
-      name: '',
-      instance_name: '',
-      api_url: FIXED_API_URL,
-      api_key: FIXED_API_KEY,
-      is_default: false,
-      is_shared: false,
-      signature_template: '👤 {nome} está te atendendo',
-    });
+    try {
+      // 1. Save to database
+      const newInstance = await createInstance.mutateAsync(formData);
+      
+      // 2. Automatically create in Evolution API
+      if (newInstance?.id) {
+        toast.info('Criando instância na Evolution API...');
+        await instanceAction.mutateAsync({ action: 'create', instanceId: newInstance.id });
+        await instanceAction.mutateAsync({ action: 'setWebhook', instanceId: newInstance.id });
+        await instanceAction.mutateAsync({ action: 'connect', instanceId: newInstance.id });
+        toast.success('Instância criada! Escaneie o QR Code.');
+      }
+      
+      setDialogOpen(false);
+      setFormData({
+        name: '',
+        instance_name: '',
+        api_url: FIXED_API_URL,
+        api_key: FIXED_API_KEY,
+        is_default: false,
+        is_shared: false,
+        signature_template: '👤 {nome} está te atendendo',
+      });
+    } catch (error) {
+      console.error('Error creating instance:', error);
+      toast.error('Erro ao criar instância');
+    }
   };
 
   const handleGenerateQRCode = async (instanceId: string) => {
