@@ -39,39 +39,37 @@ async function fetchUserRole(userId: string): Promise<AppRole | null> {
   console.log('[AuthContext] Fetching role for user:', userId);
   
   try {
-    // Primeiro tenta usar a função RPC (bypassa RLS)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const { data: rpcData, error: rpcError } = await (supabase.rpc as any)('get_my_role');
+    // Usa função RPC SECURITY DEFINER que bypassa RLS
+    const { data, error } = await supabase.rpc('get_my_role');
     
-    console.log('[AuthContext] Role RPC result:', { data: rpcData, error: rpcError });
+    console.log('[AuthContext] Role RPC result:', { data, error });
     
-    if (!rpcError && rpcData) {
-      console.log('[AuthContext] User role found via RPC:', rpcData);
-      return rpcData as AppRole;
+    if (error) {
+      console.error('[AuthContext] RPC error:', error);
+      // Fallback: query direta
+      const { data: fallbackData, error: fallbackError } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .limit(1);
+      
+      if (fallbackError || !fallbackData || fallbackData.length === 0) {
+        console.error('[AuthContext] Fallback error:', fallbackError);
+        return null;
+      }
+      
+      const roleData = fallbackData[0] as { role: string };
+      console.log('[AuthContext] Role from fallback:', roleData.role);
+      return roleData.role as AppRole;
     }
     
-    // Fallback: tenta query direta
-    console.log('[AuthContext] RPC failed, trying direct query...');
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
-    
-    console.log('[AuthContext] Direct query result:', { data, error });
-    
-    if (error || !data || data.length === 0) {
-      if (error) console.error('[AuthContext] Error fetching user role:', error);
+    if (!data) {
+      console.log('[AuthContext] No role found');
       return null;
     }
     
-    // Se tiver múltiplos roles, pega o de maior prioridade
-    const roles = data.map((r: { role: string }) => r.role);
-    const highestRole = roles.sort((a: string, b: string) => 
-      (ROLE_PRIORITY[b] || 0) - (ROLE_PRIORITY[a] || 0)
-    )[0];
-    
-    console.log('[AuthContext] User role found via query:', highestRole);
-    return highestRole as AppRole;
+    console.log('[AuthContext] User role:', data);
+    return data as AppRole;
   } catch (err) {
     console.error('[AuthContext] Error fetching user role:', err);
     return null;
