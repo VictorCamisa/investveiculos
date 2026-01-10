@@ -39,27 +39,23 @@ async function fetchUserRole(userId: string): Promise<AppRole | null> {
   console.log('[AuthContext] Fetching role for user:', userId);
   
   try {
-    // Busca TODOS os roles do usuário (pode ter mais de um)
-    const { data, error } = await supabase
-      .from('user_roles')
-      .select('role')
-      .eq('user_id', userId);
+    // Usa função RPC que bypassa RLS
+    const { data, error } = await supabase.rpc('get_my_role');
     
-    console.log('[AuthContext] Role query result:', { data, error });
+    console.log('[AuthContext] Role RPC result:', { data, error });
     
-    if (error || !data || data.length === 0) {
-      if (error) console.error('[AuthContext] Error fetching user role:', error);
+    if (error) {
+      console.error('[AuthContext] Error fetching user role:', error);
       return null;
     }
     
-    // Se tiver múltiplos roles, pega o de maior prioridade (gerente > marketing > vendedor)
-    const roles = data.map((r: { role: string }) => r.role);
-    const highestRole = roles.sort((a: string, b: string) => 
-      (ROLE_PRIORITY[b] || 0) - (ROLE_PRIORITY[a] || 0)
-    )[0];
+    if (!data) {
+      console.log('[AuthContext] No role found for user');
+      return null;
+    }
     
-    console.log('[AuthContext] User roles found:', roles, '- Using highest:', highestRole);
-    return highestRole as AppRole;
+    console.log('[AuthContext] User role found:', data);
+    return data as AppRole;
   } catch (err) {
     console.error('[AuthContext] Error fetching user role:', err);
     return null;
