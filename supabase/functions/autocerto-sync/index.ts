@@ -347,8 +347,8 @@ serve(async (req) => {
           // Insert new photos
           for (let i = 0; i < photos.length; i++) {
             const photo = photos[i];
-            // Try multiple possible URL field names
-            const photoUrl = photo.Url || photo.url || photo.UrlFoto || photo.urlFoto || 
+            // Try multiple possible URL field names - API uses "URL" (uppercase)
+            const photoUrl = photo.URL || photo.Url || photo.url || photo.UrlFoto || photo.urlFoto || 
                            photo.Foto || photo.foto || photo.Link || photo.link || 
                            photo.Caminho || photo.caminho || photo.Path || photo.path;
             
@@ -358,7 +358,7 @@ serve(async (req) => {
             }
             
             const isPrincipal = photo.Principal === true || photo.principal === true || i === 0;
-            const order = photo.Ordem ?? photo.ordem ?? photo.Order ?? photo.order ?? i;
+            const order = photo.Posicao ?? photo.Ordem ?? photo.ordem ?? photo.Order ?? photo.order ?? i;
             
             const { error: photoError } = await supabase
               .from('vehicle_images')
@@ -377,9 +377,9 @@ serve(async (req) => {
             }
           }
 
-          // Also update the images array on the vehicle
+          // Also update the images array on the vehicle - API uses "URL" (uppercase)
           const imageUrls = photos.map((p: Record<string, unknown>) => 
-            p.Url || p.url || p.UrlFoto || p.urlFoto || p.Foto || p.foto || p.Link || p.link
+            p.URL || p.Url || p.url || p.UrlFoto || p.urlFoto || p.Foto || p.foto || p.Link || p.link
           ).filter((url: unknown) => url != null);
           await supabase
             .from('vehicles')
