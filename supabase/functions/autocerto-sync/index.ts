@@ -38,18 +38,46 @@ interface AutocertoPhoto {
   Ordem: number;
 }
 
-// Helper function to make Autocerto API requests
-async function autocertoFetch(url: string, authHeader: string): Promise<Response> {
+// Helper function to get OAuth2 access token
+async function getOAuthToken(baseUrl: string, username: string, password: string): Promise<string> {
+  const tokenUrl = `${baseUrl}/oauth/token`;
+  console.log('Requesting OAuth token from:', tokenUrl);
+  console.log('Username:', username);
+  
+  const response = await fetch(tokenUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+    },
+    body: new URLSearchParams({
+      grant_type: 'password',
+      username: username,
+      password: password,
+    }),
+  });
+  
+  console.log('OAuth response status:', response.status);
+  
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error('OAuth token request failed:', response.status, errorText);
+    throw new Error(`OAuth authentication failed: ${errorText}`);
+  }
+  
+  const data = await response.json();
+  console.log('OAuth token obtained successfully');
+  return data.access_token;
+}
+
+// Helper function to make authenticated requests to Autocerto API
+async function autocertoFetch(url: string, accessToken: string): Promise<Response> {
   console.log('Making request to:', url);
-  console.log('Auth header preview:', authHeader.substring(0, 20) + '...');
   
   const response = await fetch(url, {
     method: 'GET',
     headers: {
-      'Authorization': `Basic ${authHeader}`,
+      'Authorization': `Bearer ${accessToken}`,
       'Accept': 'application/json',
-      'User-Agent': 'AutocertoClient/1.0',
-      'Cache-Control': 'no-cache',
     },
   });
   
@@ -82,32 +110,38 @@ serve(async (req) => {
       );
     }
 
-    console.log('Attempting auth with username:', username);
+    console.log('Attempting OAuth auth with username:', username);
     console.log('Base URL (normalized):', baseUrl);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    // Encode credentials for Basic Auth
-    const credentials = `${username}:${password}`;
-    const authHeader = btoa(credentials);
-    
-    console.log('Auth credentials length:', credentials.length);
+    // Get OAuth2 access token
+    let accessToken: string;
+    try {
+      accessToken = await getOAuthToken(baseUrl, username, password);
+    } catch (oauthError) {
+      console.error('OAuth authentication failed:', oauthError);
+      return new Response(
+        JSON.stringify({ error: 'Credenciais inválidas. Verifique os secrets AUTOCERTO_LOGIN e AUTOCERTO_PASSWORD.' }),
+        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
-    // Test connection by fetching stock
+    // Fetch stock using the access token
     console.log('Fetching stock from Autocerto...');
-    const stockResponse = await autocertoFetch(`${baseUrl}/api/Veiculo/ObterEstoque`, authHeader);
+    const stockResponse = await autocertoFetch(`${baseUrl}/api/Veiculo/ObterEstoque`, accessToken);
 
     console.log('Autocerto response status:', stockResponse.status);
     
     if (!stockResponse.ok) {
       const errorText = await stockResponse.text();
-      console.error('Failed to connect to Autocerto:', stockResponse.status, errorText);
+      console.error('Failed to fetch stock from Autocerto:', stockResponse.status, errorText);
       
       if (stockResponse.status === 401) {
         return new Response(
-          JSON.stringify({ error: 'Credenciais inválidas. Verifique os secrets AUTOCERTO_LOGIN e AUTOCERTO_PASSWORD.' }),
+          JSON.stringify({ error: 'Token expirado ou inválido.' }),
           { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -220,7 +254,7 @@ serve(async (req) => {
         console.log(`Fetching photos for vehicle ${vehicle.Codigo}...`);
         const photosResponse = await autocertoFetch(
           `${baseUrl}/api/Veiculo/ObterFotos?codigoVeiculo=${vehicle.Codigo}`, 
-          authHeader
+          accessToken
         );
 
         if (photosResponse.ok) {
