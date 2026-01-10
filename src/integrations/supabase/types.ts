@@ -1664,19 +1664,19 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
-          role: string
+          role: Database["public"]["Enums"]["app_role"]
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
-          role: string
+          role: Database["public"]["Enums"]["app_role"]
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
-          role?: string
+          role?: Database["public"]["Enums"]["app_role"]
           user_id?: string | null
         }
         Relationships: [
@@ -2440,7 +2440,15 @@ export type Database = {
         Args: { _module: string; _permission: string; _user_id: string }
         Returns: boolean
       }
-      has_role: { Args: { role_name: string }; Returns: boolean }
+      has_role:
+        | {
+            Args: {
+              _role: Database["public"]["Enums"]["app_role"]
+              _user_id: string
+            }
+            Returns: boolean
+          }
+        | { Args: { role_name: string }; Returns: boolean }
       increment_round_robin_counters: {
         Args: { p_salesperson_id: string }
         Returns: undefined
