@@ -24,8 +24,7 @@ export interface UserPermission {
   user_id: string;
   module: ModuleName;
   permission: PermissionType;
-  granted_by: string | null;
-  granted_at: string;
+  created_at: string;
 }
 
 export interface UserProfile {

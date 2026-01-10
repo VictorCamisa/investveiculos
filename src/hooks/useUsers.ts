@@ -201,7 +201,6 @@ export function useCreateUser() {
               user_id: userId,
               module: p.module,
               permission: p.permission,
-              granted_by: session.user.id,
             }))
           );
         if (permError) throw permError;
@@ -375,7 +374,6 @@ export function useUpdateUserPermissions() {
               user_id: input.userId,
               module: p.module,
               permission: p.permission,
-              granted_by: user?.id,
             }))
           );
 
