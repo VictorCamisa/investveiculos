@@ -1,18 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import type { Tables } from '@/integrations/supabase/types';
+import { Tables } from '@/integrations/supabase/types';
 
 export interface PublicVehicle {
   id: string;
   brand: string;
   model: string;
   version: string | null;
-  year_fabrication: number;
-  year_model: number;
-  color: string;
-  km: number;
-  fuel_type: string;
-  transmission: string;
+  year_fabrication: number | null;
+  year_model: number | null;
+  color: string | null;
+  km: number | null;
+  fuel_type: string | null;
+  transmission: string | null;
   doors: number | null;
   sale_price: number | null;
   featured: boolean | null;
@@ -34,13 +34,12 @@ export function usePublicVehicles() {
       const { data, error: vehiclesError } = await supabase
         .from('vehicles')
         .select('*')
-        .eq('status', 'disponivel')
-        .eq('featured', true)
+        .eq('status', 'Disponível')
         .order('created_at', { ascending: false });
 
       if (vehiclesError) throw vehiclesError;
-      const vehicles = data as VehicleRow[] | null;
-      if (!vehicles || vehicles.length === 0) return [];
+      const vehicles = (data || []) as VehicleRow[];
+      if (vehicles.length === 0) return [];
 
       const vehicleIds = vehicles.map(v => v.id);
 
@@ -48,28 +47,33 @@ export function usePublicVehicles() {
         .from('vehicle_images')
         .select('*')
         .in('vehicle_id', vehicleIds)
-        .order('display_order', { ascending: true });
+        .order('order_index', { ascending: true });
 
       if (imagesError) throw imagesError;
-      const images = imgData as ImageRow[] | null;
+      const images = (imgData || []) as ImageRow[];
 
       return vehicles.map(vehicle => ({
         id: vehicle.id,
         brand: vehicle.brand,
         model: vehicle.model,
         version: vehicle.version,
-        year_fabrication: vehicle.year_fabrication,
+        year_fabrication: vehicle.year_manufacture,
         year_model: vehicle.year_model,
         color: vehicle.color,
-        km: vehicle.km,
+        km: vehicle.mileage,
         fuel_type: vehicle.fuel_type,
         transmission: vehicle.transmission,
-        doors: vehicle.doors,
-        sale_price: vehicle.sale_price,
-        featured: vehicle.featured,
-        images: (images || [])
+        doors: null,
+        sale_price: vehicle.price_sale,
+        featured: null,
+        images: images
           .filter(img => img.vehicle_id === vehicle.id)
-          .map(img => ({ id: img.id, image_url: img.image_url, is_cover: img.is_cover, display_order: img.display_order }))
+          .map(img => ({ 
+            id: img.id, 
+            image_url: img.url, 
+            is_cover: img.is_main, 
+            display_order: img.order_index 
+          }))
       }));
     },
   });
@@ -83,37 +87,42 @@ export function usePublicVehicle(id: string) {
         .from('vehicles')
         .select('*')
         .eq('id', id)
-        .eq('status', 'disponivel')
+        .eq('status', 'Disponível')
         .single();
 
       if (vehicleError) throw vehicleError;
-      const vehicle = data as VehicleRow | null;
+      const vehicle = data as VehicleRow;
       if (!vehicle) throw new Error('Vehicle not found');
 
       const { data: imgData, error: imagesError } = await supabase
         .from('vehicle_images')
         .select('*')
         .eq('vehicle_id', id)
-        .order('display_order', { ascending: true });
+        .order('order_index', { ascending: true });
 
       if (imagesError) throw imagesError;
-      const images = imgData as ImageRow[] | null;
+      const images = (imgData || []) as ImageRow[];
 
       return {
         id: vehicle.id,
         brand: vehicle.brand,
         model: vehicle.model,
         version: vehicle.version,
-        year_fabrication: vehicle.year_fabrication,
+        year_fabrication: vehicle.year_manufacture,
         year_model: vehicle.year_model,
         color: vehicle.color,
-        km: vehicle.km,
+        km: vehicle.mileage,
         fuel_type: vehicle.fuel_type,
         transmission: vehicle.transmission,
-        doors: vehicle.doors,
-        sale_price: vehicle.sale_price,
-        featured: vehicle.featured,
-        images: (images || []).map(img => ({ id: img.id, image_url: img.image_url, is_cover: img.is_cover, display_order: img.display_order }))
+        doors: null,
+        sale_price: vehicle.price_sale,
+        featured: null,
+        images: images.map(img => ({ 
+          id: img.id, 
+          image_url: img.url, 
+          is_cover: img.is_main, 
+          display_order: img.order_index 
+        }))
       };
     },
     enabled: !!id,
@@ -127,14 +136,13 @@ export function useFeaturedVehicles(limit = 6) {
       const { data, error: vehiclesError } = await supabase
         .from('vehicles')
         .select('*')
-        .eq('status', 'disponivel')
-        .eq('featured', true)
+        .eq('status', 'Disponível')
         .order('created_at', { ascending: false })
         .limit(limit);
 
       if (vehiclesError) throw vehiclesError;
-      const vehicles = data as VehicleRow[] | null;
-      if (!vehicles || vehicles.length === 0) return [];
+      const vehicles = (data || []) as VehicleRow[];
+      if (vehicles.length === 0) return [];
 
       const vehicleIds = vehicles.map(v => v.id);
 
@@ -142,28 +150,33 @@ export function useFeaturedVehicles(limit = 6) {
         .from('vehicle_images')
         .select('*')
         .in('vehicle_id', vehicleIds)
-        .order('display_order', { ascending: true });
+        .order('order_index', { ascending: true });
 
       if (imagesError) throw imagesError;
-      const images = imgData as ImageRow[] | null;
+      const images = (imgData || []) as ImageRow[];
 
       return vehicles.map(vehicle => ({
         id: vehicle.id,
         brand: vehicle.brand,
         model: vehicle.model,
         version: vehicle.version,
-        year_fabrication: vehicle.year_fabrication,
+        year_fabrication: vehicle.year_manufacture,
         year_model: vehicle.year_model,
         color: vehicle.color,
-        km: vehicle.km,
+        km: vehicle.mileage,
         fuel_type: vehicle.fuel_type,
         transmission: vehicle.transmission,
-        doors: vehicle.doors,
-        sale_price: vehicle.sale_price,
-        featured: vehicle.featured,
-        images: (images || [])
+        doors: null,
+        sale_price: vehicle.price_sale,
+        featured: null,
+        images: images
           .filter(img => img.vehicle_id === vehicle.id)
-          .map(img => ({ id: img.id, image_url: img.image_url, is_cover: img.is_cover, display_order: img.display_order }))
+          .map(img => ({ 
+            id: img.id, 
+            image_url: img.url, 
+            is_cover: img.is_main, 
+            display_order: img.order_index 
+          }))
       }));
     },
   });

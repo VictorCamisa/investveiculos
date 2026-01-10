@@ -115,12 +115,15 @@ export function useSales() {
 
       if (error) throw error;
 
-      const sales = (data || []) as Sale[];
+      const sales = (data || []).map((s: any) => ({
+        ...s,
+        salesperson_id: s.seller_id, // Map seller_id to salesperson_id for compatibility
+      })) as Sale[];
 
       // Enriquecer com dados do vendedor sem depender de FK (evita erro PGRST200)
       const salespersonIds = Array.from(
-        new Set(sales.map((s) => s.salesperson_id).filter(Boolean))
-      );
+        new Set(sales.map((s) => s.seller_id).filter(Boolean))
+      ) as string[];
 
       if (salespersonIds.length === 0) return sales;
 
@@ -134,7 +137,7 @@ export function useSales() {
 
       return sales.map((s) => ({
         ...s,
-        salesperson: profileMap.get(s.salesperson_id) || null,
+        salesperson: profileMap.get(s.seller_id || '') || null,
       }));
     },
     ...salesQueryOptions,
@@ -157,13 +160,13 @@ export function useSale(id: string) {
 
       if (error) throw error;
 
-      const sale = data as Sale | null;
-      if (!sale?.salesperson_id) return sale;
+      const sale = data ? { ...data, salesperson_id: data.seller_id } as Sale : null;
+      if (!sale?.seller_id) return sale;
 
       const { data: profile } = await (supabase as any)
         .from('profiles')
         .select('id, full_name')
-        .eq('id', sale.salesperson_id)
+        .eq('id', sale.seller_id)
         .maybeSingle();
 
       return {

@@ -555,7 +555,7 @@ export function useProfitabilityAnalysis() {
     queryFn: async () => {
       const { data, error } = await supabase.from('profiles').select('*');
       if (error) throw error;
-      return data as Tables<'profiles'>[];
+      return data || [];
     },
   });
   const { data: leads } = useLeads();
@@ -587,13 +587,14 @@ export function useProfitabilityAnalysis() {
       };
     });
 
-    // By Salesperson
+    // By Salesperson (use seller_id from sales table)
     const salespersonMap = new Map<string, ProfitabilityData>();
     salesWithProfit.forEach(sale => {
-      if (!sale.salesperson_id) return;
-      const profile = profiles?.find(p => p.id === sale.salesperson_id);
-      const existing = salespersonMap.get(sale.salesperson_id) || {
-        id: sale.salesperson_id,
+      const sellerId = (sale as any).seller_id || sale.salesperson_id;
+      if (!sellerId) return;
+      const profile = profiles?.find(p => p.id === sellerId);
+      const existing = salespersonMap.get(sellerId) || {
+        id: sellerId,
         name: profile?.full_name || 'Desconhecido',
         type: 'vendedor' as const,
         revenue: 0,
@@ -607,7 +608,7 @@ export function useProfitabilityAnalysis() {
       existing.profit += sale.profit;
       existing.count += 1;
       existing.margin = existing.revenue > 0 ? (existing.profit / existing.revenue) * 100 : 0;
-      salespersonMap.set(sale.salesperson_id, existing);
+      salespersonMap.set(sellerId, existing);
     });
 
     // By Lead Source
@@ -684,7 +685,7 @@ export function useFinancialAlerts() {
     queryFn: async () => {
       const { data, error } = await supabase.from('salesperson_goals').select('*');
       if (error) throw error;
-      return data as Tables<'salesperson_goals'>[];
+      return data || [];
     },
   });
 
@@ -782,24 +783,13 @@ export function useFinancialAlerts() {
     const daysPassed = differenceInDays(now, currentMonth);
     const expectedProgress = daysPassed / daysInMonth;
 
-    goals?.filter(g => {
-      const start = new Date(g.period_start);
-      const end = new Date(g.period_end);
-      return isWithinInterval(now, { start, end });
-    }).forEach(goal => {
-      const salesProgress = goal.target_sales > 0 ? goal.current_sales / goal.target_sales : 0;
-      if (salesProgress < expectedProgress * 0.7) {
-        items.push({
-          id: `goal-${goal.id}`,
-          type: 'meta_risco',
-          severity: salesProgress < expectedProgress * 0.5 ? 'critical' : 'warning',
-          title: 'Meta em Risco',
-          description: `Progresso de ${(salesProgress * 100).toFixed(0)}% vs esperado ${(expectedProgress * 100).toFixed(0)}%`,
-          value: goal.target_sales - goal.current_sales,
-          entityId: goal.user_id,
-          entityType: 'goal',
-          createdAt: now,
-        });
+    // Goals check - using month/year from salesperson_goals table
+    goals?.forEach(goal => {
+      // Check if goal is for current month
+      if (goal.month === now.getMonth() + 1 && goal.year === now.getFullYear()) {
+        const targetSales = goal.target_count || 0;
+        // We don't have current_sales in the table, so we skip this alert for now
+        // This would require joining with sales data
       }
     });
 
