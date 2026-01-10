@@ -23,10 +23,17 @@ serve(async (req) => {
   }
 
   try {
-    const supabase = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
-    );
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    
+    console.log('Supabase config check:', { 
+      hasUrl: !!supabaseUrl, 
+      hasServiceKey: !!serviceRoleKey,
+      serviceKeyLength: serviceRoleKey.length,
+      urlPrefix: supabaseUrl.substring(0, 30)
+    });
+    
+    const supabase = createClient(supabaseUrl, serviceRoleKey);
 
     const body = await req.json();
     const { action, instanceId, userId } = body;
