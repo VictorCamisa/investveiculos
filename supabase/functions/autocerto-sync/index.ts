@@ -38,14 +38,18 @@ interface AutocertoPhoto {
   Ordem: number;
 }
 
-// Helper function to make Autocerto API requests
+// Helper function to make Autocerto API requests with browser-like headers
 async function autocertoFetch(url: string, authHeader: string): Promise<Response> {
   return fetch(url, {
     method: 'GET',
     headers: {
       'Authorization': `Basic ${authHeader}`,
       'Content-Type': 'application/json',
-      'Accept': 'application/json',
+      'Accept': 'application/json, text/plain, */*',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Origin': 'https://integracao.autocerto.com',
+      'Referer': 'https://integracao.autocerto.com/swagger/',
     },
   });
 }
