@@ -321,8 +321,13 @@ serve(async (req) => {
         );
 
         if (photosResponse.ok) {
-          const photos: AutocertoPhoto[] = await photosResponse.json();
+          const photos = await photosResponse.json();
           console.log(`Found ${photos.length} photos for vehicle ${vehicle.Codigo}`);
+          
+          // Log first photo structure to debug
+          if (photos.length > 0) {
+            console.log('Sample photo structure:', JSON.stringify(photos[0], null, 2));
+          }
 
           // Delete existing photos for this vehicle first
           await supabase
@@ -331,17 +336,31 @@ serve(async (req) => {
             .eq('vehicle_id', vehicleId);
 
           // Insert new photos
-          for (const photo of photos) {
+          for (let i = 0; i < photos.length; i++) {
+            const photo = photos[i];
+            // Try multiple possible URL field names
+            const photoUrl = photo.Url || photo.url || photo.UrlFoto || photo.urlFoto || 
+                           photo.Foto || photo.foto || photo.Link || photo.link || 
+                           photo.Caminho || photo.caminho || photo.Path || photo.path;
+            
+            if (!photoUrl) {
+              console.log(`Photo ${i} has no URL. Keys: ${Object.keys(photo).join(', ')}`);
+              continue; // Skip photos without valid URL
+            }
+            
+            const isPrincipal = photo.Principal === true || photo.principal === true || i === 0;
+            const order = photo.Ordem ?? photo.ordem ?? photo.Order ?? photo.order ?? i;
+            
             const { error: photoError } = await supabase
               .from('vehicle_images')
               .insert({
                 vehicle_id: vehicleId,
-                url: photo.Url,
-                image_url: photo.Url,
-                is_main: photo.Principal,
-                is_cover: photo.Principal,
-                display_order: photo.Ordem,
-                order_index: photo.Ordem,
+                url: photoUrl,
+                image_url: photoUrl,
+                is_main: isPrincipal,
+                is_cover: isPrincipal,
+                display_order: order,
+                order_index: order,
               });
 
             if (photoError) {
@@ -350,7 +369,9 @@ serve(async (req) => {
           }
 
           // Also update the images array on the vehicle
-          const imageUrls = photos.map(p => p.Url);
+          const imageUrls = photos.map((p: Record<string, unknown>) => 
+            p.Url || p.url || p.UrlFoto || p.urlFoto || p.Foto || p.foto || p.Link || p.link
+          ).filter((url: unknown) => url != null);
           await supabase
             .from('vehicles')
             .update({ images: imageUrls })
