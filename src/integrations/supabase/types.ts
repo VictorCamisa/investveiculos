@@ -2138,12 +2138,15 @@ export type Database = {
           id: string
           instance_key: string | null
           instance_name: string | null
+          is_default: boolean | null
+          is_shared: boolean | null
           name: string
           phone_number: string | null
           qr_code: string | null
           qr_code_expires_at: string | null
           status: string | null
           updated_at: string | null
+          user_id: string | null
           webhook_url: string | null
         }
         Insert: {
@@ -2153,12 +2156,15 @@ export type Database = {
           id?: string
           instance_key?: string | null
           instance_name?: string | null
+          is_default?: boolean | null
+          is_shared?: boolean | null
           name: string
           phone_number?: string | null
           qr_code?: string | null
           qr_code_expires_at?: string | null
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
           webhook_url?: string | null
         }
         Update: {
@@ -2168,15 +2174,33 @@ export type Database = {
           id?: string
           instance_key?: string | null
           instance_name?: string | null
+          is_default?: boolean | null
+          is_shared?: boolean | null
           name?: string
           phone_number?: string | null
           qr_code?: string | null
           qr_code_expires_at?: string | null
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
           webhook_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "whatsapp_instances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "whatsapp_instances_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       whatsapp_messages: {
         Row: {
