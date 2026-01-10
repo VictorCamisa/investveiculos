@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, memo } from "react";
 import { Loader2 } from "lucide-react";
 
 // Eager load only essential components
@@ -97,12 +97,14 @@ const queryClient = new QueryClient({
   },
 });
 
-// Loading fallback component
-const PageLoader = () => (
-  <div className="min-h-[400px] flex items-center justify-center">
-    <Loader2 className="h-8 w-8 animate-spin text-primary" />
-  </div>
-);
+// Loading fallback component - memoized to prevent ref warnings
+const PageLoader = memo(function PageLoader() {
+  return (
+    <div className="min-h-[400px] flex items-center justify-center">
+      <Loader2 className="h-8 w-8 animate-spin text-primary" />
+    </div>
+  );
+});
 
 const App = () => (
   <QueryClientProvider client={queryClient}>
