@@ -1704,6 +1704,10 @@ export type Database = {
       }
     }
     Functions: {
+      check_user_role: {
+        Args: { check_role: string; check_user_id: string }
+        Returns: boolean
+      }
       get_my_role: { Args: never; Returns: string }
       has_role: { Args: { role_name: string }; Returns: boolean }
     }

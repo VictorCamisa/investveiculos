@@ -60,17 +60,24 @@ serve(async (req) => {
 
     console.log("[create-user] Requesting user:", requestingUser.id, requestingUser.email);
 
-    // Check if requesting user is a gerente (admin)
-    const { data: roleData, error: roleCheckError } = await supabaseAdmin
-      .from("user_roles")
-      .select("role")
-      .eq("user_id", requestingUser.id)
-      .eq("role", "gerente")
-      .maybeSingle();
+    // Check if requesting user is a gerente (admin) using security definer function
+    const { data: isGerente, error: roleCheckError } = await supabaseAdmin
+      .rpc('check_user_role', { 
+        check_user_id: requestingUser.id, 
+        check_role: 'gerente' 
+      });
 
-    console.log("[create-user] Role check:", { roleData, roleCheckError });
+    console.log("[create-user] Role check via RPC:", { isGerente, roleCheckError });
 
-    if (!roleData) {
+    if (roleCheckError) {
+      console.error("[create-user] Role check error:", roleCheckError);
+      return new Response(JSON.stringify({ error: "Erro ao verificar permissões" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!isGerente) {
       return new Response(JSON.stringify({ error: "Apenas gerentes podem criar usuários" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
