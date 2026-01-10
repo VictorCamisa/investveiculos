@@ -81,10 +81,26 @@ export function NegotiationCard({ negotiation, onClick, showSalesperson }: Negot
           </div>
         )}
 
-        {showSalesperson && negotiation.salesperson?.full_name && (
-          <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1 border-t border-border/50">
+        {/* Show salesperson or "Sem vendedor" badge */}
+        {showSalesperson && (
+          <div className="flex items-center gap-1 text-xs pt-1 border-t border-border/50">
             <User className="h-3 w-3" />
-            <span>{negotiation.salesperson.full_name}</span>
+            {negotiation.salesperson?.full_name ? (
+              <span className="text-muted-foreground">{negotiation.salesperson.full_name}</span>
+            ) : (
+              <Badge variant="outline" className="text-xs text-orange-600 border-orange-300 dark:text-orange-400 dark:border-orange-600">
+                Sem vendedor
+              </Badge>
+            )}
+          </div>
+        )}
+
+        {/* Always show "Sem vendedor" badge when no salesperson, even if showSalesperson is false */}
+        {!showSalesperson && !negotiation.salesperson_id && (
+          <div className="flex items-center gap-1 text-xs pt-1 border-t border-border/50">
+            <Badge variant="outline" className="text-xs text-orange-600 border-orange-300 dark:text-orange-400 dark:border-orange-600">
+              Sem vendedor
+            </Badge>
           </div>
         )}
       </CardContent>

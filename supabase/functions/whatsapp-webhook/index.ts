@@ -101,9 +101,9 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
     leadId = await findLeadIdByPhone(supabase, phone);
 
     if (!leadId) {
-      // Create new lead with Round Robin assignment
+      // Create new lead WITHOUT salesperson assignment (Round Robin runs on qualification)
       console.log('Creating new lead for phone:', phone, 'name:', pushName);
-      leadId = await createLeadWithRoundRobin(supabase, phone, pushName || 'WhatsApp');
+      leadId = await createLeadWithoutAssignment(supabase, phone, pushName || 'WhatsApp');
       console.log('Created lead:', leadId);
     } else {
       // Update existing lead's last contact
@@ -292,18 +292,15 @@ async function processOutgoingMessage(
   }
 }
 
-// Create lead and assign via Round Robin
-async function createLeadWithRoundRobin(
+// Create lead WITHOUT salesperson assignment - Round Robin runs when moving to "Qualificado"
+async function createLeadWithoutAssignment(
   supabase: any,
   phone: string,
   name: string
 ): Promise<string | null> {
-  // Get next salesperson from Round Robin
-  const assignedTo = await getNextRoundRobinSalesperson(supabase);
-  
-  console.log('Round Robin assigned to:', assignedTo);
+  console.log('Creating lead without salesperson assignment:', { phone, name });
 
-  // Create lead
+  // Create lead WITHOUT assignment
   const { data: lead, error: leadError } = await supabase
     .from('leads')
     .insert({
@@ -311,7 +308,7 @@ async function createLeadWithRoundRobin(
       name,
       source: 'whatsapp',
       status: 'novo',
-      assigned_to: assignedTo,
+      assigned_to: null, // No salesperson assigned yet
     })
     .select()
     .single();
@@ -321,55 +318,23 @@ async function createLeadWithRoundRobin(
     return null;
   }
 
-  // Create lead assignment record
-  if (assignedTo) {
-    await supabase.from('lead_assignments').insert({
-      lead_id: lead.id,
-      salesperson_id: assignedTo,
-      assignment_type: 'round_robin',
-      notes: 'Atribuído automaticamente via Round Robin (WhatsApp)',
-    });
+  // Create negotiation WITHOUT salesperson
+  const { error: negError } = await supabase.from('negotiations').insert({
+    lead_id: lead.id,
+    salesperson_id: null, // No salesperson assigned yet
+    status: 'em_andamento',
+    notes: 'Negociação criada automaticamente a partir de mensagem WhatsApp. Aguardando qualificação.',
+  });
 
-    // Update round robin config
-    await supabase
-      .from('round_robin_config')
-      .update({
-        last_assigned_at: new Date().toISOString(),
-        total_leads_assigned: supabase.rpc ? undefined : undefined, // Will increment via separate query
-        current_leads_today: supabase.rpc ? undefined : undefined,
-      })
-      .eq('salesperson_id', assignedTo);
-
-    // Increment counters
-    await supabase.rpc('increment_round_robin_counters', { p_salesperson_id: assignedTo });
+  if (negError) {
+    console.error('Error creating negotiation:', negError);
+  } else {
+    console.log('Created negotiation without salesperson for lead:', lead.id);
   }
 
-  // Create negotiation
-  if (assignedTo) {
-    const { error: negError } = await supabase.from('negotiations').insert({
-      lead_id: lead.id,
-      salesperson_id: assignedTo,
-      status: 'contato_inicial',
-      notes: 'Negociação criada automaticamente a partir de mensagem WhatsApp',
-    });
-
-    if (negError) {
-      console.error('Error creating negotiation:', negError);
-    } else {
-      console.log('Created negotiation for lead:', lead.id);
-    }
-  }
-
-  // Create notification for assigned salesperson
-  if (assignedTo) {
-    await supabase.from('notifications').insert({
-      user_id: assignedTo,
-      type: 'new_lead',
-      title: 'Novo Lead Atribuído',
-      message: `Um novo lead foi atribuído a você: ${name} (${phone})`,
-      link: '/leads',
-    });
-  }
+  // No lead_assignments created here
+  // No notifications sent here
+  // These will happen when the negotiation is moved to "Qualificado" status
 
   return lead.id;
 }

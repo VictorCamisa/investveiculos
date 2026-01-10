@@ -72,10 +72,11 @@ export function StageTransitionModal({
         };
       case 'negociando':
         return {
-          title: 'Iniciar Negociação',
-          description: 'Registre observações relevantes para a fase de negociação.',
+          title: 'Qualificar Lead',
+          description: 'Ao confirmar, um vendedor será atribuído automaticamente via Round Robin.',
           requireValue: false,
           showNotes: true,
+          showRoundRobinWarning: true,
         };
       case 'perdido':
         return {
@@ -220,6 +221,15 @@ export function StageTransitionModal({
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
               />
+            </div>
+          )}
+
+          {/* Round Robin Warning */}
+          {'showRoundRobinWarning' in config && config.showRoundRobinWarning && !negotiation?.salesperson_id && (
+            <div className="p-3 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg">
+              <p className="text-sm text-blue-700 dark:text-blue-300 flex items-center gap-2">
+                💡 Ao confirmar, um vendedor será atribuído automaticamente via Round Robin.
+              </p>
             </div>
           )}
 
