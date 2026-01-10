@@ -28,7 +28,7 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import logoMatheusVeiculos from '@/assets/logo-matheus-veiculos.png';
+import logoInvestVeiculos from '@/assets/logo-invest-veiculos.png';
 import type { ModuleName } from '@/types/users';
 
 interface NavItem {
@@ -191,8 +191,8 @@ export function AppSidebar() {
         )}
       >
         <img
-          src={logoMatheusVeiculos}
-          alt="Logo"
+          src={logoInvestVeiculos}
+          alt="InvestVeículos"
           className={cn('object-contain transition-all', collapsed ? 'h-8 w-8' : 'h-9')}
         />
       </div>

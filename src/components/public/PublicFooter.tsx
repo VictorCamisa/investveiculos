@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin, Instagram, Facebook, MessageCircle } from 'lucide-react';
-import logoImg from '@/assets/logo-matheus-veiculos.png';
+import logoImg from '@/assets/logo-invest-veiculos.png';
 
 export function PublicFooter() {
   const currentYear = new Date().getFullYear();

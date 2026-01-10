@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
 import { Shield, FileCheck, CreditCard, Car, CheckCircle, MapPin, Clock, Phone, ArrowRight, ExternalLink } from 'lucide-react';
 import { LocationMap } from '@/components/ui/expand-map';
-import logoImg from '@/assets/logo-matheus-veiculos.png';
+import logoImg from '@/assets/logo-invest-veiculos.png';
 
 // Smooth animation variants
 const fadeInUp = {

@@ -5,7 +5,7 @@ import { usePermissions } from '@/hooks/usePermissions';
 import { useToast } from '@/hooks/use-toast';
 import { Eye, EyeOff, ArrowRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import logo from '@/assets/logo-matheus-veiculos.png';
+import logo from '@/assets/logo-invest-veiculos.png';
 
 // Animated dots background component
 const AnimatedDots = () => {

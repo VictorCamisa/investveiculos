@@ -6,7 +6,7 @@ import { useFeaturedVehicles } from '@/hooks/usePublicVehicles';
 import { PublicVehicleCard } from '@/components/public/PublicVehicleCard';
 import { LocationMap } from '@/components/ui/expand-map';
 import { StatsCard } from '@/components/ui/stats-card';
-import logoImg from '@/assets/logo-matheus-veiculos.png';
+import logoImg from '@/assets/logo-invest-veiculos.png';
 import lojaInterior from '@/assets/loja-interior.jpg';
 import lojaFachada1 from '@/assets/loja-fachada-1.jpg';
 import lojaFachada2 from '@/assets/loja-fachada-2.jpg';
