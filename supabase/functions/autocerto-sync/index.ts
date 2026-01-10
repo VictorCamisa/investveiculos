@@ -38,6 +38,22 @@ interface AutocertoPhoto {
   Ordem: number;
 }
 
+// Helper function to make Autocerto API requests
+async function autocertoFetch(url: string, authHeader: string): Promise<Response> {
+  return fetch(url, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Basic ${authHeader}`,
+      'Content-Type': 'application/json',
+      'Accept': 'application/json',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+      'Cache-Control': 'no-cache',
+      'Pragma': 'no-cache',
+    },
+  });
+}
+
 serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -58,57 +74,56 @@ serve(async (req) => {
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
 
-    const authHeader = btoa(`${username}:${password}`);
+    // Encode credentials for Basic Auth
+    const encoder = new TextEncoder();
+    const data = encoder.encode(`${username}:${password}`);
+    const authHeader = btoa(String.fromCharCode(...data));
+    
     const baseUrl = 'https://integracao.autocerto.com';
 
-    // Test connection first
-    console.log('Testing Autocerto connection...');
-    const testResponse = await fetch(`${baseUrl}/api/Health/Check`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Basic ${authHeader}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    // Test connection by fetching stock directly (Health endpoint may be blocked)
+    console.log('Testing Autocerto connection by fetching stock...');
+    const stockResponse = await autocertoFetch(`${baseUrl}/api/Veiculo/ObterEstoque`, authHeader);
 
-    if (!testResponse.ok) {
-      console.error('Failed to connect to Autocerto:', testResponse.status, await testResponse.text());
-      return new Response(
-        JSON.stringify({ error: 'Falha na autenticação com Autocerto. Verifique suas credenciais.' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    console.log('Autocerto connection successful!');
-
-    if (action === 'test') {
-      return new Response(
-        JSON.stringify({ success: true, message: 'Conexão com Autocerto estabelecida com sucesso!' }),
-        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
-    }
-
-    // Get complete stock
-    console.log('Fetching stock from Autocerto...');
-    const stockResponse = await fetch(`${baseUrl}/api/Veiculo/ObterEstoque`, {
-      method: 'GET',
-      headers: {
-        'Authorization': `Basic ${authHeader}`,
-        'Content-Type': 'application/json',
-      },
-    });
-
+    console.log('Autocerto response status:', stockResponse.status);
+    
     if (!stockResponse.ok) {
       const errorText = await stockResponse.text();
-      console.error('Failed to fetch stock:', stockResponse.status, errorText);
+      console.error('Failed to connect to Autocerto:', stockResponse.status, errorText);
+      
+      if (stockResponse.status === 401) {
+        return new Response(
+          JSON.stringify({ error: 'Credenciais inválidas. Verifique usuário e senha.' }),
+          { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
+      if (stockResponse.status === 403) {
+        return new Response(
+          JSON.stringify({ error: 'Acesso negado pelo servidor Autocerto. Verifique se as credenciais estão corretas.' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       return new Response(
-        JSON.stringify({ error: `Falha ao obter estoque: ${errorText}` }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({ error: `Erro ao conectar: ${stockResponse.status} - ${errorText.substring(0, 200)}` }),
+        { status: stockResponse.status, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
     const vehicles: AutocertoVehicle[] = await stockResponse.json();
     console.log(`Found ${vehicles.length} vehicles in Autocerto`);
+
+    // If just testing connection, return success
+    if (action === 'test') {
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: `Conexão estabelecida! ${vehicles.length} veículos encontrados no Autocerto.` 
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     let imported = 0;
     let updated = 0;
@@ -189,13 +204,10 @@ serve(async (req) => {
 
         // Fetch photos for this vehicle
         console.log(`Fetching photos for vehicle ${vehicle.Codigo}...`);
-        const photosResponse = await fetch(`${baseUrl}/api/Veiculo/ObterFotos?codigoVeiculo=${vehicle.Codigo}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Basic ${authHeader}`,
-            'Content-Type': 'application/json',
-          },
-        });
+        const photosResponse = await autocertoFetch(
+          `${baseUrl}/api/Veiculo/ObterFotos?codigoVeiculo=${vehicle.Codigo}`, 
+          authHeader
+        );
 
         if (photosResponse.ok) {
           const photos: AutocertoPhoto[] = await photosResponse.json();
