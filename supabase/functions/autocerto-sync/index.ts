@@ -257,6 +257,15 @@ serve(async (req) => {
           .eq('plate', vehicle.Placa)
           .maybeSingle();
 
+        // Try multiple price field names using rawVehicle for dynamic access
+        const price = vehicle.Preco || rawVehicle.Preco || rawVehicle.preco || 
+                     rawVehicle.Valor || rawVehicle.valor ||
+                     rawVehicle.PrecoVenda || rawVehicle.precoVenda || 
+                     rawVehicle.ValorVenda || rawVehicle.valorVenda ||
+                     null;
+        
+        console.log(`  Price fields: Preco=${rawVehicle.Preco}, Valor=${rawVehicle.Valor}, PrecoVenda=${rawVehicle.PrecoVenda}, resolved=${price}`);
+
         const vehicleData = {
           brand: brand,
           model: model,
@@ -268,7 +277,7 @@ serve(async (req) => {
           renavam: vehicle.Renavam || rawVehicle.renavam,
           km: vehicle.Km || rawVehicle.km,
           mileage: vehicle.Km || rawVehicle.km,
-          price_sale: vehicle.Preco || rawVehicle.preco || rawVehicle.Valor,
+          price_sale: price,
           color: vehicle.Cor?.Descricao || rawVehicle.Cor || rawVehicle.cor || null,
           fuel_type: (vehicle.Combustivel?.Descricao || rawVehicle.Combustivel || rawVehicle.combustivel || '').toLowerCase() || null,
           transmission: transmission,
@@ -278,7 +287,7 @@ serve(async (req) => {
           updated_at: new Date().toISOString(),
         };
         
-        console.log(`  Final vehicleData: brand=${vehicleData.brand}, model=${vehicleData.model}, plate=${vehicleData.plate}`);
+        console.log(`  Final vehicleData: brand=${vehicleData.brand}, model=${vehicleData.model}, plate=${vehicleData.plate}, price=${vehicleData.price_sale}`);
 
         let vehicleId: string;
 
