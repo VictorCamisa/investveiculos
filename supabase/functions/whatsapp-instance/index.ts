@@ -406,9 +406,12 @@ serve(async (req) => {
       );
     }
 
-    const baseUrl = evolutionUrl || instance.api_url;
-    const apiKey = evolutionKey || instance.api_key;
+    // Use instance.api_url as primary, only fallback to env if instance has none
+    const baseUrl = (instance.api_url || evolutionUrl || '').replace(/\/$/, '');
+    const apiKey = instance.api_key || evolutionKey || '';
     const instanceName = instance.instance_name;
+    
+    console.log('Using Evolution config:', { baseUrl: baseUrl.substring(0, 50), hasApiKey: !!apiKey });
 
     let result;
 
