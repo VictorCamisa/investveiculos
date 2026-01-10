@@ -10,6 +10,15 @@ const vehicleQueryOptions = {
   gcTime: 1000 * 60 * 15, // 15 minutes
 };
 
+// Helper function to map database fields to app types
+function mapVehicleFromDB(dbVehicle: Record<string, unknown>): Vehicle {
+  return {
+    ...dbVehicle,
+    sale_price: dbVehicle.price_sale as number | null,
+    purchase_price: dbVehicle.price_purchase as number | null,
+  } as Vehicle;
+}
+
 export function useVehicles() {
   return useQuery({
     queryKey: ['vehicles'],
@@ -17,11 +26,29 @@ export function useVehicles() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('vehicles')
-        .select('*')
+        .select(`
+          *,
+          vehicle_images (url, is_cover, display_order)
+        `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      return (data || []) as Vehicle[];
+      
+      return (data || []).map((v: Record<string, unknown>) => {
+        const vehicleImages = v.vehicle_images as Array<{ url: string; is_cover?: boolean; display_order?: number }> || [];
+        // Sort images by display_order and put cover first
+        const sortedImages = vehicleImages.sort((a, b) => {
+          if (a.is_cover && !b.is_cover) return -1;
+          if (!a.is_cover && b.is_cover) return 1;
+          return (a.display_order || 0) - (b.display_order || 0);
+        });
+        const images = sortedImages.map(img => img.url);
+        
+        return {
+          ...mapVehicleFromDB(v),
+          images,
+        };
+      });
     },
     ...vehicleQueryOptions,
   });
@@ -34,12 +61,28 @@ export function useVehicle(id: string) {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('vehicles')
-        .select('*')
+        .select(`
+          *,
+          vehicle_images (url, is_cover, display_order)
+        `)
         .eq('id', id)
         .maybeSingle();
 
       if (error) throw error;
-      return data as Vehicle | null;
+      if (!data) return null;
+      
+      const vehicleImages = data.vehicle_images as Array<{ url: string; is_cover?: boolean; display_order?: number }> || [];
+      const sortedImages = vehicleImages.sort((a, b) => {
+        if (a.is_cover && !b.is_cover) return -1;
+        if (!a.is_cover && b.is_cover) return 1;
+        return (a.display_order || 0) - (b.display_order || 0);
+      });
+      const images = sortedImages.map(img => img.url);
+      
+      return {
+        ...mapVehicleFromDB(data),
+        images,
+      };
     },
     enabled: !!id,
     ...vehicleQueryOptions,
