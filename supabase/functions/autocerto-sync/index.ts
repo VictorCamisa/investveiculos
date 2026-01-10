@@ -38,6 +38,15 @@ interface AutocertoPhoto {
   Ordem: number;
 }
 
+// Common headers to bypass CDN blocking
+const browserHeaders = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+  'Accept': 'application/json, text/plain, */*',
+  'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache',
+};
+
 // Helper function to get OAuth2 access token
 async function getOAuthToken(baseUrl: string, username: string, password: string): Promise<string> {
   const tokenUrl = `${baseUrl}/oauth/token`;
@@ -47,6 +56,7 @@ async function getOAuthToken(baseUrl: string, username: string, password: string
   const response = await fetch(tokenUrl, {
     method: 'POST',
     headers: {
+      ...browserHeaders,
       'Content-Type': 'application/x-www-form-urlencoded',
     },
     body: new URLSearchParams({
@@ -76,8 +86,8 @@ async function autocertoFetch(url: string, accessToken: string): Promise<Respons
   const response = await fetch(url, {
     method: 'GET',
     headers: {
+      ...browserHeaders,
       'Authorization': `Bearer ${accessToken}`,
-      'Accept': 'application/json',
     },
   });
   
