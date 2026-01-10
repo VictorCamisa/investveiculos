@@ -204,17 +204,6 @@ export function StageTransitionModal({
             </div>
           )}
 
-          {/* Notes for negociando */}
-          {config.showNotes && (
-            <div className="space-y-2">
-              <Label>Observações</Label>
-              <Textarea
-                placeholder="Registre pontos relevantes da negociação..."
-                value={notes}
-                onChange={(e) => setNotes(e.target.value)}
-              />
-            </div>
-          )}
 
           {/* Round Robin Warning */}
           {'showRoundRobinWarning' in config && config.showRoundRobinWarning && !negotiation?.salesperson_id && (
