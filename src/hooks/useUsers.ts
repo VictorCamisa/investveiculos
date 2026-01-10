@@ -159,7 +159,7 @@ export function useCreateUser() {
         throw new Error('Você precisa estar logado');
       }
 
-      // Create user via edge function
+      // Create user via edge function - now handles roles and permissions
       const response = await fetch(`${SUPABASE_URL}/functions/v1/create-user`, {
         method: 'POST',
         headers: {
@@ -170,7 +170,8 @@ export function useCreateUser() {
           email: input.email,
           password: input.password,
           full_name: input.full_name,
-          role: input.roles[0] || 'vendedor', // Primary role
+          roles: input.roles.length > 0 ? input.roles : ['vendedor'],
+          permissions: input.permissions,
         }),
       });
 
@@ -178,32 +179,6 @@ export function useCreateUser() {
       
       if (!response.ok) {
         throw new Error(data.error || 'Erro ao criar usuário');
-      }
-
-      const userId = data.user?.id;
-      if (!userId) throw new Error('ID do usuário não retornado');
-
-      // Add additional roles (if more than one)
-      for (const role of input.roles.slice(1)) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        await (supabase as any)
-          .from('user_roles')
-          .insert({ user_id: userId, role });
-      }
-
-      // Add permissions
-      if (input.permissions.length > 0) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const { error: permError } = await (supabase as any)
-          .from('user_permissions')
-          .insert(
-            input.permissions.map(p => ({
-              user_id: userId,
-              module: p.module,
-              permission: p.permission,
-            }))
-          );
-        if (permError) throw permError;
       }
 
       return data;
