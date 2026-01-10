@@ -106,8 +106,7 @@ export function NegotiationPipeline({
       qualificationData: {
         ...formData,
         engagement_score: score.engagement,
-        intent_score: score.intent,
-        completeness_score: score.completeness,
+        completeness_score: score.data,
         score: score.total,
       },
     });

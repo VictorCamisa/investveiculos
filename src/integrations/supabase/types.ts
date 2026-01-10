@@ -702,6 +702,7 @@ export type Database = {
           trade_in_vehicle: string | null
           updated_at: string
           vehicle_interest: string | null
+          vehicle_usage: string | null
         }
         Insert: {
           budget_max?: number | null
@@ -726,6 +727,7 @@ export type Database = {
           trade_in_vehicle?: string | null
           updated_at?: string
           vehicle_interest?: string | null
+          vehicle_usage?: string | null
         }
         Update: {
           budget_max?: number | null
@@ -750,6 +752,7 @@ export type Database = {
           trade_in_vehicle?: string | null
           updated_at?: string
           vehicle_interest?: string | null
+          vehicle_usage?: string | null
         }
         Relationships: [
           {

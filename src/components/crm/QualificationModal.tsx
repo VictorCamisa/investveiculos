@@ -1,11 +1,11 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Separator } from '@/components/ui/separator';
 import { Badge } from '@/components/ui/badge';
@@ -13,18 +13,17 @@ import { Alert, AlertDescription } from '@/components/ui/alert';
 import { LeadScoreIndicator } from './LeadScoreIndicator';
 import { 
   useScoreCalculation, 
-  calculateEngagementScore, 
-  calculateIntentScore,
-  getScoreClassification 
+  getScoreClassification,
+  getClassificationMessage
 } from '@/hooks/useLeadQualification';
 import { supabase } from '@/integrations/supabase/client';
 import { useQuery } from '@tanstack/react-query';
 import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { AlertTriangle, MessageCircle, Phone, Calendar, User } from 'lucide-react';
+import { AlertTriangle, MessageCircle, Phone, Calendar, User, CheckCircle2, Info } from 'lucide-react';
 import type { Negotiation } from '@/types/negotiations';
 import type { QualificationFormData, ScoreBreakdown } from '@/types/qualification';
-import { PAYMENT_METHODS, PURCHASE_TIMELINES } from '@/types/qualification';
+import { PAYMENT_METHODS, PURCHASE_TIMELINES, VEHICLE_USAGE } from '@/types/qualification';
 
 interface QualificationModalProps {
   open: boolean;
@@ -49,9 +48,8 @@ const defaultFormData: QualificationFormData = {
   payment_method: '',
   has_trade_in: false,
   trade_in_vehicle: '',
-  trade_in_value: null,
   purchase_timeline: '',
-  decision_maker: true,
+  vehicle_usage: '',
   notes: '',
 };
 
@@ -103,9 +101,10 @@ export function QualificationModal({
     enabled: open && !!negotiation?.lead?.phone,
   });
 
-  // Calculate score
+  // Calculate score with new 50/50 logic
   const score = useScoreCalculation(messages, formData);
   const classification = getScoreClassification(score.total);
+  const classificationMessage = getClassificationMessage(classification);
 
   const handleConfirm = () => {
     onConfirm(formData, score);
@@ -119,6 +118,32 @@ export function QualificationModal({
   };
 
   if (!negotiation) return null;
+
+  // Get alert styling based on classification
+  const getAlertStyling = () => {
+    switch (classification) {
+      case 'hot':
+        return {
+          variant: 'default' as const,
+          className: 'bg-green-500/10 border-green-500/30 text-green-700 dark:text-green-400',
+          icon: <CheckCircle2 className="h-4 w-4" />
+        };
+      case 'warm':
+        return {
+          variant: 'default' as const,
+          className: 'bg-yellow-500/10 border-yellow-500/30 text-yellow-700 dark:text-yellow-400',
+          icon: <Info className="h-4 w-4" />
+        };
+      case 'cold':
+        return {
+          variant: 'destructive' as const,
+          className: '',
+          icon: <AlertTriangle className="h-4 w-4" />
+        };
+    }
+  };
+
+  const alertStyling = getAlertStyling();
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -174,16 +199,6 @@ export function QualificationModal({
                   <LeadScoreIndicator score={score} size="lg" showBreakdown={true} />
                 </div>
               </div>
-              
-              {/* Warning for cold leads */}
-              {classification === 'cold' && (
-                <Alert variant="destructive">
-                  <AlertTriangle className="h-4 w-4" />
-                  <AlertDescription>
-                    Lead com baixa pontuação. Considere coletar mais informações antes de qualificar.
-                  </AlertDescription>
-                </Alert>
-              )}
             </div>
             
             {/* Center Panel - WhatsApp Conversation */}
@@ -288,7 +303,7 @@ export function QualificationModal({
                 
                 {/* Max Installment */}
                 <div className="space-y-2">
-                  <Label htmlFor="max_installment">Parcela Máxima</Label>
+                  <Label htmlFor="max_installment">Parcela Máxima Desejada</Label>
                   <Input
                     id="max_installment"
                     type="number"
@@ -331,7 +346,27 @@ export function QualificationModal({
                     <SelectContent>
                       {PURCHASE_TIMELINES.map((timeline) => (
                         <SelectItem key={timeline.value} value={timeline.value}>
-                          {timeline.label}
+                          {timeline.label} {timeline.points > 0 ? `(+${timeline.points} pts)` : ''}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {/* Vehicle Usage */}
+                <div className="space-y-2">
+                  <Label>Uso Principal do Veículo</Label>
+                  <Select
+                    value={formData.vehicle_usage}
+                    onValueChange={(value) => updateFormField('vehicle_usage', value)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {VEHICLE_USAGE.map((usage) => (
+                        <SelectItem key={usage.value} value={usage.value}>
+                          {usage.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -340,42 +375,35 @@ export function QualificationModal({
                 
                 <Separator />
                 
-                {/* Trade-in */}
+                {/* Trade-in with Radio Buttons */}
                 <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Checkbox
-                      id="has_trade_in"
-                      checked={formData.has_trade_in}
-                      onCheckedChange={(checked) => updateFormField('has_trade_in', !!checked)}
-                    />
-                    <Label htmlFor="has_trade_in">Tem veículo para troca?</Label>
-                  </div>
+                  <Label>Possui Veículo para Troca?</Label>
+                  <RadioGroup
+                    value={formData.has_trade_in ? 'sim' : 'nao'}
+                    onValueChange={(value) => updateFormField('has_trade_in', value === 'sim')}
+                    className="flex gap-4"
+                  >
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="sim" id="trade_in_yes" />
+                      <Label htmlFor="trade_in_yes" className="font-normal cursor-pointer">Sim</Label>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <RadioGroupItem value="nao" id="trade_in_no" />
+                      <Label htmlFor="trade_in_no" className="font-normal cursor-pointer">Não</Label>
+                    </div>
+                  </RadioGroup>
                   
                   {formData.has_trade_in && (
-                    <div className="space-y-2 pl-6">
+                    <div className="space-y-2 pl-0 mt-2">
+                      <Label htmlFor="trade_in_vehicle">Modelo do Veículo de Troca</Label>
                       <Input
+                        id="trade_in_vehicle"
                         value={formData.trade_in_vehicle}
                         onChange={(e) => updateFormField('trade_in_vehicle', e.target.value)}
-                        placeholder="Descrição do veículo"
-                      />
-                      <Input
-                        type="number"
-                        value={formData.trade_in_value || ''}
-                        onChange={(e) => updateFormField('trade_in_value', e.target.value ? Number(e.target.value) : null)}
-                        placeholder="Valor esperado (R$)"
+                        placeholder="Ex: Gol 2018 1.0"
                       />
                     </div>
                   )}
-                </div>
-                
-                {/* Decision Maker */}
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="decision_maker"
-                    checked={formData.decision_maker}
-                    onCheckedChange={(checked) => updateFormField('decision_maker', !!checked)}
-                  />
-                  <Label htmlFor="decision_maker">É o decisor da compra?</Label>
                 </div>
                 
                 {/* Notes */}
@@ -396,32 +424,21 @@ export function QualificationModal({
         
         <Separator className="my-2" />
         
-        <DialogFooter className="flex items-center justify-between sm:justify-between">
-          <div className="text-sm text-muted-foreground">
-            {classification === 'cold' && (
-              <span className="text-destructive font-medium">
-                ⚠️ Lead frio - Considere mais qualificação
-              </span>
-            )}
-            {classification === 'warm' && (
-              <span className="text-yellow-600 font-medium">
-                🌡️ Lead morno - Bom potencial
-              </span>
-            )}
-            {classification === 'hot' && (
-              <span className="text-green-600 font-medium">
-                🔥 Lead quente - Alta probabilidade!
-              </span>
-            )}
-          </div>
-          <div className="flex gap-2">
-            <Button variant="outline" onClick={() => onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleConfirm}>
-              ✓ Qualificar e Atribuir Vendedor
-            </Button>
-          </div>
+        {/* Classification Message Alert */}
+        <Alert variant={alertStyling.variant} className={alertStyling.className}>
+          {alertStyling.icon}
+          <AlertDescription className="font-medium">
+            {classificationMessage}
+          </AlertDescription>
+        </Alert>
+        
+        <DialogFooter className="flex items-center justify-end gap-2 pt-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button onClick={handleConfirm}>
+            ✓ Qualificar e Atribuir Vendedor
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
