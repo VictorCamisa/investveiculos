@@ -600,29 +600,80 @@ export type Database = {
         Row: {
           assigned_to: string | null
           created_at: string | null
+          created_by: string | null
           customer_id: string | null
+          email: string | null
+          first_response_at: string | null
           id: string
           last_interaction_at: string | null
+          meta_ad_id: string | null
+          meta_adset_id: string | null
+          meta_campaign_id: string | null
+          name: string | null
+          notes: string | null
+          phone: string | null
+          qualification_reason: string | null
+          qualification_status: string | null
           source: string | null
           status: string | null
+          updated_at: string | null
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          vehicle_interest: string | null
         }
         Insert: {
           assigned_to?: string | null
           created_at?: string | null
+          created_by?: string | null
           customer_id?: string | null
+          email?: string | null
+          first_response_at?: string | null
           id?: string
           last_interaction_at?: string | null
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          qualification_reason?: string | null
+          qualification_status?: string | null
           source?: string | null
           status?: string | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          vehicle_interest?: string | null
         }
         Update: {
           assigned_to?: string | null
           created_at?: string | null
+          created_by?: string | null
           customer_id?: string | null
+          email?: string | null
+          first_response_at?: string | null
           id?: string
           last_interaction_at?: string | null
+          meta_ad_id?: string | null
+          meta_adset_id?: string | null
+          meta_campaign_id?: string | null
+          name?: string | null
+          notes?: string | null
+          phone?: string | null
+          qualification_reason?: string | null
+          qualification_status?: string | null
           source?: string | null
           status?: string | null
+          updated_at?: string | null
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          vehicle_interest?: string | null
         }
         Relationships: [
           {
