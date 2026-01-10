@@ -32,10 +32,9 @@ export interface UserProfile {
   full_name: string | null;
   email: string | null;
   avatar_url: string | null;
-  is_active: boolean;
-  is_master: boolean;
-  created_at: string;
-  updated_at: string;
+  is_master: boolean | null;
+  created_at: string | null;
+  updated_at: string | null;
 }
 
 export interface UserWithRoles extends UserProfile {
