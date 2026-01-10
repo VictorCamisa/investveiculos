@@ -48,6 +48,7 @@ export function NegotiationCard({ negotiation, onClick, showSalesperson }: Negot
               {negotiationStatusLabels[negotiation.status]}
             </Badge>
           </div>
+        </div>
 
         {negotiation.customer && (
           <div className="flex items-center gap-1 text-xs text-muted-foreground bg-muted/50 rounded px-2 py-1">
