@@ -150,7 +150,79 @@ export function useUpdateNegotiation() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async ({ id, ...input }: UpdateNegotiationInput) => {
+    mutationFn: async ({ id, ...input }: UpdateNegotiationInput & { salesperson_id?: string | null }) => {
+      // If moving to "negociando" (Qualificado), check if we need to assign a salesperson
+      if (input.status === 'negociando') {
+        // Get current negotiation to check if it has a salesperson
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const { data: current } = await (supabase as any)
+          .from('negotiations')
+          .select('salesperson_id, lead_id')
+          .eq('id', id)
+          .single();
+
+        // If no salesperson assigned, run Round Robin
+        if (current && !current.salesperson_id) {
+          console.log('No salesperson assigned, running Round Robin...');
+          
+          // Get next salesperson from Round Robin
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: nextSalesperson } = await (supabase as any).rpc('get_next_round_robin_salesperson');
+          
+          if (nextSalesperson) {
+            console.log('Round Robin assigned to:', nextSalesperson);
+            
+            // Add salesperson to the update
+            (input as any).salesperson_id = nextSalesperson;
+
+            // Update lead with assigned salesperson
+            if (current.lead_id) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (supabase as any)
+                .from('leads')
+                .update({ assigned_to: nextSalesperson })
+                .eq('id', current.lead_id);
+
+              // Create lead assignment record
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (supabase as any).from('lead_assignments').insert({
+                lead_id: current.lead_id,
+                user_id: nextSalesperson,
+              });
+
+              // Increment Round Robin counters
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (supabase as any).rpc('increment_round_robin_counters', { 
+                p_salesperson_id: nextSalesperson 
+              });
+
+              // Get lead info for notification
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              const { data: lead } = await (supabase as any)
+                .from('leads')
+                .select('name, phone')
+                .eq('id', current.lead_id)
+                .single();
+
+              // Send notification to assigned salesperson
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (supabase as any).from('notifications').insert({
+                user_id: nextSalesperson,
+                type: 'new_lead',
+                title: 'Lead Qualificado Atribuído',
+                message: `Um lead qualificado foi atribuído a você: ${lead?.name || 'Sem nome'} (${lead?.phone || 'Sem telefone'})`,
+                link: '/crm',
+              });
+
+              toast.info('Vendedor atribuído automaticamente via Round Robin');
+            }
+          } else {
+            console.log('No salesperson available in Round Robin');
+            toast.warning('Nenhum vendedor disponível no Round Robin');
+          }
+        }
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('negotiations')
@@ -164,6 +236,7 @@ export function useUpdateNegotiation() {
     },
     onSuccess: async () => {
       await queryClient.refetchQueries({ queryKey: ['negotiations'] });
+      await queryClient.refetchQueries({ queryKey: ['leads'] });
       toast.success('Negociação atualizada!');
     },
     onError: (error: Error) => {
