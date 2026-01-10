@@ -85,11 +85,11 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { email, password, full_name, role } = await req.json();
+    const { email, password, full_name, role, roles, permissions } = await req.json();
 
-    console.log("[create-user] Creating user:", { email, full_name, role });
+    console.log("[create-user] Creating user:", { email, full_name, role, roles, permissionsCount: permissions?.length });
 
-    if (!email || !password || !full_name || !role) {
+    if (!email || !password || !full_name) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -133,13 +133,36 @@ serve(async (req) => {
       console.error("[create-user] Error creating profile:", profileError);
     }
 
-    // Assign the role
-    const { error: roleError } = await supabaseAdmin
-      .from("user_roles")
-      .insert({ user_id: newUser.user.id, role });
+    // Assign roles - support both single role and multiple roles
+    const rolesToAssign = roles && Array.isArray(roles) ? roles : (role ? [role] : ['vendedor']);
+    
+    for (const r of rolesToAssign) {
+      const { error: roleError } = await supabaseAdmin
+        .from("user_roles")
+        .insert({ user_id: newUser.user.id, role: r });
 
-    if (roleError) {
-      console.error("[create-user] Error assigning role:", roleError);
+      if (roleError) {
+        console.error("[create-user] Error assigning role:", roleError);
+      }
+    }
+
+    // Assign permissions if provided
+    if (permissions && Array.isArray(permissions) && permissions.length > 0) {
+      const permissionInserts = permissions.map((p: { module: string; permission: string }) => ({
+        user_id: newUser.user.id,
+        module: p.module,
+        permission: p.permission,
+      }));
+
+      const { error: permError } = await supabaseAdmin
+        .from("user_permissions")
+        .insert(permissionInserts);
+
+      if (permError) {
+        console.error("[create-user] Error assigning permissions:", permError);
+      } else {
+        console.log("[create-user] Permissions assigned:", permissionInserts.length);
+      }
     }
 
     console.log("[create-user] Success!");
