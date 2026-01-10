@@ -68,7 +68,9 @@ serve(async (req) => {
     const { action } = await req.json();
 
     // Get credentials from environment variables
-    const baseUrl = Deno.env.get('AUTOCERTO_BASE_URL') || 'https://integracao.autocerto.com';
+    // Remove trailing slashes from base URL to avoid double slashes in API paths
+    const rawBaseUrl = Deno.env.get('AUTOCERTO_BASE_URL') || 'https://integracao.autocerto.com';
+    const baseUrl = rawBaseUrl.replace(/\/+$/, '');
     const username = Deno.env.get('AUTOCERTO_LOGIN');
     const password = Deno.env.get('AUTOCERTO_PASSWORD');
 
@@ -81,7 +83,7 @@ serve(async (req) => {
     }
 
     console.log('Attempting auth with username:', username);
-    console.log('Base URL:', baseUrl);
+    console.log('Base URL (normalized):', baseUrl);
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
