@@ -184,7 +184,7 @@ export function SalespersonDashboard() {
           title="Meus Leads"
           value={metrics.totalLeads.toString()}
           subtitle={`${metrics.leadsNeedingResponse} aguardando retorno`}
-          colors={["#E53935", "#EF5350", "#E57373"]}
+          colors={["#E8A020", "#F5B740", "#FFD060"]}
           delay={0}
           icon={<Users className="h-5 w-5 text-primary" />}
         />
@@ -192,7 +192,7 @@ export function SalespersonDashboard() {
           title="Negociações Ativas"
           value={metrics.activeNegotiations.toString()}
           subtitle={`${metrics.wonThisMonth} ganhas este mês`}
-          colors={["#B71C1C", "#C62828", "#D32F2F"]}
+          colors={["#C78A10", "#E8A020", "#F5B740"]}
           delay={0.1}
           icon={<Target className="h-5 w-5 text-primary" />}
         />
@@ -200,7 +200,7 @@ export function SalespersonDashboard() {
           title="Comissões do Mês"
           value={formatCurrency(commissions?.total || 0)}
           subtitle={`${formatCurrency(commissions?.pending || 0)} pendentes`}
-          colors={["#D32F2F", "#E53935", "#EF5350"]}
+          colors={["#8A8A8A", "#9A9A9A", "#AAAAAA"]}
           delay={0.2}
           icon={<Wallet className="h-5 w-5 text-primary" />}
         />
@@ -208,7 +208,7 @@ export function SalespersonDashboard() {
           title="Agendamentos"
           value={metrics.upcomingAppointments.toString()}
           subtitle="próximos 7 dias"
-          colors={["#C62828", "#D32F2F", "#E53935"]}
+          colors={["#6A6A6A", "#7A7A7A", "#8A8A8A"]}
           delay={0.3}
           icon={<Calendar className="h-5 w-5 text-primary" />}
         />
