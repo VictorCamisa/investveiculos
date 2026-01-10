@@ -19,24 +19,36 @@ export type Database = {
           action: string
           created_at: string | null
           details: Json | null
+          entity_id: string | null
+          entity_type: string | null
           id: string
+          ip_address: string | null
           module: string | null
+          user_agent: string | null
           user_id: string | null
         }
         Insert: {
           action: string
           created_at?: string | null
           details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
+          ip_address?: string | null
           module?: string | null
+          user_agent?: string | null
           user_id?: string | null
         }
         Update: {
           action?: string
           created_at?: string | null
           details?: Json | null
+          entity_id?: string | null
+          entity_type?: string | null
           id?: string
+          ip_address?: string | null
           module?: string | null
+          user_agent?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -888,6 +900,36 @@ export type Database = {
         }
         Relationships: []
       }
+      mercadolibre_tokens: {
+        Row: {
+          access_token: string
+          created_at: string | null
+          expires_at: string | null
+          id: string
+          refresh_token: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          access_token: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          refresh_token?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          access_token?: string
+          created_at?: string | null
+          expires_at?: string | null
+          id?: string
+          refresh_token?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       meta_ads: {
         Row: {
           adset_id: string | null
@@ -1113,25 +1155,31 @@ export type Database = {
         Row: {
           created_at: string | null
           id: string
+          link: string | null
           message: string | null
           read: boolean | null
           title: string
+          type: string | null
           user_id: string | null
         }
         Insert: {
           created_at?: string | null
           id?: string
+          link?: string | null
           message?: string | null
           read?: boolean | null
           title: string
+          type?: string | null
           user_id?: string | null
         }
         Update: {
           created_at?: string | null
           id?: string
+          link?: string | null
           message?: string | null
           read?: boolean | null
           title?: string
+          type?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -1192,6 +1240,8 @@ export type Database = {
           is_active: boolean | null
           last_assigned_at: string | null
           priority: number | null
+          total_leads_assigned: number | null
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
@@ -1201,6 +1251,8 @@ export type Database = {
           is_active?: boolean | null
           last_assigned_at?: string | null
           priority?: number | null
+          total_leads_assigned?: number | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
@@ -1210,6 +1262,8 @@ export type Database = {
           is_active?: boolean | null
           last_assigned_at?: string | null
           priority?: number | null
+          total_leads_assigned?: number | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
@@ -1232,32 +1286,89 @@ export type Database = {
       sale_commissions: {
         Row: {
           amount: number
+          approved_at: string | null
+          approved_by: string | null
+          calculated_amount: number | null
+          commission_rule_id: string | null
           created_at: string | null
+          final_amount: number | null
           id: string
+          manual_adjustment: number | null
+          notes: string | null
+          paid: boolean | null
           paid_at: string | null
+          payment_due_date: string | null
+          rejection_reason: string | null
           sale_id: string | null
+          split_percentage: number | null
           status: string | null
+          updated_at: string | null
           user_id: string | null
         }
         Insert: {
           amount: number
+          approved_at?: string | null
+          approved_by?: string | null
+          calculated_amount?: number | null
+          commission_rule_id?: string | null
           created_at?: string | null
+          final_amount?: number | null
           id?: string
+          manual_adjustment?: number | null
+          notes?: string | null
+          paid?: boolean | null
           paid_at?: string | null
+          payment_due_date?: string | null
+          rejection_reason?: string | null
           sale_id?: string | null
+          split_percentage?: number | null
           status?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Update: {
           amount?: number
+          approved_at?: string | null
+          approved_by?: string | null
+          calculated_amount?: number | null
+          commission_rule_id?: string | null
           created_at?: string | null
+          final_amount?: number | null
           id?: string
+          manual_adjustment?: number | null
+          notes?: string | null
+          paid?: boolean | null
           paid_at?: string | null
+          payment_due_date?: string | null
+          rejection_reason?: string | null
           sale_id?: string | null
+          split_percentage?: number | null
           status?: string | null
+          updated_at?: string | null
           user_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "sale_commissions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "sale_commissions_approved_by_fkey"
+            columns: ["approved_by"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "sale_commissions_commission_rule_id_fkey"
+            columns: ["commission_rule_id"]
+            isOneToOne: false
+            referencedRelation: "commission_rules"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "sale_commissions_sale_id_fkey"
             columns: ["sale_id"]
@@ -1447,6 +1558,63 @@ export type Database = {
           },
         ]
       }
+      scheduled_reports: {
+        Row: {
+          config: Json | null
+          created_at: string | null
+          created_by: string | null
+          frequency: string
+          id: string
+          last_run_at: string | null
+          name: string
+          next_run_at: string | null
+          recipients: string[] | null
+          report_type: string
+          updated_at: string | null
+        }
+        Insert: {
+          config?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          frequency: string
+          id?: string
+          last_run_at?: string | null
+          name: string
+          next_run_at?: string | null
+          recipients?: string[] | null
+          report_type: string
+          updated_at?: string | null
+        }
+        Update: {
+          config?: Json | null
+          created_at?: string | null
+          created_by?: string | null
+          frequency?: string
+          id?: string
+          last_run_at?: string | null
+          name?: string
+          next_run_at?: string | null
+          recipients?: string[] | null
+          report_type?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "scheduled_reports_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       user_permissions: {
         Row: {
           created_at: string | null
@@ -1522,6 +1690,66 @@ export type Database = {
           {
             foreignKeyName: "user_roles_user_id_fkey"
             columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      utm_links: {
+        Row: {
+          base_url: string
+          clicks: number | null
+          created_at: string | null
+          created_by: string | null
+          full_url: string | null
+          id: string
+          name: string
+          utm_campaign: string | null
+          utm_content: string | null
+          utm_medium: string | null
+          utm_source: string | null
+          utm_term: string | null
+        }
+        Insert: {
+          base_url: string
+          clicks?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          full_url?: string | null
+          id?: string
+          name: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Update: {
+          base_url?: string
+          clicks?: number | null
+          created_at?: string | null
+          created_by?: string | null
+          full_url?: string | null
+          id?: string
+          name?: string
+          utm_campaign?: string | null
+          utm_content?: string | null
+          utm_medium?: string | null
+          utm_source?: string | null
+          utm_term?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "utm_links_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "utm_links_created_by_fkey"
+            columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "salesperson_ranking"
             referencedColumns: ["user_id"]
@@ -1904,25 +2132,49 @@ export type Database = {
       }
       whatsapp_instances: {
         Row: {
+          api_key: string | null
+          api_url: string | null
           created_at: string | null
           id: string
           instance_key: string | null
+          instance_name: string | null
           name: string
+          phone_number: string | null
+          qr_code: string | null
+          qr_code_expires_at: string | null
           status: string | null
+          updated_at: string | null
+          webhook_url: string | null
         }
         Insert: {
+          api_key?: string | null
+          api_url?: string | null
           created_at?: string | null
           id?: string
           instance_key?: string | null
+          instance_name?: string | null
           name: string
+          phone_number?: string | null
+          qr_code?: string | null
+          qr_code_expires_at?: string | null
           status?: string | null
+          updated_at?: string | null
+          webhook_url?: string | null
         }
         Update: {
+          api_key?: string | null
+          api_url?: string | null
           created_at?: string | null
           id?: string
           instance_key?: string | null
+          instance_name?: string | null
           name?: string
+          phone_number?: string | null
+          qr_code?: string | null
+          qr_code_expires_at?: string | null
           status?: string | null
+          updated_at?: string | null
+          webhook_url?: string | null
         }
         Relationships: []
       }
