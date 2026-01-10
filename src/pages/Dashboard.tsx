@@ -346,7 +346,6 @@ export default function Dashboard() {
           title="Faturamento do Mês"
           value={formatCurrencyShort(kpis?.thisMonthRevenue || 0)}
           subtitle={`${kpis?.thisMonthSalesCount || 0} vendas realizadas`}
-          colors={["#E53935", "#EF5350", "#E57373"]}
           delay={0}
           icon={<DollarSign className="h-5 w-5 text-primary" />}
         />
@@ -354,7 +353,6 @@ export default function Dashboard() {
           title="Lucro Líquido"
           value={formatCurrencyShort(kpis?.thisMonthProfit || 0)}
           subtitle={`Margem: ${formatPercent(kpis?.avgMargin || 0)}`}
-          colors={["#B71C1C", "#C62828", "#D32F2F"]}
           delay={0.1}
           icon={<TrendingUp className="h-5 w-5 text-primary" />}
         />
@@ -362,7 +360,6 @@ export default function Dashboard() {
           title="Veículos em Estoque"
           value={dashboardMetrics.vehiclesInStock.toString()}
           subtitle={`${formatCurrencyShort(kpis?.totalStockValue || 0)} investidos`}
-          colors={["#D32F2F", "#E53935", "#EF5350"]}
           delay={0.2}
           icon={<Package className="h-5 w-5 text-primary" />}
         />
@@ -370,7 +367,6 @@ export default function Dashboard() {
           title="Pipeline Ativo"
           value={formatCurrencyShort(kpis?.weightedPipeline || 0)}
           subtitle={`${dashboardMetrics.activeNegotiations} negociações ativas`}
-          colors={["#C62828", "#D32F2F", "#E53935"]}
           delay={0.3}
           icon={<Target className="h-5 w-5 text-primary" />}
         />

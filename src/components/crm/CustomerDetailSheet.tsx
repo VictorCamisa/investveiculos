@@ -111,7 +111,7 @@ export function CustomerDetailSheet({
         <ScrollArea className="h-full">
           {/* Header with gradient */}
           <div className="relative overflow-hidden">
-            <AnimatedGradient colors={["#E53935", "#D32F2F", "#B71C1C"]} speed={0.03} blur="heavy" />
+            <AnimatedGradient colors={["#2A2A2A", "#3A3A3A", "#4A4A4A"]} speed={0.03} blur="heavy" />
             <div className="relative z-10 p-6 pb-8">
               <SheetHeader className="mb-4">
                 <div className="flex items-center justify-between">

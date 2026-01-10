@@ -55,7 +55,6 @@ export function CRMStats({ leads, negotiations }: CRMStatsProps) {
         title="Leads Ativos"
         value={activeLeads}
         subtitle="Em atendimento"
-        colors={["#E53935", "#EF5350", "#E57373"]}
         delay={0}
         icon={<Users className="h-4 w-4 text-muted-foreground" />}
       />
@@ -63,7 +62,6 @@ export function CRMStats({ leads, negotiations }: CRMStatsProps) {
         title="Negociações"
         value={activeNegotiations}
         subtitle="Em andamento"
-        colors={["#D32F2F", "#E53935", "#EF5350"]}
         delay={0.05}
         icon={<Target className="h-4 w-4 text-muted-foreground" />}
       />
@@ -71,7 +69,6 @@ export function CRMStats({ leads, negotiations }: CRMStatsProps) {
         title="Pipeline"
         value={formatCurrency(totalPipelineValue)}
         subtitle="Valor potencial"
-        colors={["#C62828", "#D32F2F", "#E53935"]}
         delay={0.1}
         icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
       />
@@ -79,7 +76,6 @@ export function CRMStats({ leads, negotiations }: CRMStatsProps) {
         title="Conversão"
         value={`${conversionRate}%`}
         subtitle={`${wonNegotiations.length} de ${totalClosed} fechadas`}
-        colors={["#B71C1C", "#C62828", "#D32F2F"]}
         delay={0.15}
         icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
       />
@@ -87,7 +83,6 @@ export function CRMStats({ leads, negotiations }: CRMStatsProps) {
         title="Tempo Médio"
         value={`${avgDaysToClose}d`}
         subtitle="Para fechamento"
-        colors={["#E53935", "#EF5350", "#E57373"]}
         delay={0.2}
         icon={<Clock className="h-4 w-4 text-muted-foreground" />}
       />
@@ -95,7 +90,6 @@ export function CRMStats({ leads, negotiations }: CRMStatsProps) {
         title="Alertas"
         value={staleLeads}
         subtitle="Leads parados (+3d)"
-        colors={staleLeads > 0 ? ["#B71C1C", "#C62828", "#D32F2F"] : ["#4A4A4A", "#6B6B6B", "#8C8C8C"]}
         delay={0.25}
         icon={<AlertTriangle className="h-4 w-4 text-muted-foreground" />}
       />

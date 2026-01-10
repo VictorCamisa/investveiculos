@@ -3,11 +3,14 @@ import { motion } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { AnimatedGradient } from "@/components/ui/animated-gradient";
 
+// Default dark gray colors for consistent brand styling
+const DEFAULT_CARD_COLORS = ["#2A2A2A", "#3A3A3A", "#4A4A4A"];
+
 interface BentoCardProps {
   title: string;
   value: string | number;
   subtitle?: string;
-  colors: string[];
+  colors?: string[];
   delay?: number;
   className?: string;
   icon?: React.ReactNode;
@@ -17,7 +20,7 @@ const BentoCard: React.FC<BentoCardProps> = ({
   title,
   value,
   subtitle,
-  colors,
+  colors = DEFAULT_CARD_COLORS,
   delay = 0,
   className,
   icon,

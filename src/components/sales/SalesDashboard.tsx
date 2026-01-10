@@ -65,7 +65,6 @@ export function SalesDashboard() {
             title="Pendentes de Aprovação"
             value={pendingCount}
             subtitle={pendingCount === 0 ? 'Nenhuma venda aguardando' : 'Vendas para aprovar'}
-            colors={['#B71C1C', '#C62828', '#D32F2F']}
             icon={<AlertCircle className="h-4 w-4 text-muted-foreground" />}
           />
         </div>
@@ -74,7 +73,6 @@ export function SalesDashboard() {
           title="Faturamento Total"
           value={formatCurrency(totalRevenue)}
           subtitle={`${sales?.filter(s => s.status === 'concluida').length || 0} vendas concluídas`}
-          colors={['#E53935', '#EF5350', '#E57373']}
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
         />
 
@@ -82,7 +80,6 @@ export function SalesDashboard() {
           title="Lucro Líquido"
           value={formatCurrency(totalNetProfit)}
           subtitle="Lucro real após custos"
-          colors={['#D32F2F', '#E53935', '#EF5350']}
           icon={<TrendingUp className="h-4 w-4 text-muted-foreground" />}
         />
 
@@ -90,7 +87,6 @@ export function SalesDashboard() {
           title="Pipeline Ativo"
           value={formatCurrency(pipelineValue)}
           subtitle={`${activeNegotiations} negociações em andamento`}
-          colors={['#C62828', '#D32F2F', '#E53935']}
           icon={<Target className="h-4 w-4 text-muted-foreground" />}
         />
       </div>

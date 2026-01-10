@@ -56,7 +56,6 @@ export default function MarketingCampaignsPage() {
           title="Campanhas Ativas"
           value={activeCampaigns.length}
           subtitle={`${campaigns?.length || 0} campanhas no total`}
-          colors={["#E53935", "#EF5350", "#E57373"]}
           delay={0}
           icon={<Target className="h-5 w-5 text-muted-foreground" />}
         />
@@ -64,7 +63,6 @@ export default function MarketingCampaignsPage() {
           title="Orçamento Total"
           value={formatCurrency(totalBudget)}
           subtitle="Soma de todas campanhas"
-          colors={["#D32F2F", "#E53935", "#EF5350"]}
           delay={0.1}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
         />
@@ -72,7 +70,6 @@ export default function MarketingCampaignsPage() {
           title="Total Gasto"
           value={formatCurrency(totalSpent)}
           subtitle="Investimento realizado"
-          colors={["#C62828", "#D32F2F", "#E53935"]}
           delay={0.2}
           icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />}
         />
@@ -80,7 +77,6 @@ export default function MarketingCampaignsPage() {
           title="Utilização do Orçamento"
           value={`${budgetUtilization.toFixed(1)}%`}
           subtitle="Gasto vs orçamento"
-          colors={["#B71C1C", "#C62828", "#D32F2F"]}
           delay={0.3}
           icon={<BarChart3 className="h-5 w-5 text-muted-foreground" />}
         />

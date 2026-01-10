@@ -120,10 +120,10 @@ export function CashFlowPage() {
 
       {/* Summary KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <BentoCard title="Entradas Realizadas" value={formatCurrency(summary.totalEntradas)} subtitle="Vendas e receitas" colors={["#22c55e", "#16a34a", "#15803d"]} delay={0} icon={<ArrowUpCircle className="h-5 w-5 text-green-500" />} />
-        <BentoCard title="Saídas Realizadas" value={formatCurrency(summary.totalSaidas)} subtitle="Custos e despesas" colors={["#ef4444", "#dc2626", "#b91c1c"]} delay={0.1} icon={<ArrowDownCircle className="h-5 w-5 text-red-500" />} />
-        <BentoCard title="Saldo Realizado" value={formatCurrency(summary.saldoRealizado)} subtitle="Entradas - Saídas" colors={["#3b82f6", "#2563eb", "#1d4ed8"]} delay={0.2} icon={<Wallet className="h-5 w-5 text-blue-500" />} />
-        <BentoCard title="Projeção Saídas" value={formatCurrency(summary.projecaoSaidas)} subtitle="Comissões a pagar" colors={["#f59e0b", "#d97706", "#b45309"]} delay={0.3} icon={<TrendingUp className="h-5 w-5 text-amber-500" />} />
+        <BentoCard title="Entradas Realizadas" value={formatCurrency(summary.totalEntradas)} subtitle="Vendas e receitas" delay={0} icon={<ArrowUpCircle className="h-5 w-5 text-muted-foreground" />} />
+        <BentoCard title="Saídas Realizadas" value={formatCurrency(summary.totalSaidas)} subtitle="Custos e despesas" delay={0.1} icon={<ArrowDownCircle className="h-5 w-5 text-muted-foreground" />} />
+        <BentoCard title="Saldo Realizado" value={formatCurrency(summary.saldoRealizado)} subtitle="Entradas - Saídas" delay={0.2} icon={<Wallet className="h-5 w-5 text-muted-foreground" />} />
+        <BentoCard title="Projeção Saídas" value={formatCurrency(summary.projecaoSaidas)} subtitle="Comissões a pagar" delay={0.3} icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />} />
       </div>
 
       {/* Balance Chart */}

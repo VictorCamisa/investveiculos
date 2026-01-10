@@ -167,7 +167,6 @@ export default function CRMAnalytics() {
           title="Total de Leads"
           value={periodLeads.length}
           subtitle="No período selecionado"
-          colors={["#E53935", "#EF5350", "#E57373"]}
           delay={0}
           icon={<Users className="h-5 w-5 text-muted-foreground" />}
         />
@@ -175,7 +174,6 @@ export default function CRMAnalytics() {
           title="Negociações Fechadas"
           value={totalClosed}
           subtitle={`${wonNegotiations} ganhas / ${lostNegotiations} perdidas`}
-          colors={["#D32F2F", "#E53935", "#EF5350"]}
           delay={0.1}
           icon={<Handshake className="h-5 w-5 text-muted-foreground" />}
         />
@@ -183,7 +181,6 @@ export default function CRMAnalytics() {
           title="Taxa de Conversão"
           value={`${conversionRate}%`}
           subtitle="Negociações ganhas"
-          colors={["#C62828", "#D32F2F", "#E53935"]}
           delay={0.2}
           icon={<TrendingUp className="h-5 w-5 text-muted-foreground" />}
         />
@@ -191,7 +188,6 @@ export default function CRMAnalytics() {
           title="Tempo Médio de Fechamento"
           value={`${avgTimeToClose.toFixed(0)} dias`}
           subtitle="Para negociações ganhas"
-          colors={["#B71C1C", "#C62828", "#D32F2F"]}
           delay={0.3}
           icon={<Clock className="h-5 w-5 text-muted-foreground" />}
         />
