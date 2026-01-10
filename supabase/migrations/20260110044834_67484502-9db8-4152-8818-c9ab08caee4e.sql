@@ -1,0 +1,43 @@
+-- Habilitar RLS nas tabelas que não têm
+ALTER TABLE public.sale_payment_methods ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lead_assignments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.lead_costs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.follow_up_executions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.loss_recovery_rules ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.loss_recovery_executions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vehicle_interest_alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.vehicle_simulations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.campaign_events ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.commission_audit_log ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.commission_splits ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.marketing_alerts ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.meta_ads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.meta_adsets ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.meta_sync_logs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.google_campaigns ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.google_ad_groups ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.google_ads ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.google_insights ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.google_sync_logs ENABLE ROW LEVEL SECURITY;
+
+-- Criar políticas básicas para tabelas sem políticas
+CREATE POLICY "Authenticated access" ON sale_payment_methods FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON lead_assignments FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON lead_costs FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON follow_up_executions FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON loss_recovery_rules FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON loss_recovery_executions FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON vehicle_interest_alerts FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON vehicle_simulations FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON campaign_events FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON commission_audit_log FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON commission_splits FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON marketing_alerts FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON meta_ads FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON meta_adsets FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON meta_sync_logs FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON google_campaigns FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON google_ad_groups FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON google_ads FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON google_insights FOR ALL TO authenticated USING (true);
+CREATE POLICY "Authenticated access" ON google_sync_logs FOR ALL TO authenticated USING (true);

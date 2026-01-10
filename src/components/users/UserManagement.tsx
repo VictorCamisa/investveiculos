@@ -51,10 +51,11 @@ export function UserManagement() {
     user.email?.toLowerCase().includes(searchTerm.toLowerCase())
   ) || [];
 
-  // Placeholder for future is_active toggle functionality
-  const handleToggleActive = async (_user: UserWithRoles) => {
-    // TODO: Add is_active column to profiles table first
-    console.log('Toggle active not implemented - is_active column does not exist');
+  const handleToggleActive = async (user: UserWithRoles) => {
+    await updateUser.mutateAsync({
+      userId: user.id,
+      is_active: !user.is_active,
+    });
   };
 
   // Verifica se o usuário é gerente (não pode ser editado/excluído por outros)
@@ -160,10 +161,17 @@ export function UserManagement() {
                         <UserWhatsAppButton user={user} />
                       </TableCell>
                       <TableCell>
-                        <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Ativo
-                        </Badge>
+                        {user.is_active ? (
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200">
+                            <CheckCircle className="h-3 w-3 mr-1" />
+                            Ativo
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" className="bg-red-50 text-red-700 border-red-200">
+                            <XCircle className="h-3 w-3 mr-1" />
+                            Inativo
+                          </Badge>
+                        )}
                       </TableCell>
                       <TableCell>
                         <DropdownMenu>
@@ -185,6 +193,22 @@ export function UserManagement() {
                                   onClick={() => setEditingUser(user)}
                                 >
                                   Editar Usuário
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleToggleActive(user)}
+                                  className={user.is_active ? 'text-destructive' : 'text-green-600'}
+                                >
+                                  {user.is_active ? (
+                                    <>
+                                      <XCircle className="h-4 w-4 mr-2" />
+                                      Desativar
+                                    </>
+                                  ) : (
+                                    <>
+                                      <CheckCircle className="h-4 w-4 mr-2" />
+                                      Ativar
+                                    </>
+                                  )}
                                 </DropdownMenuItem>
                               </>
                             )}

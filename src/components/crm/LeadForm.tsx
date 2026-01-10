@@ -51,9 +51,9 @@ export function LeadForm({ lead, onSubmit, isLoading }: LeadFormProps) {
   const { data: campaigns = [] } = useMetaCampaigns();
   const { data: users = [] } = useUsersWithRoles();
   
-  // Filter to only show users with vendedor or gerente role
+  // Filter to only show active users with vendedor or gerente role
   const salespeople = users.filter(u => 
-    u.roles.includes('vendedor') || u.roles.includes('gerente')
+    u.is_active && (u.roles.includes('vendedor') || u.roles.includes('gerente'))
   );
   
   const form = useForm<LeadFormValues>({

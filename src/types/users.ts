@@ -25,6 +25,8 @@ export interface UserPermission {
   module: ModuleName;
   permission: PermissionType;
   created_at: string;
+  granted_at?: string;
+  granted_by?: string;
 }
 
 export interface UserProfile {
@@ -32,6 +34,7 @@ export interface UserProfile {
   full_name: string | null;
   email: string | null;
   avatar_url: string | null;
+  is_active: boolean;
   is_master: boolean | null;
   created_at: string | null;
   updated_at: string | null;
