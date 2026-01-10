@@ -1604,6 +1604,7 @@ export type Database = {
       }
     }
     Functions: {
+      get_my_role: { Args: never; Returns: string }
       has_role: { Args: { role_name: string }; Returns: boolean }
     }
     Enums: {
