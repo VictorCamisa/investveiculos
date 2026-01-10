@@ -14,15 +14,40 @@ export function useNegotiations() {
           *,
           lead:leads(id, name, phone, email, source),
           vehicle:vehicles(id, brand, model, year_model, plate, sale_price),
-          salesperson:profiles!negotiations_salesperson_id_fkey(full_name),
           customer:customers(id, name, phone, email)
         `)
-        .order('updated_at', { ascending: false });
+        .order('updated_at', { ascending: false, nullsFirst: false });
 
       if (error) throw error;
-      return (data || []).map((n: any) => ({
+      
+      const negotiations = (data || []) as any[];
+      
+      // Buscar salesperson separadamente para evitar erro de FK
+      const salespersonIds = Array.from(
+        new Set(negotiations.map((n) => n.salesperson_id).filter(Boolean))
+      ) as string[];
+      
+      if (salespersonIds.length === 0) {
+        return negotiations.map((n: any) => ({
+          ...n,
+          objections: n.objections || [],
+          salesperson: null,
+        })) as Negotiation[];
+      }
+      
+      const { data: profiles } = await (supabase as any)
+        .from('profiles')
+        .select('id, full_name')
+        .in('id', salespersonIds);
+      
+      const profileMap = new Map<string, { full_name: string | null }>(
+        (profiles || []).map((p: any) => [p.id, { full_name: p.full_name }])
+      );
+      
+      return negotiations.map((n: any) => ({
         ...n,
         objections: n.objections || [],
+        salesperson: n.salesperson_id ? profileMap.get(n.salesperson_id) : null,
       })) as Negotiation[];
     },
   });

@@ -924,30 +924,79 @@ export type Database = {
       }
       negotiations: {
         Row: {
+          actual_close_date: string | null
+          appointment_date: string | null
+          appointment_time: string | null
           created_at: string | null
+          customer_id: string | null
+          estimated_value: number | null
+          expected_close_date: string | null
           id: string
           lead_id: string | null
+          loss_reason: string | null
+          notes: string | null
+          objections: string[] | null
+          probability: number | null
+          salesperson_id: string | null
+          showed_up: boolean | null
           status: string | null
+          structured_loss_reason: string | null
+          updated_at: string | null
           value_offered: number | null
           vehicle_id: string | null
         }
         Insert: {
+          actual_close_date?: string | null
+          appointment_date?: string | null
+          appointment_time?: string | null
           created_at?: string | null
+          customer_id?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
           id?: string
           lead_id?: string | null
+          loss_reason?: string | null
+          notes?: string | null
+          objections?: string[] | null
+          probability?: number | null
+          salesperson_id?: string | null
+          showed_up?: boolean | null
           status?: string | null
+          structured_loss_reason?: string | null
+          updated_at?: string | null
           value_offered?: number | null
           vehicle_id?: string | null
         }
         Update: {
+          actual_close_date?: string | null
+          appointment_date?: string | null
+          appointment_time?: string | null
           created_at?: string | null
+          customer_id?: string | null
+          estimated_value?: number | null
+          expected_close_date?: string | null
           id?: string
           lead_id?: string | null
+          loss_reason?: string | null
+          notes?: string | null
+          objections?: string[] | null
+          probability?: number | null
+          salesperson_id?: string | null
+          showed_up?: boolean | null
           status?: string | null
+          structured_loss_reason?: string | null
+          updated_at?: string | null
           value_offered?: number | null
           vehicle_id?: string | null
         }
         Relationships: [
+          {
+            foreignKeyName: "negotiations_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "negotiations_lead_id_fkey"
             columns: ["lead_id"]
