@@ -13,8 +13,9 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // Use custom secrets to bypass reserved remix secrets
+    const supabaseUrl = Deno.env.get("MY_SUPABASE_URL") ?? Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("MY_SUPABASE_SERVICE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     // Create admin client
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {

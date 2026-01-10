@@ -13,12 +13,13 @@ serve(async (req) => {
   }
 
   try {
-    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
-    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    // Use custom secrets to bypass reserved remix secrets
+    const supabaseUrl = Deno.env.get("MY_SUPABASE_URL") ?? Deno.env.get("SUPABASE_URL")!;
+    const serviceRoleKey = Deno.env.get("MY_SUPABASE_SERVICE_KEY") ?? Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     console.log("[create-user] Starting...");
     console.log("[create-user] URL:", supabaseUrl);
-    console.log("[create-user] Service role key exists:", !!serviceRoleKey);
+    console.log("[create-user] Service role key length:", serviceRoleKey?.length);
 
     // Create admin client with service role key - this bypasses RLS
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
