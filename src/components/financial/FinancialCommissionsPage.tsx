@@ -79,7 +79,6 @@ export function FinancialCommissionsPage() {
           title="Pendentes"
           value={formatCurrency(stats?.totalPending || 0)}
           subtitle={`${stats?.countPending || 0} comissões`}
-          colors={["#E53935", "#EF5350", "#E57373"]}
           delay={0}
           icon={<Clock className="h-5 w-5 text-primary" />}
         />
@@ -87,7 +86,6 @@ export function FinancialCommissionsPage() {
           title="Aprovadas (a pagar)"
           value={formatCurrency(stats?.totalApproved || 0)}
           subtitle={`${stats?.countApproved || 0} comissões`}
-          colors={["#D32F2F", "#E53935", "#EF5350"]}
           delay={0.1}
           icon={<CheckCircle className="h-5 w-5 text-primary" />}
         />
@@ -95,7 +93,6 @@ export function FinancialCommissionsPage() {
           title="Pagas"
           value={formatCurrency(stats?.totalPaid || 0)}
           subtitle={`${stats?.countPaid || 0} comissões`}
-          colors={["#C62828", "#D32F2F", "#E53935"]}
           delay={0.2}
           icon={<Wallet className="h-5 w-5 text-primary" />}
         />
@@ -103,7 +100,6 @@ export function FinancialCommissionsPage() {
           title="Total Geral"
           value={formatCurrency((stats?.totalPending || 0) + (stats?.totalApproved || 0) + (stats?.totalPaid || 0))}
           subtitle="Todas as comissões"
-          colors={["#B71C1C", "#C62828", "#D32F2F"]}
           delay={0.3}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
         />

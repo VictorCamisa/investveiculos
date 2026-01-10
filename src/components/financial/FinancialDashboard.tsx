@@ -61,7 +61,6 @@ export function FinancialDashboard() {
           title="Faturamento Total"
           value={formatCurrency(kpis.totalRevenue)}
           subtitle={`${kpis.completedSalesCount} vendas concluídas`}
-          colors={["#E53935", "#EF5350", "#E57373"]}
           delay={0}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
         />
@@ -69,7 +68,6 @@ export function FinancialDashboard() {
           title="Lucro Líquido"
           value={formatCurrency(kpis.totalNetProfit)}
           subtitle={`Margem: ${kpis.avgMargin.toFixed(1)}%`}
-          colors={["#D32F2F", "#E53935", "#EF5350"]}
           delay={0.1}
           icon={kpis.totalNetProfit >= 0 ? 
             <TrendingUp className="h-5 w-5 text-primary" /> : 
@@ -80,7 +78,6 @@ export function FinancialDashboard() {
           title="Valor em Estoque"
           value={formatCurrency(kpis.totalStockValue)}
           subtitle={`${kpis.vehiclesInStock} veículos • ${kpis.avgDaysInStock.toFixed(0)} dias média`}
-          colors={["#C62828", "#D32F2F", "#E53935"]}
           delay={0.2}
           icon={<Car className="h-5 w-5 text-muted-foreground" />}
         />
@@ -88,7 +85,6 @@ export function FinancialDashboard() {
           title="Pipeline Projetado"
           value={formatCurrency(kpis.weightedPipeline)}
           subtitle={`Total: ${formatCurrency(kpis.pipelineValue)}`}
-          colors={["#B71C1C", "#C62828", "#D32F2F"]}
           delay={0.3}
           icon={<Target className="h-5 w-5 text-muted-foreground" />}
         />

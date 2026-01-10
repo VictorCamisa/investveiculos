@@ -62,7 +62,6 @@ export function AlertsPage() {
           title="Alertas Críticos"
           value={criticalAlerts.length.toString()}
           subtitle="Requerem ação imediata"
-          colors={["#B71C1C", "#C62828", "#D32F2F"]}
           delay={0}
           icon={<AlertTriangle className="h-5 w-5 text-primary" />}
         />
@@ -70,7 +69,6 @@ export function AlertsPage() {
           title="Alertas de Atenção"
           value={warningAlerts.length.toString()}
           subtitle="Monitorar situação"
-          colors={["#E53935", "#EF5350", "#E57373"]}
           delay={0.1}
           icon={<AlertCircle className="h-5 w-5 text-primary" />}
         />
@@ -78,7 +76,6 @@ export function AlertsPage() {
           title="Veículos Parados"
           value={stockAlerts.length.toString()}
           subtitle="Acima do tempo esperado"
-          colors={["#D32F2F", "#E53935", "#EF5350"]}
           delay={0.2}
           icon={<Car className="h-5 w-5 text-muted-foreground" />}
         />
@@ -86,7 +83,6 @@ export function AlertsPage() {
           title="Margens Baixas"
           value={marginAlerts.length.toString()}
           subtitle="Vendas com margem reduzida"
-          colors={["#C62828", "#D32F2F", "#E53935"]}
           delay={0.3}
           icon={<DollarSign className="h-5 w-5 text-muted-foreground" />}
         />
