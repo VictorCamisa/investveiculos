@@ -2,15 +2,16 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Modern Luxury Design System - Matheus Veículos
+/* Modern Luxury Design System - InvestVeículos
    All colors MUST be HSL.
-   Primary brand color: Vermelho #E53935 (0 73% 55%)
-   Typography: Playfair Display (headings) + Plus Jakarta Sans (body)
+   Primary brand color: Laranja/Âmbar #E8A020 (36 82% 52%)
+   Secondary: Cinza #8A8A8A (0 0% 54%)
+   Typography: Plus Jakarta Sans
 */
 
 @layer base {
   :root {
-    /* Light mode - Vermelho, Branco e Preto */
+    /* Light mode - Laranja, Cinza e Preto */
     --background: 0 0% 98%;
     --foreground: 0 0% 10%;
 
@@ -20,42 +21,42 @@
     --popover: 0 0% 100%;
     --popover-foreground: 0 0% 10%;
 
-    --primary: 0 73% 55%;
+    --primary: 36 82% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 96%;
-    --secondary-foreground: 0 0% 20%;
+    --secondary: 0 0% 54%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 96%;
     --muted-foreground: 0 0% 45%;
 
-    --accent: 0 73% 97%;
-    --accent-foreground: 0 73% 45%;
+    --accent: 36 82% 95%;
+    --accent-foreground: 36 82% 40%;
 
-    --destructive: 0 73% 55%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 0 73% 55%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 0 73% 55%;
+    --warning: 36 82% 52%;
     --warning-foreground: 0 0% 100%;
 
     --border: 0 0% 90%;
     --input: 0 0% 92%;
-    --ring: 0 73% 55%;
+    --ring: 36 82% 52%;
 
     --radius: 0.625rem;
 
     /* Sidebar - Light */
     --sidebar-background: 0 0% 100%;
     --sidebar-foreground: 0 0% 30%;
-    --sidebar-primary: 0 73% 55%;
+    --sidebar-primary: 36 82% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 96%;
     --sidebar-accent-foreground: 0 0% 20%;
     --sidebar-border: 0 0% 92%;
-    --sidebar-ring: 0 73% 55%;
+    --sidebar-ring: 36 82% 52%;
 
     /* Surface levels for depth */
     --surface-1: 0 0% 100%;
@@ -76,10 +77,10 @@
     --auth-text-primary: 0 0% 20%;
     --auth-heading: 0 0% 10%;
 
-    /* Public website theme - Matheus Veículos */
-    --public-primary: 0 73% 55%;
-    --public-primary-dark: 0 73% 45%;
-    --public-primary-light: 0 73% 65%;
+    /* Public website theme - InvestVeículos */
+    --public-primary: 36 82% 52%;
+    --public-primary-dark: 36 82% 42%;
+    --public-primary-light: 36 82% 62%;
     --public-primary-foreground: 0 0% 100%;
     --public-background: 0 0% 100%;
     --public-foreground: 0 0% 10%;
@@ -89,7 +90,7 @@
   }
 
   .dark {
-    /* Dark mode - Vermelho, Branco e Preto */
+    /* Dark mode - Laranja, Cinza e Preto */
     --background: 0 0% 7%;
     --foreground: 0 0% 92%;
 
@@ -99,40 +100,40 @@
     --popover: 0 0% 10%;
     --popover-foreground: 0 0% 92%;
 
-    --primary: 0 73% 55%;
+    --primary: 36 82% 52%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 85%;
+    --secondary: 0 0% 54%;
+    --secondary-foreground: 0 0% 100%;
 
     --muted: 0 0% 14%;
     --muted-foreground: 0 0% 55%;
 
-    --accent: 0 20% 15%;
-    --accent-foreground: 0 73% 65%;
+    --accent: 36 30% 18%;
+    --accent-foreground: 36 82% 62%;
 
-    --destructive: 0 73% 55%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
-    --success: 0 73% 55%;
+    --success: 142 76% 36%;
     --success-foreground: 0 0% 100%;
 
-    --warning: 0 73% 55%;
+    --warning: 36 82% 52%;
     --warning-foreground: 0 0% 100%;
 
     --border: 0 0% 16%;
     --input: 0 0% 16%;
-    --ring: 0 73% 55%;
+    --ring: 36 82% 52%;
 
     /* Sidebar - Dark */
     --sidebar-background: 0 0% 8%;
     --sidebar-foreground: 0 0% 75%;
-    --sidebar-primary: 0 73% 55%;
+    --sidebar-primary: 36 82% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
     --sidebar-accent: 0 0% 13%;
     --sidebar-accent-foreground: 0 0% 90%;
     --sidebar-border: 0 0% 14%;
-    --sidebar-ring: 0 73% 55%;
+    --sidebar-ring: 36 82% 52%;
 
     /* Surface levels for depth */
     --surface-1: 0 0% 10%;
@@ -153,10 +154,10 @@
     --auth-text-primary: 0 0% 80%;
     --auth-heading: 0 0% 95%;
 
-    /* Public website theme - Matheus Veículos (dark mode) */
-    --public-primary: 0 73% 55%;
-    --public-primary-dark: 0 73% 45%;
-    --public-primary-light: 0 73% 65%;
+    /* Public website theme - InvestVeículos (dark mode) */
+    --public-primary: 36 82% 52%;
+    --public-primary-dark: 36 82% 42%;
+    --public-primary-light: 36 82% 62%;
     --public-primary-foreground: 0 0% 100%;
     --public-background: 0 0% 5%;
     --public-foreground: 0 0% 95%;

@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X } from 'lucide-react';
-import logoImg from '@/assets/logo-matheus-veiculos.png';
+import logoImg from '@/assets/logo-invest-veiculos.png';
 
 const navLinks = [
   { href: '/', label: 'Início' },

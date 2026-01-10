@@ -20,7 +20,7 @@ import {
 import { useState } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
-import logoMatheusVeiculos from '@/assets/logo-matheus-veiculos.png';
+import logoInvestVeiculos from '@/assets/logo-invest-veiculos.png';
 import { MainNav } from './MainNav';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
@@ -44,8 +44,8 @@ export function AppHeader() {
         {/* Logo */}
         <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
           <img 
-            src={logoMatheusVeiculos} 
-            alt="Matheus Veículos" 
+            src={logoInvestVeiculos} 
+            alt="InvestVeículos" 
             className="h-8 w-auto object-contain"
           />
         </Link>
