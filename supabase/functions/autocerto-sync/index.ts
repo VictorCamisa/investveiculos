@@ -38,20 +38,24 @@ interface AutocertoPhoto {
   Ordem: number;
 }
 
-// Helper function to make Autocerto API requests with browser-like headers
+// Helper function to make Autocerto API requests
 async function autocertoFetch(url: string, authHeader: string): Promise<Response> {
-  return fetch(url, {
+  console.log('Making request to:', url);
+  console.log('Auth header preview:', authHeader.substring(0, 20) + '...');
+  
+  const response = await fetch(url, {
     method: 'GET',
     headers: {
       'Authorization': `Basic ${authHeader}`,
-      'Content-Type': 'application/json',
-      'Accept': 'application/json, text/plain, */*',
-      'Accept-Language': 'pt-BR,pt;q=0.9,en-US;q=0.8,en;q=0.7',
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      'Origin': 'https://integracao.autocerto.com',
-      'Referer': 'https://integracao.autocerto.com/swagger/',
+      'Accept': 'application/json',
+      'User-Agent': 'AutocertoClient/1.0',
+      'Cache-Control': 'no-cache',
     },
   });
+  
+  console.log('Response status:', response.status);
+  
+  return response;
 }
 
 serve(async (req) => {
