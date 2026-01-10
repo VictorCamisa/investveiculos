@@ -19,13 +19,15 @@ export function useLeads() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('leads')
-        .select(`
-          *,
-          meta_campaign:meta_campaigns(id, name)
-        `)
+        .select('*')
         .order('created_at', { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error('[useLeads] Erro ao buscar leads:', error);
+        throw error;
+      }
+      
+      console.log('[useLeads] Leads carregados:', data?.length ?? 0);
 
       const leads = (data || []) as Lead[];
 
