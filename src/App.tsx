@@ -1,4 +1,4 @@
-// App v2.1 - Force cache rebuild
+// App v2.2 - Force Vite cache rebuild
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
