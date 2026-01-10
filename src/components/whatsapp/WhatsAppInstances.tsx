@@ -46,27 +46,20 @@ export function WhatsAppInstances() {
   const syncStatus = useSyncInstanceStatus();
   
   const [dialogOpen, setDialogOpen] = useState(false);
+  
+  // Fixed Evolution API credentials
+  const FIXED_API_URL = 'https://vssolutions-evolution-api.fjsxhg.easypanel.host/';
+  const FIXED_API_KEY = 'E53F2CE050E7-4D35-BE93-D506BFEF9BA0';
+  
   const [formData, setFormData] = useState({
     name: '',
     instance_name: '',
-    api_url: '',
-    api_key: '',
+    api_url: FIXED_API_URL,
+    api_key: FIXED_API_KEY,
     is_default: false,
     is_shared: false,
     signature_template: '👤 {nome} está te atendendo',
   });
-
-  // Pre-fill URL and API Key from existing instances when dialog opens
-  React.useEffect(() => {
-    if (dialogOpen && instances?.length) {
-      const firstInstance = instances[0];
-      setFormData(prev => ({
-        ...prev,
-        api_url: firstInstance.api_url || '',
-        api_key: firstInstance.api_key || '',
-      }));
-    }
-  }, [dialogOpen, instances]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,8 +74,8 @@ export function WhatsAppInstances() {
     setFormData({
       name: '',
       instance_name: '',
-      api_url: instances?.[0]?.api_url || '',
-      api_key: instances?.[0]?.api_key || '',
+      api_url: FIXED_API_URL,
+      api_key: FIXED_API_KEY,
       is_default: false,
       is_shared: false,
       signature_template: '👤 {nome} está te atendendo',
@@ -177,24 +170,30 @@ export function WhatsAppInstances() {
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="api_url">URL da Evolution API *</Label>
+                <Label htmlFor="api_url">URL da Evolution API</Label>
                 <Input
                   id="api_url"
-                  placeholder="https://sua-vps.com"
                   value={formData.api_url}
-                  onChange={(e) => setFormData({ ...formData, api_url: e.target.value })}
+                  disabled
+                  className="bg-muted"
                 />
+                <p className="text-xs text-muted-foreground">
+                  URL fixa da Evolution API
+                </p>
               </div>
               
               <div className="space-y-2">
-                <Label htmlFor="api_key">API Key *</Label>
+                <Label htmlFor="api_key">API Key</Label>
                 <Input
                   id="api_key"
                   type="password"
-                  placeholder="Sua chave de API"
                   value={formData.api_key}
-                  onChange={(e) => setFormData({ ...formData, api_key: e.target.value })}
+                  disabled
+                  className="bg-muted"
                 />
+                <p className="text-xs text-muted-foreground">
+                  Chave de API fixa
+                </p>
               </div>
               
               <div className="flex items-center justify-between">
