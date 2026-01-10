@@ -14,10 +14,9 @@ export interface LeadQualification {
   trade_in_vehicle: string | null;
   trade_in_value: number | null;
   purchase_timeline: string | null;
-  decision_maker: boolean;
+  vehicle_usage: string | null;
   notes: string | null;
   engagement_score: number;
-  intent_score: number;
   completeness_score: number;
   created_at: string;
   updated_at: string;
@@ -32,49 +31,48 @@ export interface QualificationFormData {
   payment_method: string;
   has_trade_in: boolean;
   trade_in_vehicle: string;
-  trade_in_value: number | null;
   purchase_timeline: string;
-  decision_maker: boolean;
+  vehicle_usage: string;
   notes: string;
 }
 
 export interface ScoreBreakdown {
+  data: number;
   engagement: number;
-  intent: number;
-  completeness: number;
   total: number;
 }
 
 export type ScoreClassification = 'hot' | 'warm' | 'cold';
 
 export const PAYMENT_METHODS = [
-  { value: 'a_vista', label: 'À Vista' },
   { value: 'financiamento', label: 'Financiamento' },
+  { value: 'a_vista', label: 'À Vista' },
   { value: 'consorcio', label: 'Consórcio' },
-  { value: 'troca', label: 'Troca + Diferença' },
+  { value: 'outro', label: 'Outro' },
 ] as const;
 
 export const PURCHASE_TIMELINES = [
-  { value: 'imediato', label: 'Imediato (esta semana)' },
-  { value: '15_dias', label: 'Próximos 15 dias' },
-  { value: '30_dias', label: 'Próximos 30 dias' },
-  { value: '60_dias', label: '60 dias ou mais' },
+  { value: 'imediato', label: 'Imediato', points: 20 },
+  { value: 'ate_30_dias', label: 'Em até 30 dias', points: 15 },
+  { value: '3_a_6_meses', label: '3 a 6 meses', points: 5 },
+  { value: 'pesquisando', label: 'Apenas pesquisando', points: 0 },
 ] as const;
 
-// Intent keywords with their scores
-export const INTENT_KEYWORDS = {
-  high: [
-    'quero comprar', 'vou comprar', 'fechar negócio', 'fechar negocio',
-    'posso ir ver', 'agendar visita', 'posso visitar', 'vou aí',
-    'preciso logo', 'urgente', 'hoje', 'amanhã', 'amanha'
+export const VEHICLE_USAGE = [
+  { value: 'trabalho', label: 'Trabalho' },
+  { value: 'lazer_familia', label: 'Lazer/Família' },
+  { value: 'misto', label: 'Misto' },
+] as const;
+
+// Engagement keywords for detecting user interactions
+export const ENGAGEMENT_KEYWORDS = {
+  clickedLink: [
+    'acessei', 'vi o link', 'abri', 'cliquei', 'entrei no site',
+    'vi a página', 'olhei o link', 'abri o site'
   ],
-  medium: [
-    'tenho entrada', 'valor de entrada', 'quanto de entrada',
-    'financiamento', 'parcela', 'consigo financiar',
-    'trocar meu carro', 'tenho um pra trocar', 'aceita troca'
-  ],
-  low: [
-    'interessado', 'interesse', 'gostei', 'bonito',
-    'quanto custa', 'qual valor', 'preço', 'preco'
+  requestedContact: [
+    'falar com vendedor', 'quero atendimento', 'chamar vendedor',
+    'contato humano', 'posso falar com alguém', 'atendente',
+    'quero falar com uma pessoa', 'passar para vendedor'
   ]
 } as const;

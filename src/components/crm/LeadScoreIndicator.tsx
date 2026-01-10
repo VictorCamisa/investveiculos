@@ -3,7 +3,8 @@ import {
   getScoreClassification, 
   getClassificationLabel,
   getClassificationColor,
-  getClassificationBackground 
+  getClassificationBackground,
+  getClassificationMessage
 } from '@/hooks/useLeadQualification';
 import type { ScoreBreakdown } from '@/types/qualification';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -67,22 +68,16 @@ export function LeadScoreIndicator({
             {size !== 'sm' && (
               <div className="w-full space-y-1.5 text-xs">
                 <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Engajamento</span>
-                  <span className="font-medium">{score.engagement}/40</span>
-                </div>
-                <Progress value={(score.engagement / 40) * 100} className="h-1.5" />
-                
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Intenção</span>
-                  <span className="font-medium">{score.intent}/30</span>
-                </div>
-                <Progress value={(score.intent / 30) * 100} className="h-1.5" />
-                
-                <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">Dados</span>
-                  <span className="font-medium">{score.completeness}/30</span>
+                  <span className="font-medium">{score.data}/50</span>
                 </div>
-                <Progress value={(score.completeness / 30) * 100} className="h-1.5" />
+                <Progress value={(score.data / 50) * 100} className="h-1.5" />
+                
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Engajamento</span>
+                  <span className="font-medium">{score.engagement}/50</span>
+                </div>
+                <Progress value={(score.engagement / 50) * 100} className="h-1.5" />
               </div>
             )}
           </div>
@@ -91,9 +86,8 @@ export function LeadScoreIndicator({
           <div className="space-y-2">
             <p className="font-semibold">Composição do Score</p>
             <div className="space-y-1 text-sm">
-              <p><strong>Engajamento ({score.engagement}/40):</strong> Baseado na quantidade de mensagens e velocidade de resposta</p>
-              <p><strong>Intenção ({score.intent}/30):</strong> Palavras-chave que indicam interesse de compra</p>
-              <p><strong>Dados ({score.completeness}/30):</strong> Informações preenchidas na ficha</p>
+              <p><strong>Dados ({score.data}/50):</strong> Prazo de compra, forma de pagamento, entrada, parcela, orçamento e veículo para troca.</p>
+              <p><strong>Engajamento ({score.engagement}/50):</strong> Iniciou conversa, respondeu perguntas, clicou em links, solicitou vendedor.</p>
             </div>
           </div>
         </TooltipContent>

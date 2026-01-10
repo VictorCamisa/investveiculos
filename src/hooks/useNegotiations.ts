@@ -138,12 +138,10 @@ interface QualificationData {
   payment_method?: string;
   has_trade_in?: boolean;
   trade_in_vehicle?: string;
-  trade_in_value?: number | null;
   purchase_timeline?: string;
-  decision_maker?: boolean;
+  vehicle_usage?: string;
   notes?: string;
   engagement_score: number;
-  intent_score: number;
   completeness_score: number;
   score: number;
 }
@@ -270,12 +268,10 @@ export function useUpdateNegotiation() {
           payment_method: qualificationData.payment_method,
           has_trade_in: qualificationData.has_trade_in,
           trade_in_vehicle: qualificationData.trade_in_vehicle,
-          trade_in_value: qualificationData.trade_in_value,
           purchase_timeline: qualificationData.purchase_timeline,
-          decision_maker: qualificationData.decision_maker,
+          vehicle_usage: qualificationData.vehicle_usage,
           notes: qualificationData.notes,
           engagement_score: qualificationData.engagement_score,
-          intent_score: qualificationData.intent_score,
           completeness_score: qualificationData.completeness_score,
         });
       }
