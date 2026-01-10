@@ -197,15 +197,56 @@ serve(async (req) => {
     let updated = 0;
     let errors = 0;
 
+    // Log first vehicle to understand the API structure
+    if (vehicles.length > 0) {
+      console.log('Sample vehicle from API:', JSON.stringify(vehicles[0], null, 2));
+    }
+
     for (const vehicle of vehicles) {
       try {
+        // Log the raw vehicle data to understand its structure
+        console.log(`Processing vehicle: Codigo=${vehicle.Codigo}, Placa=${vehicle.Placa}`);
+        console.log(`  Marca: ${JSON.stringify(vehicle.Marca)}`);
+        console.log(`  Modelo: ${JSON.stringify(vehicle.Modelo)}`);
+        
+        // Try multiple possible field names for brand/model
+        const rawVehicle = vehicle as any;
+        
+        // Brand could be: Marca.Descricao, Marca.Nome, marca, MarcaDescricao, etc.
+        let brand = vehicle.Marca?.Descricao 
+          || rawVehicle.Marca?.Nome 
+          || rawVehicle.MarcaDescricao 
+          || rawVehicle.marca 
+          || rawVehicle.Marca
+          || 'Desconhecida';
+        
+        // Model could be: Modelo.Descricao, Modelo.Nome, modelo, ModeloDescricao, etc.
+        let model = vehicle.Modelo?.Descricao 
+          || rawVehicle.Modelo?.Nome 
+          || rawVehicle.ModeloDescricao 
+          || rawVehicle.modelo 
+          || rawVehicle.Modelo
+          || 'Desconhecido';
+        
+        // If Marca is a string directly, use it
+        if (typeof rawVehicle.Marca === 'string') {
+          brand = rawVehicle.Marca;
+        }
+        if (typeof rawVehicle.Modelo === 'string') {
+          model = rawVehicle.Modelo;
+        }
+        
+        console.log(`  Resolved brand: ${brand}, model: ${model}`);
+
         // Map Autocerto status to our status
         let status = 'disponivel';
-        if (vehicle.Status === 'Vendido') status = 'vendido';
-        else if (vehicle.Status === 'Reservado') status = 'reservado';
+        const vehicleStatus = rawVehicle.Status || rawVehicle.status || '';
+        if (vehicleStatus.toLowerCase() === 'vendido') status = 'vendido';
+        else if (vehicleStatus.toLowerCase() === 'reservado') status = 'reservado';
 
-        // Map transmission
-        let transmission = vehicle.Cambio?.Descricao?.toLowerCase() || null;
+        // Map transmission - try multiple field names
+        const cambioRaw = vehicle.Cambio?.Descricao || rawVehicle.Cambio || rawVehicle.cambio || rawVehicle.Transmissao || '';
+        let transmission = typeof cambioRaw === 'string' ? cambioRaw.toLowerCase() : null;
         if (transmission?.includes('manual')) transmission = 'manual';
         else if (transmission?.includes('auto')) transmission = 'automatico';
 
@@ -217,25 +258,27 @@ serve(async (req) => {
           .maybeSingle();
 
         const vehicleData = {
-          brand: vehicle.Marca?.Descricao || 'Desconhecida',
-          model: vehicle.Modelo?.Descricao || 'Desconhecido',
-          version: vehicle.Versao?.Descricao || null,
-          year_fabrication: vehicle.AnoFabricacao,
-          year_model: vehicle.AnoModelo,
-          plate: vehicle.Placa,
-          chassis: vehicle.Chassi,
-          renavam: vehicle.Renavam,
-          km: vehicle.Km,
-          mileage: vehicle.Km,
-          price_sale: vehicle.Preco,
-          color: vehicle.Cor?.Descricao || null,
-          fuel_type: vehicle.Combustivel?.Descricao?.toLowerCase() || null,
+          brand: brand,
+          model: model,
+          version: vehicle.Versao?.Descricao || rawVehicle.Versao || null,
+          year_fabrication: vehicle.AnoFabricacao || rawVehicle.anoFabricacao,
+          year_model: vehicle.AnoModelo || rawVehicle.anoModelo,
+          plate: vehicle.Placa || rawVehicle.placa,
+          chassis: vehicle.Chassi || rawVehicle.chassi,
+          renavam: vehicle.Renavam || rawVehicle.renavam,
+          km: vehicle.Km || rawVehicle.km,
+          mileage: vehicle.Km || rawVehicle.km,
+          price_sale: vehicle.Preco || rawVehicle.preco || rawVehicle.Valor,
+          color: vehicle.Cor?.Descricao || rawVehicle.Cor || rawVehicle.cor || null,
+          fuel_type: (vehicle.Combustivel?.Descricao || rawVehicle.Combustivel || rawVehicle.combustivel || '').toLowerCase() || null,
           transmission: transmission,
-          doors: vehicle.Portas || null,
-          description: vehicle.Observacao || null,
+          doors: vehicle.Portas || rawVehicle.portas || null,
+          description: vehicle.Observacao || rawVehicle.observacao || null,
           status: status,
           updated_at: new Date().toISOString(),
         };
+        
+        console.log(`  Final vehicleData: brand=${vehicleData.brand}, model=${vehicleData.model}, plate=${vehicleData.plate}`);
 
         let vehicleId: string;
 
