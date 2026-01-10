@@ -17,12 +17,22 @@ serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 
     console.log("[create-user] Starting...");
+    console.log("[create-user] URL:", supabaseUrl);
+    console.log("[create-user] Service role key exists:", !!serviceRoleKey);
 
-    // Create admin client with service role key
+    // Create admin client with service role key - this bypasses RLS
     const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey, {
       auth: {
         autoRefreshToken: false,
         persistSession: false,
+      },
+      db: {
+        schema: 'public',
+      },
+      global: {
+        headers: {
+          Authorization: `Bearer ${serviceRoleKey}`,
+        },
       },
     });
 
