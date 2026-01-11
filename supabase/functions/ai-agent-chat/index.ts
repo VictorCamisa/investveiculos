@@ -6,6 +6,90 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// ============= SCHEMA VALIDATION SYSTEM =============
+// Cache de schemas das tabelas para evitar queries repetidas
+let tableSchemas: Record<string, Set<string>> = {};
+let schemaLoadedAt: number = 0;
+const SCHEMA_CACHE_TTL = 5 * 60 * 1000; // 5 minutos
+
+async function loadTableSchemas(supabase: any, tables: string[]): Promise<Record<string, Set<string>>> {
+  const now = Date.now();
+  
+  // Retorna cache se ainda válido
+  if (Object.keys(tableSchemas).length > 0 && (now - schemaLoadedAt) < SCHEMA_CACHE_TTL) {
+    console.log('[Schema] Using cached schemas');
+    return tableSchemas;
+  }
+  
+  console.log('[Schema] Loading schemas for tables:', tables);
+  const schemas: Record<string, Set<string>> = {};
+  
+  for (const table of tables) {
+    try {
+      // Usar a função SQL criada para obter colunas
+      const { data, error } = await supabase.rpc('get_table_columns', { p_table_name: table });
+      
+      if (!error && data && data.length > 0) {
+        schemas[table] = new Set(data.map((col: any) => col.column_name));
+        console.log(`[Schema] ${table}: ${data.length} columns loaded`);
+      } else {
+        console.warn(`[Schema] Could not load schema for ${table}:`, error?.message || 'no data');
+        schemas[table] = new Set();
+      }
+    } catch (e) {
+      console.error(`[Schema] Error loading schema for ${table}:`, e);
+      schemas[table] = new Set();
+    }
+  }
+  
+  tableSchemas = schemas;
+  schemaLoadedAt = now;
+  return schemas;
+}
+
+function validateColumns(table: string, requestedColumns: string[]): { valid: string[], invalid: string[] } {
+  const tableColumns = tableSchemas[table];
+  
+  if (!tableColumns || tableColumns.size === 0) {
+    // Se não temos schema, assume que todas são válidas (fallback)
+    console.warn(`[Schema] No schema for ${table}, assuming all columns valid`);
+    return { valid: requestedColumns, invalid: [] };
+  }
+  
+  const valid: string[] = [];
+  const invalid: string[] = [];
+  
+  for (const col of requestedColumns) {
+    if (tableColumns.has(col)) {
+      valid.push(col);
+    } else {
+      invalid.push(col);
+    }
+  }
+  
+  if (invalid.length > 0) {
+    console.warn(`[Schema] Invalid columns for ${table}: ${invalid.join(', ')}`);
+    console.log(`[Schema] Valid columns for ${table}: ${Array.from(tableColumns).join(', ')}`);
+  }
+  
+  return { valid, invalid };
+}
+
+function getSafeSelectColumns(table: string, desiredColumns: string[]): string {
+  const { valid, invalid } = validateColumns(table, desiredColumns);
+  
+  if (invalid.length > 0) {
+    console.warn(`[Schema Warning] Removed invalid columns for ${table}: ${invalid.join(', ')}`);
+  }
+  
+  return valid.length > 0 ? valid.join(', ') : '*';
+}
+
+function hasColumn(table: string, column: string): boolean {
+  const tableColumns = tableSchemas[table];
+  return tableColumns ? tableColumns.has(column) : true; // fallback to true if no schema
+}
+
 // Tool definitions for function calling
 const agentTools = [
   {
@@ -256,6 +340,12 @@ serve(async (req) => {
     const elevenLabsApiKey = Deno.env.get('ELEVENLABS_API_KEY') ?? '';
     
     const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+    // ============= CARREGAMENTO AUTOMÁTICO DE SCHEMAS =============
+    // Carregar schemas das tabelas principais para validação dinâmica
+    const coreTables = ['vehicles', 'leads', 'negotiations', 'customers', 'sales', 'profiles'];
+    await loadTableSchemas(supabase, coreTables);
+    console.log('[Schema] Core tables loaded:', Object.keys(tableSchemas).join(', '));
 
     const { 
       agent_id, 
@@ -629,9 +719,18 @@ async function executeToolFunction(
 }
 
 async function searchVehicles(supabase: any, args: any): Promise<any> {
+  // Colunas que queremos buscar - usando nomes corretos do schema
+  const desiredColumns = [
+    'id', 'brand', 'model', 'year_model', 'year_manufacture', 
+    'price_sale', 'mileage', 'fuel_type', 'color', 'images', 'status'
+  ];
+  
+  const selectCols = getSafeSelectColumns('vehicles', desiredColumns);
+  console.log('[searchVehicles] Using columns:', selectCols);
+  
   let query = supabase
     .from('vehicles')
-    .select('id, brand, model, year_model, year_manufacture, price_sale, mileage, fuel_type, color, photos, status')
+    .select(selectCols)
     .eq('status', 'available')
     .order('created_at', { ascending: false })
     .limit(args.limit || 5);
@@ -661,8 +760,8 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
   const { data, error } = await query;
 
   if (error) {
-    console.error('Search vehicles error:', error);
-    return { error: 'Failed to search vehicles' };
+    console.error('[searchVehicles] Error:', error);
+    return { error: `Erro ao buscar veículos: ${error.message}` };
   }
 
   if (!data || data.length === 0) {
@@ -676,12 +775,12 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
     message: `Encontrei ${data.length} veículo(s) disponível(is).`,
     vehicles: data.map((v: any) => ({
       id: v.id,
-      nome: `${v.brand} ${v.model} ${v.year_manufacture}/${v.year_model}`,
+      nome: `${v.brand} ${v.model} ${v.year_manufacture || ''}/${v.year_model || ''}`.trim(),
       preco: `R$ ${(v.price_sale || 0).toLocaleString('pt-BR')}`,
       km: `${(v.mileage || 0).toLocaleString('pt-BR')} km`,
       combustivel: v.fuel_type,
       cor: v.color,
-      foto: v.photos?.[0] || null
+      foto: v.images?.[0] || null // CORRIGIDO: images em vez de photos
     }))
   };
 }
@@ -838,23 +937,39 @@ async function getVehicleDetails(supabase: any, vehicleId: string): Promise<any>
     .single();
 
   if (error || !data) {
-    return { error: 'Vehicle not found' };
+    console.error('[getVehicleDetails] Error:', error);
+    return { error: 'Veículo não encontrado' };
   }
+
+  // Log das colunas disponíveis para debug
+  console.log('[getVehicleDetails] Available columns:', Object.keys(data));
+
+  // Usar nomes corretos do schema
+  const yearDisplay = data.year_manufacture && data.year_model 
+    ? `${data.year_manufacture}/${data.year_model}` 
+    : (data.year_model || data.year_manufacture || '');
 
   return {
     id: data.id,
-    nome: `${data.brand} ${data.model} ${data.year}`,
-    preco: `R$ ${(data.price || 0).toLocaleString('pt-BR')}`,
+    nome: `${data.brand} ${data.model} ${yearDisplay}`.trim(),
+    preco: `R$ ${(data.price_sale || 0).toLocaleString('pt-BR')}`,
     km: `${(data.mileage || 0).toLocaleString('pt-BR')} km`,
     combustivel: data.fuel_type,
     cor: data.color,
     transmissao: data.transmission,
-    motor: data.engine,
     portas: data.doors,
     placa_final: data.plate?.slice(-1),
-    fotos: data.photos || [],
-    opcional: data.features || [],
-    observacoes: data.notes
+    fotos: data.images || [], // CORRIGIDO: images em vez de photos
+    descricao: data.description,
+    observacoes: data.notes,
+    // Campos adicionais disponíveis no schema
+    versao: data.version,
+    renavam: data.renavam,
+    chassis: data.chassis,
+    tipo_carroceria: data.body_type,
+    data_compra: data.purchase_date,
+    preco_compra: data.purchase_price ? `R$ ${data.purchase_price.toLocaleString('pt-BR')}` : null,
+    status: data.status
   };
 }
 

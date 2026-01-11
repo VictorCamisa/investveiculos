@@ -3268,6 +3268,14 @@ export type Database = {
       }
       get_my_role: { Args: never; Returns: string }
       get_next_round_robin_salesperson: { Args: never; Returns: string }
+      get_table_columns: {
+        Args: { p_table_name: string }
+        Returns: {
+          column_name: string
+          data_type: string
+          is_nullable: string
+        }[]
+      }
       get_user_permissions: {
         Args: { _user_id: string }
         Returns: {
