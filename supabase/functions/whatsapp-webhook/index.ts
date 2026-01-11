@@ -329,7 +329,9 @@ async function handleAIAgentResponse(
       await sendWhatsAppMessage(
         instanceName,
         phone,
-        'Entendi! Vou transferir você para um de nossos atendentes. Em instantes alguém entrará em contato. 👋'
+        'Entendi! Vou transferir você para um de nossos atendentes. Em instantes alguém entrará em contato. 👋',
+        supabase,
+        leadId
       );
 
       // Notify assigned salesperson if lead has one
@@ -392,15 +394,21 @@ async function handleAIAgentResponse(
     console.log('AI Agent response:', agentReply.substring(0, 100));
 
     // Send the AI response via WhatsApp
-    await sendWhatsAppMessage(instanceName, phone, agentReply);
+    await sendWhatsAppMessage(instanceName, phone, agentReply, supabase, leadId);
 
   } catch (error) {
     console.error('Error in AI agent integration:', error);
   }
 }
 
-// Send WhatsApp message via Evolution API
-async function sendWhatsAppMessage(instanceName: string, phone: string, message: string) {
+// Send WhatsApp message via Evolution API and save to database
+async function sendWhatsAppMessage(
+  instanceName: string, 
+  phone: string, 
+  message: string,
+  supabase?: any,
+  leadId?: string | null
+) {
   const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
   const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
 
@@ -431,6 +439,42 @@ async function sendWhatsAppMessage(instanceName: string, phone: string, message:
       console.error('Failed to send WhatsApp message:', response.status, errorText);
     } else {
       console.log('WhatsApp message sent successfully');
+      
+      // Save the outgoing message to the database
+      if (supabase) {
+        // Get instance
+        const { data: instance } = await supabase
+          .from('whatsapp_instances')
+          .select('id')
+          .eq('instance_name', instanceName)
+          .single();
+        
+        // Get contact
+        const { data: contact } = await supabase
+          .from('whatsapp_contacts')
+          .select('id, lead_id')
+          .eq('phone', formattedPhone)
+          .single();
+        
+        // Save the agent's message
+        const { error: insertError } = await supabase.from('whatsapp_messages').insert({
+          instance_id: instance?.id,
+          contact_id: contact?.id,
+          remote_jid: remoteJid,
+          message_id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+          direction: 'outgoing',
+          message_type: 'text',
+          content: message,
+          status: 'sent',
+          lead_id: contact?.lead_id || leadId,
+        });
+        
+        if (insertError) {
+          console.error('Failed to save outgoing message:', insertError);
+        } else {
+          console.log('Outgoing AI message saved to database');
+        }
+      }
     }
   } catch (error) {
     console.error('Error sending WhatsApp message:', error);
