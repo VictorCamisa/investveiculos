@@ -526,6 +526,7 @@ serve(async (req) => {
     return new Response(JSON.stringify({
       conversation_id: currentConversationId,
       message: assistantContent,
+      response: assistantContent, // Alias for webhook compatibility
       audio: audioBase64,
       tool_calls: toolCalls,
       tool_results: toolResults,

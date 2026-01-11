@@ -222,6 +222,78 @@ export type Database = {
           },
         ]
       }
+      ai_agent_human_takeover: {
+        Row: {
+          conversation_id: string | null
+          id: string
+          instance_id: string | null
+          lead_id: string | null
+          phone: string | null
+          reason: string | null
+          released_at: string | null
+          taken_over_at: string | null
+          taken_over_by: string | null
+        }
+        Insert: {
+          conversation_id?: string | null
+          id?: string
+          instance_id?: string | null
+          lead_id?: string | null
+          phone?: string | null
+          reason?: string | null
+          released_at?: string | null
+          taken_over_at?: string | null
+          taken_over_by?: string | null
+        }
+        Update: {
+          conversation_id?: string | null
+          id?: string
+          instance_id?: string | null
+          lead_id?: string | null
+          phone?: string | null
+          reason?: string | null
+          released_at?: string | null
+          taken_over_at?: string | null
+          taken_over_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ai_agent_human_takeover_conversation_id_fkey"
+            columns: ["conversation_id"]
+            isOneToOne: false
+            referencedRelation: "ai_agent_conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_human_takeover_instance_id_fkey"
+            columns: ["instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_human_takeover_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_human_takeover_taken_over_by_fkey"
+            columns: ["taken_over_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "ai_agent_human_takeover_taken_over_by_fkey"
+            columns: ["taken_over_by"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
       ai_agent_messages: {
         Row: {
           content: string
@@ -555,10 +627,14 @@ export type Database = {
           system_prompt: string | null
           temperature: number | null
           top_p: number | null
+          transfer_keywords: string[] | null
+          transfer_to_human_enabled: boolean | null
           updated_at: string | null
           vector_db_config: Json | null
           vector_db_provider: string | null
           webhook_url: string | null
+          whatsapp_auto_reply: boolean | null
+          whatsapp_instance_id: string | null
         }
         Insert: {
           api_key_encrypted?: string | null
@@ -584,10 +660,14 @@ export type Database = {
           system_prompt?: string | null
           temperature?: number | null
           top_p?: number | null
+          transfer_keywords?: string[] | null
+          transfer_to_human_enabled?: boolean | null
           updated_at?: string | null
           vector_db_config?: Json | null
           vector_db_provider?: string | null
           webhook_url?: string | null
+          whatsapp_auto_reply?: boolean | null
+          whatsapp_instance_id?: string | null
         }
         Update: {
           api_key_encrypted?: string | null
@@ -613,10 +693,14 @@ export type Database = {
           system_prompt?: string | null
           temperature?: number | null
           top_p?: number | null
+          transfer_keywords?: string[] | null
+          transfer_to_human_enabled?: boolean | null
           updated_at?: string | null
           vector_db_config?: Json | null
           vector_db_provider?: string | null
           webhook_url?: string | null
+          whatsapp_auto_reply?: boolean | null
+          whatsapp_instance_id?: string | null
         }
         Relationships: [
           {
@@ -632,6 +716,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "salesperson_ranking"
             referencedColumns: ["user_id"]
+          },
+          {
+            foreignKeyName: "ai_agents_whatsapp_instance_id_fkey"
+            columns: ["whatsapp_instance_id"]
+            isOneToOne: false
+            referencedRelation: "whatsapp_instances"
+            referencedColumns: ["id"]
           },
         ]
       }
