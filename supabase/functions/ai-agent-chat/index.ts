@@ -94,6 +94,72 @@ const agentTools = [
         required: ["vehicle_id"]
       }
     }
+  },
+  {
+    type: "function",
+    function: {
+      name: "query_database",
+      description: "Consulta dados do sistema. Use para buscar leads, clientes, vendas, negociações ou qualquer informação do banco de dados.",
+      parameters: {
+        type: "object",
+        properties: {
+          table: { 
+            type: "string", 
+            description: "Nome da tabela a consultar (vehicles, leads, customers, negotiations, sales, profiles)" 
+          },
+          filters: { 
+            type: "object", 
+            description: "Filtros a aplicar na consulta (ex: { 'status': 'disponivel', 'brand': 'Toyota' })" 
+          },
+          select: { 
+            type: "string", 
+            description: "Campos a retornar separados por vírgula (ex: 'id,name,phone'). Se vazio, retorna todos." 
+          },
+          limit: { 
+            type: "number", 
+            description: "Número máximo de resultados (padrão: 10)" 
+          },
+          order_by: { 
+            type: "string", 
+            description: "Campo para ordenação (ex: 'created_at' ou '-price' para decrescente)" 
+          }
+        },
+        required: ["table"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_sales_summary",
+      description: "Obtém resumo de vendas com totais, médias e estatísticas. Use quando perguntarem sobre performance de vendas.",
+      parameters: {
+        type: "object",
+        properties: {
+          period: { 
+            type: "string", 
+            description: "Período: 'today', 'week', 'month', 'year'" 
+          },
+          salesperson_id: { 
+            type: "string", 
+            description: "ID do vendedor para filtrar (opcional)" 
+          }
+        },
+        required: []
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "get_inventory_stats",
+      description: "Obtém estatísticas do estoque: total de veículos, valor médio, mais antigos, etc.",
+      parameters: {
+        type: "object",
+        properties: {},
+        required: []
+      }
+    }
   }
 ];
 
@@ -137,6 +203,19 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // 1.1 Load connected data sources
+    const { data: dataSources } = await supabase
+      .from('ai_agent_data_sources')
+      .select('*')
+      .eq('agent_id', agent_id)
+      .eq('is_active', true);
+    
+    const connectedTables = (dataSources || [])
+      .filter((ds: any) => ds.source_type === 'supabase')
+      .map((ds: any) => ds.table_name);
+    
+    console.log('Connected Supabase tables:', connectedTables);
 
     // 2. Get or create conversation
     let currentConversationId = conversation_id;
@@ -242,7 +321,8 @@ serve(async (req) => {
           lead_id,
           phone,
           supabaseUrl,
-          serviceRoleKey
+          serviceRoleKey,
+          connectedTables
         });
         
         toolResults.push({
@@ -392,7 +472,7 @@ async function executeToolFunction(
   supabase: any, 
   functionName: string, 
   args: any,
-  context: { lead_id?: string; phone?: string; supabaseUrl: string; serviceRoleKey: string }
+  context: { lead_id?: string; phone?: string; supabaseUrl: string; serviceRoleKey: string; connectedTables?: string[] }
 ): Promise<any> {
   console.log(`Executing ${functionName} with args:`, args);
 
@@ -411,6 +491,15 @@ async function executeToolFunction(
     
     case 'get_vehicle_details':
       return await getVehicleDetails(supabase, args.vehicle_id);
+    
+    case 'query_database':
+      return await queryDatabase(supabase, args, context.connectedTables || []);
+    
+    case 'get_sales_summary':
+      return await getSalesSummary(supabase, args);
+    
+    case 'get_inventory_stats':
+      return await getInventoryStats(supabase);
     
     default:
       return { error: `Unknown function: ${functionName}` };
@@ -672,4 +761,145 @@ async function updateAgentMetrics(supabase: any, agentId: string, tokensUsed: nu
       conversations_count: 1,
     });
   }
+}
+
+// Query database - generic function for connected tables
+async function queryDatabase(supabase: any, args: any, connectedTables: string[]): Promise<any> {
+  const { table, filters = {}, select, limit = 10, order_by } = args;
+  
+  // Security: only allow querying connected tables
+  if (!connectedTables.includes(table)) {
+    return { 
+      error: `Tabela '${table}' não está conectada ao agente.`,
+      available_tables: connectedTables 
+    };
+  }
+  
+  let query = supabase
+    .from(table)
+    .select(select || '*')
+    .limit(limit);
+  
+  // Apply filters
+  for (const [key, value] of Object.entries(filters)) {
+    if (typeof value === 'string' && value.includes('%')) {
+      query = query.ilike(key, value);
+    } else {
+      query = query.eq(key, value);
+    }
+  }
+  
+  // Apply ordering
+  if (order_by) {
+    const isDesc = order_by.startsWith('-');
+    const field = isDesc ? order_by.slice(1) : order_by;
+    query = query.order(field, { ascending: !isDesc });
+  } else {
+    query = query.order('created_at', { ascending: false });
+  }
+  
+  const { data, error } = await query;
+  
+  if (error) {
+    console.error('Query database error:', error);
+    return { error: 'Erro ao consultar banco de dados' };
+  }
+  
+  return {
+    table,
+    count: data?.length || 0,
+    data: data || []
+  };
+}
+
+// Sales summary
+async function getSalesSummary(supabase: any, args: any): Promise<any> {
+  const { period = 'month', salesperson_id } = args;
+  
+  let startDate = new Date();
+  switch (period) {
+    case 'today':
+      startDate.setHours(0, 0, 0, 0);
+      break;
+    case 'week':
+      startDate.setDate(startDate.getDate() - 7);
+      break;
+    case 'month':
+      startDate.setMonth(startDate.getMonth() - 1);
+      break;
+    case 'year':
+      startDate.setFullYear(startDate.getFullYear() - 1);
+      break;
+  }
+  
+  let query = supabase
+    .from('sales')
+    .select('id, sale_price, profit, sale_date, seller_id')
+    .gte('sale_date', startDate.toISOString().split('T')[0]);
+  
+  if (salesperson_id) {
+    query = query.eq('seller_id', salesperson_id);
+  }
+  
+  const { data: sales, error } = await query;
+  
+  if (error) {
+    console.error('Sales summary error:', error);
+    return { error: 'Erro ao obter resumo de vendas' };
+  }
+  
+  const totalSales = sales?.length || 0;
+  const totalValue = sales?.reduce((sum: number, s: any) => sum + (s.sale_price || 0), 0) || 0;
+  const totalProfit = sales?.reduce((sum: number, s: any) => sum + (s.profit || 0), 0) || 0;
+  const avgTicket = totalSales > 0 ? totalValue / totalSales : 0;
+  
+  return {
+    periodo: period,
+    total_vendas: totalSales,
+    valor_total: `R$ ${totalValue.toLocaleString('pt-BR')}`,
+    lucro_total: `R$ ${totalProfit.toLocaleString('pt-BR')}`,
+    ticket_medio: `R$ ${avgTicket.toLocaleString('pt-BR')}`,
+    margem_media: totalValue > 0 ? `${((totalProfit / totalValue) * 100).toFixed(1)}%` : '0%'
+  };
+}
+
+// Inventory stats
+async function getInventoryStats(supabase: any): Promise<any> {
+  const { data: vehicles, error } = await supabase
+    .from('vehicles')
+    .select('id, price, status, created_at, brand, model, year')
+    .eq('status', 'available');
+  
+  if (error) {
+    console.error('Inventory stats error:', error);
+    return { error: 'Erro ao obter estatísticas do estoque' };
+  }
+  
+  const total = vehicles?.length || 0;
+  const totalValue = vehicles?.reduce((sum: number, v: any) => sum + (v.price || 0), 0) || 0;
+  const avgPrice = total > 0 ? totalValue / total : 0;
+  
+  // Group by brand
+  const byBrand: Record<string, number> = {};
+  vehicles?.forEach((v: any) => {
+    byBrand[v.brand] = (byBrand[v.brand] || 0) + 1;
+  });
+  
+  // Find oldest vehicles (in stock for longest)
+  const sorted = [...(vehicles || [])].sort((a: any, b: any) => 
+    new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+  );
+  const oldest = sorted.slice(0, 5).map((v: any) => ({
+    nome: `${v.brand} ${v.model} ${v.year}`,
+    dias_em_estoque: Math.floor((Date.now() - new Date(v.created_at).getTime()) / (1000 * 60 * 60 * 24)),
+    preco: `R$ ${(v.price || 0).toLocaleString('pt-BR')}`
+  }));
+  
+  return {
+    total_veiculos: total,
+    valor_total_estoque: `R$ ${totalValue.toLocaleString('pt-BR')}`,
+    preco_medio: `R$ ${avgPrice.toLocaleString('pt-BR')}`,
+    por_marca: byBrand,
+    mais_antigos: oldest
+  };
 }

@@ -1,13 +1,15 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useAIAgent, useUpdateAIAgent } from '@/hooks/useAIAgents';
+import { useAIAgent, useUpdateAIAgent, useAIAgentDataSources, useCreateAIAgentDataSource } from '@/hooks/useAIAgents';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Select,
   SelectContent,
@@ -24,8 +26,21 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Save, Database, HardDrive, Clock } from 'lucide-react';
+import { Loader2, Save, Database, HardDrive, Clock, Plus, Table2, CheckCircle2, XCircle } from 'lucide-react';
 import { SHORT_TERM_MEMORY_TYPES, VECTOR_DB_PROVIDERS } from '@/types/ai-agents';
+import { toast } from 'sonner';
+
+// Tabelas do sistema disponíveis para conexão
+const SUPABASE_TABLES = [
+  { name: 'vehicles', label: 'Veículos', description: 'Estoque de veículos' },
+  { name: 'leads', label: 'Leads', description: 'Leads e oportunidades' },
+  { name: 'customers', label: 'Clientes', description: 'Base de clientes' },
+  { name: 'negotiations', label: 'Negociações', description: 'Pipeline de vendas' },
+  { name: 'sales', label: 'Vendas', description: 'Vendas realizadas' },
+  { name: 'vehicle_costs', label: 'Custos de Veículos', description: 'Custos por veículo' },
+  { name: 'profiles', label: 'Usuários', description: 'Equipe de vendas' },
+  { name: 'financial_transactions', label: 'Financeiro', description: 'Transações financeiras' },
+];
 
 const formSchema = z.object({
   short_term_memory_type: z.string(),
@@ -41,7 +56,11 @@ type FormData = z.infer<typeof formSchema>;
 export function AgentMemoryPage() {
   const { agentId } = useParams();
   const { data: agent, isLoading } = useAIAgent(agentId);
+  const { data: dataSources = [], isLoading: loadingDataSources } = useAIAgentDataSources(agentId);
   const updateAgent = useUpdateAIAgent();
+  const createDataSource = useCreateAIAgentDataSource();
+  
+  const [selectedTables, setSelectedTables] = useState<string[]>([]);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -71,10 +90,60 @@ export function AgentMemoryPage() {
     }
   }, [agent, form]);
 
+  // Carregar tabelas já conectadas
+  useEffect(() => {
+    if (dataSources.length > 0) {
+      const connectedTables = dataSources
+        .filter(ds => ds.source_type === 'supabase')
+        .map(ds => ds.table_name || '');
+      setSelectedTables(connectedTables);
+    }
+  }, [dataSources]);
+
   const onSubmit = async (data: FormData) => {
     if (agentId) {
       await updateAgent.mutateAsync({ id: agentId, ...data });
     }
+  };
+
+  const handleToggleTable = (tableName: string) => {
+    setSelectedTables(prev => 
+      prev.includes(tableName) 
+        ? prev.filter(t => t !== tableName)
+        : [...prev, tableName]
+    );
+  };
+
+  const handleConnectTables = async () => {
+    if (!agentId) return;
+    
+    // Tabelas já conectadas
+    const existingTables = dataSources
+      .filter(ds => ds.source_type === 'supabase')
+      .map(ds => ds.table_name);
+    
+    // Novas tabelas para conectar
+    const newTables = selectedTables.filter(t => !existingTables.includes(t));
+    
+    for (const tableName of newTables) {
+      const tableInfo = SUPABASE_TABLES.find(t => t.name === tableName);
+      await createDataSource.mutateAsync({
+        agent_id: agentId,
+        name: tableInfo?.label || tableName,
+        source_type: 'supabase',
+        table_name: tableName,
+        is_active: true,
+        sync_status: 'synced',
+      });
+    }
+    
+    if (newTables.length > 0) {
+      toast.success(`${newTables.length} tabela(s) conectada(s) com sucesso!`);
+    }
+  };
+
+  const getTableStatus = (tableName: string) => {
+    return dataSources.some(ds => ds.table_name === tableName && ds.is_active);
   };
 
   if (isLoading) {
@@ -86,7 +155,82 @@ export function AgentMemoryPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="space-y-6 max-w-4xl">
+      {/* Supabase Data Sources */}
+      <Card className="border-primary/20">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+              <Database className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="flex items-center gap-2">
+                Conexão Supabase
+                <Badge variant="secondary" className="ml-2">
+                  {dataSources.filter(ds => ds.source_type === 'supabase').length} tabelas conectadas
+                </Badge>
+              </CardTitle>
+              <CardDescription>
+                Conecte o agente às tabelas do seu sistema para acesso aos dados em tempo real.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <div className="grid gap-3 sm:grid-cols-2">
+              {SUPABASE_TABLES.map((table) => {
+                const isConnected = getTableStatus(table.name);
+                const isSelected = selectedTables.includes(table.name);
+                
+                return (
+                  <div
+                    key={table.name}
+                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                      isSelected 
+                        ? 'border-primary bg-primary/5' 
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                    onClick={() => handleToggleTable(table.name)}
+                  >
+                    <Checkbox
+                      checked={isSelected}
+                      onCheckedChange={() => handleToggleTable(table.name)}
+                    />
+                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                      <Table2 className="h-4 w-4 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm">{table.label}</p>
+                      <p className="text-xs text-muted-foreground truncate">{table.description}</p>
+                    </div>
+                    {isConnected ? (
+                      <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                    ) : isSelected ? (
+                      <Badge variant="outline" className="text-xs shrink-0">Pendente</Badge>
+                    ) : null}
+                  </div>
+                );
+              })}
+            </div>
+            
+            <div className="flex items-center justify-between pt-4 border-t">
+              <p className="text-sm text-muted-foreground">
+                {selectedTables.length} tabela(s) selecionada(s)
+              </p>
+              <Button 
+                onClick={handleConnectTables}
+                disabled={createDataSource.isPending || selectedTables.length === 0}
+              >
+                {createDataSource.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                <Plus className="mr-2 h-4 w-4" />
+                Conectar Tabelas
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
       {/* Short Term Memory */}
       <Card>
         <CardHeader>
@@ -197,7 +341,7 @@ export function AgentMemoryPage() {
               <div className="border-t pt-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
-                    <Database className="h-5 w-5 text-white" />
+                    <HardDrive className="h-5 w-5 text-white" />
                   </div>
                   <div>
                     <h3 className="font-semibold">Memória de Longo Prazo (RAG)</h3>
