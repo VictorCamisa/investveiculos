@@ -105,23 +105,21 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
     message.message?.extendedTextMessage?.text ||
     '';
   
-  // If it's an audio message, try to transcribe it via Evolution API
+  // Note: Audio transcription will happen in handleAIAgentResponse 
+  // where we have access to the agent's API keys
+  // For now, just mark audio messages for later processing
+  let audioBase64ForTranscription: string | null = null;
+  
   if (isAudioMessage && message.key?.id) {
-    console.log('Audio message detected, attempting transcription via Evolution API...');
+    console.log('Audio message detected, will transcribe after getting agent config...');
     
     // Get decrypted audio from Evolution API
-    const audioBase64 = await getAudioBase64FromEvolution(instanceName, message.key);
+    audioBase64ForTranscription = await getAudioBase64FromEvolution(instanceName, message.key);
     
-    if (audioBase64) {
-      const transcription = await transcribeAudioFromBase64(audioBase64);
-      if (transcription) {
-        content = transcription;
-        console.log('Audio transcribed:', content.substring(0, 50));
-      } else {
-        content = '[Áudio não transcrito]';
-      }
-    } else {
+    if (!audioBase64ForTranscription) {
       content = '[Áudio - falha ao obter mídia]';
+    } else {
+      content = '[AUDIO_PENDING_TRANSCRIPTION]';
     }
   }
   
@@ -289,7 +287,7 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
 
   // ===== AI AGENT INTEGRATION =====
   // Check if there's an active AI agent connected to this WhatsApp instance
-  await handleAIAgentResponse(supabase, instance?.id, effectivePhone, content, leadId, instanceName, isAudioMessage);
+  await handleAIAgentResponse(supabase, instance?.id, effectivePhone, content, leadId, instanceName, isAudioMessage, audioBase64ForTranscription);
 }
 
 // Handle AI Agent auto-response
@@ -300,7 +298,8 @@ async function handleAIAgentResponse(
   messageContent: string, 
   leadId: string | null,
   instanceName: string,
-  isAudioMessage: boolean = false
+  isAudioMessage: boolean = false,
+  audioBase64: string | null = null
 ) {
   if (!instanceId) {
     console.log('No instance ID, skipping AI agent check');
@@ -311,7 +310,7 @@ async function handleAIAgentResponse(
     // Find an active AI agent connected to this WhatsApp instance
     const { data: agent, error: agentError } = await supabase
       .from('ai_agents')
-      .select('id, status, whatsapp_auto_reply, transfer_to_human_enabled, transfer_keywords, enable_voice, voice_id')
+      .select('id, status, whatsapp_auto_reply, transfer_to_human_enabled, transfer_keywords, enable_voice, voice_id, api_key_encrypted, llm_provider')
       .eq('whatsapp_instance_id', instanceId)
       .eq('status', 'active')
       .eq('whatsapp_auto_reply', true)
@@ -323,6 +322,50 @@ async function handleAIAgentResponse(
     }
 
     console.log('Found active AI agent:', agent.id);
+
+    // Transcribe audio if pending, using agent's API key
+    let actualMessageContent = messageContent;
+    if (messageContent === '[AUDIO_PENDING_TRANSCRIPTION]' && audioBase64) {
+      console.log('Transcribing audio with agent API key...');
+      
+      // Get OpenAI API key from agent config
+      let openaiApiKey: string | null = null;
+      if (agent.api_key_encrypted) {
+        try {
+          const keys = JSON.parse(agent.api_key_encrypted);
+          openaiApiKey = keys.openai || null;
+        } catch {
+          // Legacy format - single key
+          if (agent.llm_provider === 'openai') {
+            openaiApiKey = agent.api_key_encrypted;
+          }
+        }
+      }
+      
+      if (openaiApiKey) {
+        const transcription = await transcribeAudioFromBase64(audioBase64, openaiApiKey);
+        if (transcription) {
+          actualMessageContent = transcription;
+          console.log('Audio transcribed successfully:', actualMessageContent.substring(0, 50));
+        } else {
+          actualMessageContent = '[Áudio não transcrito]';
+        }
+      } else {
+        console.log('No OpenAI API key found, trying Lovable gateway...');
+        const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
+        if (lovableApiKey) {
+          const transcription = await transcribeAudioFromBase64(audioBase64, null, lovableApiKey);
+          if (transcription) {
+            actualMessageContent = transcription;
+            console.log('Audio transcribed via Lovable:', actualMessageContent.substring(0, 50));
+          } else {
+            actualMessageContent = '[Áudio não transcrito]';
+          }
+        } else {
+          actualMessageContent = '[Áudio - sem chave de transcrição]';
+        }
+      }
+    }
 
     // Check if there's an active human takeover for this phone/lead
     const { data: takeover } = await supabase
@@ -339,7 +382,7 @@ async function handleAIAgentResponse(
 
     // Check for transfer keywords
     const transferKeywords = agent.transfer_keywords || ['falar com humano', 'atendente', 'vendedor', 'pessoa real'];
-    const messageLower = messageContent.toLowerCase();
+    const messageLower = actualMessageContent.toLowerCase();
     const shouldTransfer = transferKeywords.some((keyword: string) => 
       messageLower.includes(keyword.toLowerCase())
     );
@@ -352,7 +395,7 @@ async function handleAIAgentResponse(
         lead_id: leadId,
         phone,
         instance_id: instanceId,
-        reason: `Cliente solicitou: "${messageContent.substring(0, 100)}"`,
+        reason: `Cliente solicitou: "${actualMessageContent.substring(0, 100)}"`,
       });
 
       // Send transfer message via WhatsApp
@@ -439,7 +482,7 @@ async function handleAIAgentResponse(
       },
                 body: JSON.stringify({
                   agent_id: agent.id,
-                  message: messageContent,
+                  message: actualMessageContent,
                   conversation_id: conversationId,
                   lead_id: leadId,
                   phone,
@@ -582,12 +625,18 @@ async function getAudioBase64FromEvolution(
   }
 }
 
-// Transcribe audio using OpenAI Whisper via Lovable Gateway
-async function transcribeAudioFromBase64(audioBase64: string): Promise<string | null> {
-  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+// Transcribe audio using OpenAI Whisper
+async function transcribeAudioFromBase64(
+  audioBase64: string,
+  openaiApiKey: string | null = null,
+  lovableApiKey: string | null = null
+): Promise<string | null> {
+  // Determine which API to use
+  const useOpenAI = !!openaiApiKey;
+  const useLovable = !useOpenAI && !!lovableApiKey;
   
-  if (!LOVABLE_API_KEY) {
-    console.error('Missing LOVABLE_API_KEY for audio transcription');
+  if (!useOpenAI && !useLovable) {
+    console.error('No API key provided for audio transcription');
     return null;
   }
   
@@ -607,12 +656,18 @@ async function transcribeAudioFromBase64(audioBase64: string): Promise<string | 
     formData.append('model', 'whisper-1');
     formData.append('language', 'pt');
     
-    console.log('Sending audio to Whisper for transcription...');
+    // Choose endpoint and auth based on available key
+    const endpoint = useOpenAI 
+      ? 'https://api.openai.com/v1/audio/transcriptions'
+      : 'https://ai.gateway.lovable.dev/v1/audio/transcriptions';
+    const authKey = useOpenAI ? openaiApiKey : lovableApiKey;
     
-    const response = await fetch('https://ai.gateway.lovable.dev/v1/audio/transcriptions', {
+    console.log(`Sending audio to Whisper for transcription via ${useOpenAI ? 'OpenAI' : 'Lovable'}...`);
+    
+    const response = await fetch(endpoint, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+        'Authorization': `Bearer ${authKey}`,
       },
       body: formData,
     });
