@@ -260,11 +260,14 @@ export function useConnectWhatsAppInstance() {
         channels.push('whatsapp');
       }
 
+      // Update both embed_code (config) AND the new whatsapp_instance_id column
       const { data, error } = await (supabase
         .from('ai_agents') as any)
         .update({ 
           embed_code: JSON.stringify(config),
           deployment_channels: channels,
+          whatsapp_instance_id: instanceId,
+          whatsapp_auto_reply: autoRespond,
         })
         .eq('id', agentId)
         .select()
@@ -325,11 +328,14 @@ export function useDisconnectWhatsApp() {
         ? currentChannels.filter((c: string) => c !== 'whatsapp')
         : [];
 
+      // Update both embed_code (config) AND clear the whatsapp_instance_id column
       const { data, error } = await (supabase
         .from('ai_agents') as any)
         .update({ 
           embed_code: JSON.stringify(config),
           deployment_channels: channels,
+          whatsapp_instance_id: null,
+          whatsapp_auto_reply: false,
         })
         .eq('id', agentId)
         .select()
