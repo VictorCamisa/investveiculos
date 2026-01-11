@@ -428,13 +428,26 @@ serve(async (req) => {
       currentConversationId = newConversation.id;
     }
 
-    // 3. Load conversation history
+// 3. Load conversation history - RESPEITAR CONFIGURAÇÃO DO AGENTE
+    const contextWindowSize = agent.context_window_size || 20;
     const { data: history } = await supabase
       .from('ai_agent_messages')
       .select('role, content')
       .eq('conversation_id', currentConversationId)
       .order('created_at', { ascending: true })
-      .limit(20); // Keep last 20 messages for context
+      .limit(contextWindowSize);
+    
+    console.log(`[Memory] Loaded ${history?.length || 0} messages (window: ${contextWindowSize})`);
+    
+    // 3.1 Load conversation context (último veículo mencionado, etc.)
+    const { data: conversationData } = await supabase
+      .from('ai_agent_conversations')
+      .select('metadata')
+      .eq('id', currentConversationId)
+      .single();
+    
+    const conversationContext = conversationData?.metadata || {};
+    console.log('[Memory] Conversation context:', conversationContext);
 
     // 4. Save user message
     await supabase.from('ai_agent_messages').insert({
@@ -445,7 +458,7 @@ serve(async (req) => {
 
     // 5. Build messages array for LLM
     const baseSystemPrompt = agent.system_prompt || buildDefaultSystemPrompt(agent);
-    const systemPrompt = buildEnhancedSystemPrompt(baseSystemPrompt, orchestrationRules, connectedTables);
+    const systemPrompt = buildEnhancedSystemPrompt(baseSystemPrompt, orchestrationRules, connectedTables, conversationContext);
     
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -516,7 +529,8 @@ serve(async (req) => {
           phone,
           supabaseUrl,
           serviceRoleKey,
-          connectedTables
+          connectedTables,
+          conversationId: currentConversationId
         });
         
         toolResults.push({
@@ -660,19 +674,64 @@ INFORMAÇÕES DA LOJA:
 Mantenha suas respostas concisas mas informativas. Sempre que possível, faça perguntas para entender melhor as necessidades do cliente.`;
 }
 
-function buildEnhancedSystemPrompt(basePrompt: string, orchestrationRules: string[], connectedTables: string[]): string {
+function buildEnhancedSystemPrompt(basePrompt: string, orchestrationRules: string[], connectedTables: string[], conversationContext?: any): string {
   let enhancedPrompt = basePrompt;
+  
+  // CRÍTICO: Adicionar regras de memória de IDs de veículos
+  enhancedPrompt += `
+
+═══════════════════════════════════════════════════════════════
+🧠 REGRAS DE MEMÓRIA E CONTEXTO (CRÍTICO - SIGA SEMPRE)
+═══════════════════════════════════════════════════════════════
+• SEMPRE guarde os IDs (UUIDs) dos veículos que você mostrar ao cliente
+• Quando o cliente disser "esse carro", "esse veículo", "esse", "ele", "mais info", use o ID do ÚLTIMO veículo mencionado
+• Os IDs são UUIDs no formato: 4a14f429-49d0-4c92-9a15-5de70cfe5d96
+• NUNCA invente IDs como "peugeot-208-2014" - isso NÃO funciona
+• Se não souber o ID exato, use search_vehicles para buscar novamente
+• Ao usar get_vehicle_details, SEMPRE passe o UUID completo do veículo
+
+EXEMPLO CORRETO:
+Cliente: "qual o mais barato?"
+Você: Busca veículo → ID: abc-123-456-789 → "O mais barato é o Peugeot 208..."
+Cliente: "mais info sobre ele"
+Você: Usa get_vehicle_details com vehicle_id: "abc-123-456-789" (o UUID que você recebeu)
+
+EXEMPLO ERRADO (NÃO FAÇA):
+Cliente: "mais info sobre esse carro"
+Você: Usa get_vehicle_details com vehicle_id: "peugeot-208" ← ERRADO! Use o UUID!`;
+
+  // Adicionar contexto da conversa atual (último veículo, etc.)
+  if (conversationContext && Object.keys(conversationContext).length > 0) {
+    enhancedPrompt += `
+
+═══════════════════════════════════════════════════════════════
+📋 CONTEXTO DA CONVERSA ATUAL
+═══════════════════════════════════════════════════════════════`;
+    if (conversationContext.last_vehicle_id) {
+      enhancedPrompt += `
+• Último veículo mencionado: ${conversationContext.last_vehicle_name || 'N/A'}
+• ID do último veículo (use este para get_vehicle_details): ${conversationContext.last_vehicle_id}`;
+    }
+    if (conversationContext.vehicles_shown) {
+      enhancedPrompt += `
+• Veículos mostrados na conversa: ${JSON.stringify(conversationContext.vehicles_shown)}`;
+    }
+  }
   
   // Add connected tables info
   if (connectedTables.length > 0) {
-    enhancedPrompt += `\n\nTABELAS DISPONÍVEIS PARA CONSULTA:
+    enhancedPrompt += `
+
+TABELAS DISPONÍVEIS PARA CONSULTA:
 Você tem acesso às seguintes tabelas do banco de dados: ${connectedTables.join(', ')}.
 Use a ferramenta query_database para consultar dados dessas tabelas quando necessário.`;
   }
   
   // Add orchestration rules
   if (orchestrationRules.length > 0) {
-    enhancedPrompt += `\n\nREGRAS DE ORQUESTRAÇÃO:
+    enhancedPrompt += `
+
+REGRAS DE ORQUESTRAÇÃO:
 Siga estas regras para decidir quando usar as ferramentas disponíveis:
 ${orchestrationRules.map((rule, i) => `${i + 1}. ${rule}`).join('\n')}`;
   }
@@ -684,13 +743,25 @@ async function executeToolFunction(
   supabase: any, 
   functionName: string, 
   args: any,
-  context: { lead_id?: string; phone?: string; supabaseUrl: string; serviceRoleKey: string; connectedTables?: string[] }
+  context: { lead_id?: string; phone?: string; supabaseUrl: string; serviceRoleKey: string; connectedTables?: string[]; conversationId?: string }
 ): Promise<any> {
   console.log(`Executing ${functionName} with args:`, args);
 
+  let result: any;
+  
   switch (functionName) {
     case 'search_vehicles':
-      return await searchVehicles(supabase, args);
+      result = await searchVehicles(supabase, args);
+      // Salvar contexto dos veículos encontrados
+      if (result.vehicles && result.vehicles.length > 0 && context.conversationId) {
+        const firstVehicle = result.vehicles[0];
+        await updateConversationContext(supabase, context.conversationId, {
+          last_vehicle_id: firstVehicle.id,
+          last_vehicle_name: firstVehicle.nome,
+          vehicles_shown: result.vehicles.map((v: any) => ({ id: v.id, nome: v.nome, preco: v.preco }))
+        });
+      }
+      return result;
     
     case 'create_or_update_lead':
       return await createOrUpdateLead(supabase, args, context.phone);
@@ -702,7 +773,15 @@ async function executeToolFunction(
       return await sendWhatsAppMessage(args, context.supabaseUrl, context.serviceRoleKey);
     
     case 'get_vehicle_details':
-      return await getVehicleDetails(supabase, args.vehicle_id);
+      result = await getVehicleDetails(supabase, args.vehicle_id);
+      // Salvar contexto do veículo consultado
+      if (result && !result.error && context.conversationId) {
+        await updateConversationContext(supabase, context.conversationId, {
+          last_vehicle_id: result.id,
+          last_vehicle_name: result.nome
+        });
+      }
+      return result;
     
     case 'query_database':
       return await queryDatabase(supabase, args, context.connectedTables || []);
@@ -715,6 +794,37 @@ async function executeToolFunction(
     
     default:
       return { error: `Unknown function: ${functionName}` };
+  }
+}
+
+// Função para atualizar contexto da conversa
+async function updateConversationContext(supabase: any, conversationId: string, newContext: any): Promise<void> {
+  try {
+    // Buscar metadata atual
+    const { data: current } = await supabase
+      .from('ai_agent_conversations')
+      .select('metadata')
+      .eq('id', conversationId)
+      .single();
+    
+    const existingMetadata = current?.metadata || {};
+    
+    // Merge com novo contexto
+    const updatedMetadata = {
+      ...existingMetadata,
+      ...newContext,
+      updated_at: new Date().toISOString()
+    };
+    
+    // Salvar
+    await supabase
+      .from('ai_agent_conversations')
+      .update({ metadata: updatedMetadata })
+      .eq('id', conversationId);
+    
+    console.log('[Context] Updated conversation context:', conversationId, newContext);
+  } catch (error) {
+    console.error('[Context] Error updating conversation context:', error);
   }
 }
 
@@ -798,9 +908,10 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
   console.log(`[searchVehicles] Found ${data.length} vehicles, first: ${data[0]?.brand} ${data[0]?.model} - R$ ${data[0]?.price_sale}`);
 
   return {
-    message: `Encontrei ${data.length} veículo(s) disponível(is).`,
-    vehicles: data.map((v: any) => ({
-      id: v.id,
+    message: `Encontrei ${data.length} veículo(s) disponível(is). IMPORTANTE: Os IDs abaixo são UUIDs - use-os para get_vehicle_details.`,
+    vehicles: data.map((v: any, index: number) => ({
+      numero: index + 1, // Número para referência do usuário (1, 2, 3...)
+      id: v.id, // UUID REAL - USAR ESTE para get_vehicle_details
       nome: `${v.brand} ${v.model} ${v.year_manufacture || ''}/${v.year_model || ''}`.trim(),
       preco: `R$ ${(v.price_sale || 0).toLocaleString('pt-BR')}`,
       preco_valor: v.price_sale || 0, // valor numérico para comparações
@@ -808,7 +919,9 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
       combustivel: v.fuel_type,
       cor: v.color,
       foto: v.images?.[0] || null
-    }))
+    })),
+    // INSTRUÇÃO PARA A IA
+    instrucao_sistema: "CRÍTICO: Quando o cliente pedir 'mais info sobre esse carro' ou similar, use o campo 'id' (UUID) na função get_vehicle_details. O primeiro veículo da lista (numero: 1) é o mais relevante para a busca. NUNCA invente IDs como 'peugeot-208' - use APENAS os UUIDs retornados."
   };
 }
 
