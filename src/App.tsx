@@ -37,11 +37,11 @@ const FinancialLayout = lazy(() => import("@/components/financial/FinancialLayou
 const MarketingLayout = lazy(() => import("@/components/marketing/MarketingLayout"));
 const WhatsAppLayout = lazy(() => import("@/components/whatsapp/WhatsAppLayout").then(m => ({ default: m.WhatsAppLayout })));
 const AIAgentsLayout = lazy(() => import("@/components/ai-agents/AIAgentsLayout").then(m => ({ default: m.AIAgentsLayout })));
-const AIAgentsListPage = lazy(() => import("@/components/ai-agents/pages/AIAgentsListPage").then(m => ({ default: m.AIAgentsListPage })));
-const AgentBasicsPage = lazy(() => import("@/components/ai-agents/pages/AgentBasicsPage").then(m => ({ default: m.AgentBasicsPage })));
-const AgentLLMConfigPage = lazy(() => import("@/components/ai-agents/pages/AgentLLMConfigPage").then(m => ({ default: m.AgentLLMConfigPage })));
-const AgentMemoryPage = lazy(() => import("@/components/ai-agents/pages/AgentMemoryPage").then(m => ({ default: m.AgentMemoryPage })));
-const AgentToolsPage = lazy(() => import("@/components/ai-agents/pages/AgentToolsPage").then(m => ({ default: m.AgentToolsPage })));
+const AIAgentsListPage = lazy(() => import("@/components/ai-agents/pages/AIAgentsListPage"));
+const AgentBasicsPage = lazy(() => import("@/components/ai-agents/pages/AgentBasicsPage"));
+const AgentLLMConfigPage = lazy(() => import("@/components/ai-agents/pages/AgentLLMConfigPage"));
+const AgentMemoryPage = lazy(() => import("@/components/ai-agents/pages/AgentMemoryPage"));
+const AgentToolsPage = lazy(() => import("@/components/ai-agents/pages/AgentToolsPage"));
 
 // Lazy load Marketing pages
 const MarketingCockpit = lazy(() => import("@/components/marketing/MarketingCockpit").then(m => ({ default: m.MarketingCockpit })));
