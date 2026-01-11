@@ -1,4 +1,4 @@
-// App v2.2 - Force Vite cache rebuild
+// App v2.3 - Force Vite cache rebuild after CRM fix
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
