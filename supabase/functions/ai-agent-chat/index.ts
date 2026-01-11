@@ -163,6 +163,71 @@ const agentTools = [
   }
 ];
 
+// Helper function to get LLM endpoint and headers based on configuration
+function getLLMConfig(agent: any, lovableApiKey: string): { endpoint: string; headers: Record<string, string>; transformModel: (model: string) => string } {
+  // If agent has custom API key, use direct provider endpoint
+  if (agent.api_key_encrypted) {
+    const apiKey = agent.api_key_encrypted;
+    
+    if (agent.llm_provider === 'openai') {
+      return {
+        endpoint: 'https://api.openai.com/v1/chat/completions',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        // Transform model name from gateway format to OpenAI format
+        transformModel: (model: string) => model.replace('openai/', '')
+      };
+    }
+    
+    if (agent.llm_provider === 'google') {
+      // Google uses a different API format
+      return {
+        endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        // Transform model name for Google
+        transformModel: (model: string) => {
+          const modelName = model.replace('google/', '');
+          // Map to Google's model names
+          const googleModels: Record<string, string> = {
+            'gemini-3-flash-preview': 'gemini-2.0-flash',
+            'gemini-3-pro-preview': 'gemini-2.0-pro-exp',
+            'gemini-2.5-flash': 'gemini-1.5-flash',
+            'gemini-2.5-pro': 'gemini-1.5-pro',
+          };
+          return googleModels[modelName] || modelName;
+        }
+      };
+    }
+    
+    if (agent.llm_provider === 'anthropic') {
+      return {
+        endpoint: 'https://api.anthropic.com/v1/messages',
+        headers: {
+          'x-api-key': apiKey,
+          'Content-Type': 'application/json',
+          'anthropic-version': '2023-06-01',
+        },
+        transformModel: (model: string) => model.replace('anthropic/', '')
+      };
+    }
+  }
+  
+  // Default: use Lovable AI Gateway
+  return {
+    endpoint: 'https://ai.gateway.lovable.dev/v1/chat/completions',
+    headers: {
+      'Authorization': `Bearer ${lovableApiKey}`,
+      'Content-Type': 'application/json',
+    },
+    transformModel: (model: string) => model
+  };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -203,6 +268,10 @@ serve(async (req) => {
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
+
+    // Get LLM configuration based on agent settings
+    const llmConfig = getLLMConfig(agent, lovableApiKey);
+    console.log('Using LLM endpoint:', llmConfig.endpoint, 'Provider:', agent.llm_provider);
 
     // 1.1 Load connected data sources
     const { data: dataSources } = await supabase
@@ -264,17 +333,15 @@ serve(async (req) => {
       { role: 'user', content: message }
     ];
 
-    // 6. Call LLM via Lovable AI Gateway
-    console.log('Calling Lovable AI Gateway...');
+    // 6. Call LLM (via Lovable Gateway or direct provider)
+    const modelToUse = llmConfig.transformModel(agent.llm_model || 'google/gemini-3-flash-preview');
+    console.log('Calling LLM with model:', modelToUse);
     
-    const llmResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+    const llmResponse = await fetch(llmConfig.endpoint, {
       method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${lovableApiKey}`,
-        'Content-Type': 'application/json',
-      },
+      headers: llmConfig.headers,
       body: JSON.stringify({
-        model: agent.llm_model || 'google/gemini-3-flash-preview',
+        model: modelToUse,
         messages,
         tools: agentTools,
         tool_choice: 'auto',
@@ -294,7 +361,14 @@ serve(async (req) => {
         });
       }
       
-      throw new Error(`LLM error: ${llmResponse.status}`);
+      if (llmResponse.status === 401) {
+        return new Response(JSON.stringify({ error: 'Invalid API key. Please check your API key configuration.' }), {
+          status: 401,
+          headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+        });
+      }
+      
+      throw new Error(`LLM error: ${llmResponse.status} - ${errorText}`);
     }
 
     const llmData = await llmResponse.json();
@@ -343,14 +417,11 @@ serve(async (req) => {
         }))
       ];
 
-      const finalResponse = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
+      const finalResponse = await fetch(llmConfig.endpoint, {
         method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${lovableApiKey}`,
-          'Content-Type': 'application/json',
-        },
+        headers: llmConfig.headers,
         body: JSON.stringify({
-          model: agent.llm_model || 'google/gemini-3-flash-preview',
+          model: modelToUse,
           messages: toolMessages,
           temperature: agent.temperature || 0.7,
           max_tokens: agent.max_tokens || 1024,

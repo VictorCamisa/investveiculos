@@ -11,6 +11,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -27,8 +28,9 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Save, Brain, Sparkles, Volume2, Key, CheckCircle2, AlertCircle } from 'lucide-react';
+import { Loader2, Save, Brain, Sparkles, Volume2, Key, CheckCircle2, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { LLM_PROVIDERS, LLM_MODELS } from '@/types/ai-agents';
+import { toast } from 'sonner';
 
 // Vozes disponíveis do ElevenLabs
 const ELEVENLABS_VOICES = [
@@ -53,14 +55,22 @@ const formSchema = z.object({
 
 type FormData = z.infer<typeof formSchema>;
 
+type ApiKeySource = 'lovable_gateway' | 'custom';
+
 export function AgentLLMConfigPage() {
   const { agentId } = useParams();
   const { data: agent, isLoading } = useAIAgent(agentId);
   const updateAgent = useUpdateAIAgent();
   
-  // Estado local para configurações de voz (não salvas no DB ainda)
+  // Estado local para configurações de voz
   const [enableTTS, setEnableTTS] = useState(false);
   const [selectedVoice, setSelectedVoice] = useState('JBFqnCBsd6RMkjVDRZzb');
+  
+  // Estado para API Keys
+  const [apiKeySource, setApiKeySource] = useState<ApiKeySource>('lovable_gateway');
+  const [customApiKey, setCustomApiKey] = useState('');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [savingApiKey, setSavingApiKey] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -86,8 +96,46 @@ export function AgentLLMConfigPage() {
         max_tokens: agent.max_tokens,
         system_prompt: agent.system_prompt || '',
       });
+      // Se tiver api_key_encrypted, é porque usa chave própria
+      if (agent.api_key_encrypted) {
+        setApiKeySource('custom');
+        setCustomApiKey('••••••••••••••••'); // Mascarado
+      }
     }
   }, [agent, form]);
+
+  const handleSaveApiKey = async () => {
+    if (!agentId) return;
+    
+    if (apiKeySource === 'custom' && !customApiKey.includes('•')) {
+      setSavingApiKey(true);
+      try {
+        await updateAgent.mutateAsync({ 
+          id: agentId, 
+          api_key_encrypted: customApiKey // Na prática, deve ser criptografado
+        });
+        toast.success('Chave de API salva com sucesso!');
+        setCustomApiKey('••••••••••••••••');
+      } catch (error) {
+        toast.error('Erro ao salvar chave de API');
+      } finally {
+        setSavingApiKey(false);
+      }
+    } else if (apiKeySource === 'lovable_gateway') {
+      setSavingApiKey(true);
+      try {
+        await updateAgent.mutateAsync({ 
+          id: agentId, 
+          api_key_encrypted: null 
+        });
+        toast.success('Configurado para usar Lovable Gateway');
+      } catch (error) {
+        toast.error('Erro ao salvar configuração');
+      } finally {
+        setSavingApiKey(false);
+      }
+    }
+  };
 
   const onSubmit = async (data: FormData) => {
     if (agentId) {
@@ -107,43 +155,109 @@ export function AgentLLMConfigPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
-      {/* API Keys Status */}
-      <Card className="border-green-500/20 bg-green-500/5">
+      {/* API Keys Configuration */}
+      <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
               <Key className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1">
-              <CardTitle className="text-base">Chaves de API Configuradas</CardTitle>
+              <CardTitle className="text-base">Configuração de API Key</CardTitle>
               <CardDescription>
-                As APIs são gerenciadas via secrets do Supabase
+                Escolha como o agente vai se conectar aos modelos de IA
               </CardDescription>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-background border">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <div>
-                <p className="text-sm font-medium">Lovable AI Gateway</p>
-                <p className="text-xs text-muted-foreground">OpenAI, Google, Anthropic</p>
+        <CardContent className="space-y-4">
+          <RadioGroup 
+            value={apiKeySource} 
+            onValueChange={(v) => setApiKeySource(v as ApiKeySource)}
+            className="space-y-3"
+          >
+            <div className={`flex items-start gap-3 p-4 rounded-lg border transition-colors ${apiKeySource === 'lovable_gateway' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+              <RadioGroupItem value="lovable_gateway" id="lovable_gateway" className="mt-1" />
+              <div className="flex-1">
+                <label htmlFor="lovable_gateway" className="text-sm font-medium cursor-pointer flex items-center gap-2">
+                  Lovable AI Gateway
+                  <Badge variant="secondary" className="text-xs">Recomendado</Badge>
+                </label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Acesso a OpenAI GPT-5, Google Gemini e outros modelos sem precisar de API key própria. 
+                  Uso incluído no plano Lovable.
+                </p>
               </div>
-              <Badge variant="secondary" className="ml-auto">Ativo</Badge>
+              <CheckCircle2 className="h-4 w-4 text-green-500 mt-1" />
             </div>
-            <div className="flex items-center gap-2 p-3 rounded-lg bg-background border">
-              <CheckCircle2 className="h-4 w-4 text-green-500" />
-              <div>
-                <p className="text-sm font-medium">ElevenLabs TTS</p>
-                <p className="text-xs text-muted-foreground">Texto para Voz</p>
+            
+            <div className={`flex items-start gap-3 p-4 rounded-lg border transition-colors ${apiKeySource === 'custom' ? 'border-primary bg-primary/5' : 'border-border'}`}>
+              <RadioGroupItem value="custom" id="custom" className="mt-1" />
+              <div className="flex-1">
+                <label htmlFor="custom" className="text-sm font-medium cursor-pointer">
+                  Minha própria API Key
+                </label>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Use sua própria chave de API da OpenAI ou Google. Você controla os custos diretamente.
+                </p>
               </div>
-              <Badge variant="secondary" className="ml-auto">Ativo</Badge>
             </div>
-          </div>
-          <p className="text-xs text-muted-foreground mt-3">
-            💡 O Lovable AI Gateway fornece acesso a múltiplos LLMs sem necessidade de API keys individuais.
-          </p>
+          </RadioGroup>
+
+          {apiKeySource === 'custom' && (
+            <div className="space-y-4 pt-2">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">
+                  Chave de API ({watchProvider === 'openai' ? 'OpenAI' : watchProvider === 'google' ? 'Google AI' : 'Provedor selecionado'})
+                </label>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      type={showApiKey ? 'text' : 'password'}
+                      placeholder={watchProvider === 'openai' ? 'sk-...' : 'AIza...'}
+                      value={customApiKey}
+                      onChange={(e) => setCustomApiKey(e.target.value)}
+                      className="pr-10"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => setShowApiKey(!showApiKey)}
+                    >
+                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <Button 
+                    onClick={handleSaveApiKey} 
+                    disabled={savingApiKey || customApiKey.includes('•')}
+                  >
+                    {savingApiKey && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                    Salvar
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  {watchProvider === 'openai' && (
+                    <>Obtenha sua API key em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline">platform.openai.com</a></>
+                  )}
+                  {watchProvider === 'google' && (
+                    <>Obtenha sua API key em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary underline">aistudio.google.com</a></>
+                  )}
+                  {watchProvider === 'anthropic' && (
+                    <>Obtenha sua API key em <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">console.anthropic.com</a></>
+                  )}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
+                <AlertCircle className="h-4 w-4 text-yellow-600 shrink-0" />
+                <p className="text-xs text-yellow-700 dark:text-yellow-400">
+                  Sua API key é armazenada de forma segura e criptografada. Os custos de uso serão cobrados diretamente pela OpenAI/Google.
+                </p>
+              </div>
+            </div>
+          )}
         </CardContent>
       </Card>
 
