@@ -765,29 +765,29 @@ serve(async (req) => {
 
         console.log(`[Auto-Qualify] Message count for conversation ${currentConversationId}: ${messageCount}`);
 
-        // If 4 or more messages, move negotiation to "qualificando"
+        // If 4 or more messages, move negotiation to "Em Qualificação" (proposta_enviada)
         if (!countError && messageCount && messageCount >= 4) {
-          // Find the negotiation for this lead that's still in initial status
+          // Find the negotiation for this lead that's still in "Lead" status (em_andamento)
           const { data: negotiation, error: negError } = await supabase
             .from('negotiations')
             .select('id, status')
             .eq('lead_id', lead_id)
-            .in('status', ['novo', 'em_andamento', 'inicial', 'contato_inicial'])
+            .eq('status', 'em_andamento')
             .maybeSingle();
 
           if (negotiation && !negError) {
-            // Update to "qualificando" status
+            // Update to "Em Qualificação" status (proposta_enviada)
             const { error: updateError } = await supabase
               .from('negotiations')
               .update({ 
-                status: 'qualificando',
-                notes: 'Status atualizado automaticamente após 4+ mensagens de conversa com IA.',
+                status: 'proposta_enviada',
+                notes: 'Status atualizado automaticamente para "Em Qualificação" após 4+ mensagens de conversa com IA.',
                 updated_at: new Date().toISOString()
               })
               .eq('id', negotiation.id);
 
             if (!updateError) {
-              console.log(`[Auto-Qualify] Negotiation ${negotiation.id} moved to "qualificando" status`);
+              console.log(`[Auto-Qualify] Negotiation ${negotiation.id} moved to "proposta_enviada" (Em Qualificação) status`);
               
               // Create notification for managers about new qualified lead
               const { data: managers } = await supabase
