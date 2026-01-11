@@ -30,7 +30,7 @@ const Reports = lazy(() => import("./pages/Reports"));
 const Documentation = lazy(() => import("./pages/Documentation"));
 
 // Lazy load layouts
-const CRMLayout = lazy(() => import("@/components/crm/CRMLayout").then(m => ({ default: m.CRMLayout })));
+import { CRMLayout } from "@/components/crm/CRMLayout";
 const CommissionsLayout = lazy(() => import("@/components/commissions/CommissionsLayout").then(m => ({ default: m.CommissionsLayout })));
 const SalesLayout = lazy(() => import("@/components/sales/SalesLayout").then(m => ({ default: m.SalesLayout })));
 const FinancialLayout = lazy(() => import("@/components/financial/FinancialLayout").then(m => ({ default: m.FinancialLayout })));
@@ -142,16 +142,14 @@ const App = () => (
                   {/* CRM Routes */}
                   <Route path="/crm" element={
                     <ProtectedRoute requiredModule="crm">
-                      <Suspense fallback={<PageLoader />}>
-                        <CRMLayout />
-                      </Suspense>
+                      <CRMLayout />
                     </ProtectedRoute>
                   }>
-                    <Route index element={<CRMHome />} />
-                    <Route path="leads" element={<Leads />} />
-                    <Route path="follow-ups" element={<FollowUps />} />
-                    <Route path="perdas" element={<LostNegotiations />} />
-                    <Route path="analytics" element={<CRMAnalytics />} />
+                    <Route index element={<Suspense fallback={<PageLoader />}><CRMHome /></Suspense>} />
+                    <Route path="leads" element={<Suspense fallback={<PageLoader />}><Leads /></Suspense>} />
+                    <Route path="follow-ups" element={<Suspense fallback={<PageLoader />}><FollowUps /></Suspense>} />
+                    <Route path="perdas" element={<Suspense fallback={<PageLoader />}><LostNegotiations /></Suspense>} />
+                    <Route path="analytics" element={<Suspense fallback={<PageLoader />}><CRMAnalytics /></Suspense>} />
                   </Route>
                   
                   <Route path="/estoque" element={
