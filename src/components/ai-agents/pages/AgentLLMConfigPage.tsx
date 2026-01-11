@@ -68,9 +68,11 @@ export function AgentLLMConfigPage() {
   
   // Estado para API Keys
   const [apiKeySource, setApiKeySource] = useState<ApiKeySource>('lovable_gateway');
-  const [customApiKey, setCustomApiKey] = useState('');
-  const [showApiKey, setShowApiKey] = useState(false);
-  const [savingApiKey, setSavingApiKey] = useState(false);
+  const [openaiApiKey, setOpenaiApiKey] = useState('');
+  const [googleApiKey, setGoogleApiKey] = useState('');
+  const [showOpenaiKey, setShowOpenaiKey] = useState(false);
+  const [showGoogleKey, setShowGoogleKey] = useState(false);
+  const [savingKeys, setSavingKeys] = useState(false);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -99,41 +101,63 @@ export function AgentLLMConfigPage() {
       // Se tiver api_key_encrypted, é porque usa chave própria
       if (agent.api_key_encrypted) {
         setApiKeySource('custom');
-        setCustomApiKey('••••••••••••••••'); // Mascarado
+        // Parse stored keys (format: {openai: "key", google: "key"})
+        try {
+          const keys = JSON.parse(agent.api_key_encrypted);
+          if (keys.openai) setOpenaiApiKey('••••••••••••••••');
+          if (keys.google) setGoogleApiKey('••••••••••••••••');
+        } catch {
+          // Legacy format - single key
+          if (agent.llm_provider === 'openai') {
+            setOpenaiApiKey('••••••••••••••••');
+          } else {
+            setGoogleApiKey('••••••••••••••••');
+          }
+        }
       }
     }
   }, [agent, form]);
 
-  const handleSaveApiKey = async () => {
+  const handleSaveApiKeys = async () => {
     if (!agentId) return;
     
-    if (apiKeySource === 'custom' && !customApiKey.includes('•')) {
-      setSavingApiKey(true);
-      try {
+    setSavingKeys(true);
+    try {
+      if (apiKeySource === 'custom') {
+        // Build keys object
+        const keys: Record<string, string> = {};
+        if (openaiApiKey && !openaiApiKey.includes('•')) {
+          keys.openai = openaiApiKey;
+        }
+        if (googleApiKey && !googleApiKey.includes('•')) {
+          keys.google = googleApiKey;
+        }
+        
+        if (Object.keys(keys).length === 0) {
+          toast.error('Adicione pelo menos uma API key');
+          setSavingKeys(false);
+          return;
+        }
+        
         await updateAgent.mutateAsync({ 
           id: agentId, 
-          api_key_encrypted: customApiKey // Na prática, deve ser criptografado
+          api_key_encrypted: JSON.stringify(keys)
         });
-        toast.success('Chave de API salva com sucesso!');
-        setCustomApiKey('••••••••••••••••');
-      } catch (error) {
-        toast.error('Erro ao salvar chave de API');
-      } finally {
-        setSavingApiKey(false);
-      }
-    } else if (apiKeySource === 'lovable_gateway') {
-      setSavingApiKey(true);
-      try {
+        toast.success('Chaves de API salvas com sucesso!');
+        
+        if (keys.openai) setOpenaiApiKey('••••••••••••••••');
+        if (keys.google) setGoogleApiKey('••••••••••••••••');
+      } else {
         await updateAgent.mutateAsync({ 
           id: agentId, 
           api_key_encrypted: null 
         });
         toast.success('Configurado para usar Lovable Gateway');
-      } catch (error) {
-        toast.error('Erro ao salvar configuração');
-      } finally {
-        setSavingApiKey(false);
       }
+    } catch (error) {
+      toast.error('Erro ao salvar configuração');
+    } finally {
+      setSavingKeys(false);
     }
   };
 
@@ -163,7 +187,7 @@ export function AgentLLMConfigPage() {
               <Key className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1">
-              <CardTitle className="text-base">Configuração de API Key</CardTitle>
+              <CardTitle className="text-base">Configuração de API Keys</CardTitle>
               <CardDescription>
                 Escolha como o agente vai se conectar aos modelos de IA
               </CardDescription>
@@ -195,10 +219,10 @@ export function AgentLLMConfigPage() {
               <RadioGroupItem value="custom" id="custom" className="mt-1" />
               <div className="flex-1">
                 <label htmlFor="custom" className="text-sm font-medium cursor-pointer">
-                  Minha própria API Key
+                  Minhas próprias API Keys
                 </label>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Use sua própria chave de API da OpenAI ou Google. Você controla os custos diretamente.
+                  Use suas próprias chaves de API da OpenAI e/ou Google. Você controla os custos diretamente.
                 </p>
               </div>
             </div>
@@ -206,57 +230,103 @@ export function AgentLLMConfigPage() {
 
           {apiKeySource === 'custom' && (
             <div className="space-y-4 pt-2">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">
-                  Chave de API ({watchProvider === 'openai' ? 'OpenAI' : watchProvider === 'google' ? 'Google AI' : 'Provedor selecionado'})
-                </label>
+              {/* OpenAI API Key */}
+              <div className="space-y-2 p-4 rounded-lg border bg-card">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded bg-emerald-500/10 flex items-center justify-center">
+                    <span className="text-xs font-bold text-emerald-600">AI</span>
+                  </div>
+                  <label className="text-sm font-medium">OpenAI API Key</label>
+                  {openaiApiKey && <Badge variant="outline" className="text-xs text-green-600">Configurada</Badge>}
+                </div>
                 <div className="flex gap-2">
                   <div className="relative flex-1">
                     <Input
-                      type={showApiKey ? 'text' : 'password'}
-                      placeholder={watchProvider === 'openai' ? 'sk-...' : 'AIza...'}
-                      value={customApiKey}
-                      onChange={(e) => setCustomApiKey(e.target.value)}
-                      className="pr-10"
+                      type={showOpenaiKey ? 'text' : 'password'}
+                      placeholder="sk-..."
+                      value={openaiApiKey}
+                      onChange={(e) => setOpenaiApiKey(e.target.value)}
+                      className="pr-10 font-mono text-sm"
                     />
                     <Button
                       type="button"
                       variant="ghost"
                       size="icon"
                       className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                      onClick={() => setShowApiKey(!showApiKey)}
+                      onClick={() => setShowOpenaiKey(!showOpenaiKey)}
                     >
-                      {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      {showOpenaiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </Button>
                   </div>
-                  <Button 
-                    onClick={handleSaveApiKey} 
-                    disabled={savingApiKey || customApiKey.includes('•')}
-                  >
-                    {savingApiKey && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                    Salvar
-                  </Button>
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  {watchProvider === 'openai' && (
-                    <>Obtenha sua API key em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline">platform.openai.com</a></>
-                  )}
-                  {watchProvider === 'google' && (
-                    <>Obtenha sua API key em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary underline">aistudio.google.com</a></>
-                  )}
-                  {watchProvider === 'anthropic' && (
-                    <>Obtenha sua API key em <a href="https://console.anthropic.com/" target="_blank" rel="noopener noreferrer" className="text-primary underline">console.anthropic.com</a></>
-                  )}
+                  Obtenha sua API key em <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-primary underline">platform.openai.com</a>
+                </p>
+              </div>
+
+              {/* Google API Key */}
+              <div className="space-y-2 p-4 rounded-lg border bg-card">
+                <div className="flex items-center gap-2">
+                  <div className="h-6 w-6 rounded bg-blue-500/10 flex items-center justify-center">
+                    <span className="text-xs font-bold text-blue-600">G</span>
+                  </div>
+                  <label className="text-sm font-medium">Google AI API Key</label>
+                  {googleApiKey && <Badge variant="outline" className="text-xs text-green-600">Configurada</Badge>}
+                </div>
+                <div className="flex gap-2">
+                  <div className="relative flex-1">
+                    <Input
+                      type={showGoogleKey ? 'text' : 'password'}
+                      placeholder="AIza..."
+                      value={googleApiKey}
+                      onChange={(e) => setGoogleApiKey(e.target.value)}
+                      className="pr-10 font-mono text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
+                      onClick={() => setShowGoogleKey(!showGoogleKey)}
+                    >
+                      {showGoogleKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Obtenha sua API key em <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener noreferrer" className="text-primary underline">aistudio.google.com</a>
                 </p>
               </div>
 
               <div className="flex items-center gap-2 p-3 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
                 <AlertCircle className="h-4 w-4 text-yellow-600 shrink-0" />
                 <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                  Sua API key é armazenada de forma segura e criptografada. Os custos de uso serão cobrados diretamente pela OpenAI/Google.
+                  Suas API keys são armazenadas de forma segura. Os custos de uso serão cobrados diretamente pela OpenAI/Google.
                 </p>
               </div>
+
+              <Button 
+                onClick={handleSaveApiKeys} 
+                disabled={savingKeys}
+                className="w-full"
+              >
+                {savingKeys && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                <Save className="h-4 w-4 mr-2" />
+                Salvar API Keys
+              </Button>
             </div>
+          )}
+
+          {apiKeySource === 'lovable_gateway' && (
+            <Button 
+              onClick={handleSaveApiKeys} 
+              disabled={savingKeys}
+              variant="outline"
+              className="w-full"
+            >
+              {savingKeys && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Confirmar Lovable Gateway
+            </Button>
           )}
         </CardContent>
       </Card>

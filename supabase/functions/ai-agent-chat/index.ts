@@ -165,15 +165,28 @@ const agentTools = [
 
 // Helper function to get LLM endpoint and headers based on configuration
 function getLLMConfig(agent: any, lovableApiKey: string): { endpoint: string; headers: Record<string, string>; transformModel: (model: string) => string } {
-  // If agent has custom API key, use direct provider endpoint
+  // If agent has custom API keys, use direct provider endpoint
   if (agent.api_key_encrypted) {
-    const apiKey = agent.api_key_encrypted;
+    let keys: Record<string, string> = {};
     
-    if (agent.llm_provider === 'openai') {
+    // Try to parse as JSON (new format: {openai: "key", google: "key"})
+    try {
+      keys = JSON.parse(agent.api_key_encrypted);
+    } catch {
+      // Legacy format - single key stored directly
+      if (agent.llm_provider === 'openai') {
+        keys.openai = agent.api_key_encrypted;
+      } else if (agent.llm_provider === 'google') {
+        keys.google = agent.api_key_encrypted;
+      }
+    }
+    
+    // Get the appropriate API key for the selected provider
+    if (agent.llm_provider === 'openai' && keys.openai) {
       return {
         endpoint: 'https://api.openai.com/v1/chat/completions',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${keys.openai}`,
           'Content-Type': 'application/json',
         },
         // Transform model name from gateway format to OpenAI format
@@ -181,12 +194,12 @@ function getLLMConfig(agent: any, lovableApiKey: string): { endpoint: string; he
       };
     }
     
-    if (agent.llm_provider === 'google') {
+    if (agent.llm_provider === 'google' && keys.google) {
       // Google uses a different API format
       return {
         endpoint: 'https://generativelanguage.googleapis.com/v1beta/openai/chat/completions',
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          'Authorization': `Bearer ${keys.google}`,
           'Content-Type': 'application/json',
         },
         // Transform model name for Google
@@ -204,17 +217,20 @@ function getLLMConfig(agent: any, lovableApiKey: string): { endpoint: string; he
       };
     }
     
-    if (agent.llm_provider === 'anthropic') {
+    if (agent.llm_provider === 'anthropic' && keys.anthropic) {
       return {
         endpoint: 'https://api.anthropic.com/v1/messages',
         headers: {
-          'x-api-key': apiKey,
+          'x-api-key': keys.anthropic,
           'Content-Type': 'application/json',
           'anthropic-version': '2023-06-01',
         },
         transformModel: (model: string) => model.replace('anthropic/', '')
       };
     }
+    
+    // If provider selected but no key for it, log warning and fallback
+    console.log(`No API key found for provider ${agent.llm_provider}, falling back to Lovable Gateway`);
   }
   
   // Default: use Lovable AI Gateway
