@@ -726,15 +726,14 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
   ];
   
   const selectCols = getSafeSelectColumns('vehicles', desiredColumns);
-  console.log('[searchVehicles] Using columns:', selectCols);
+  console.log('[searchVehicles] Using columns:', selectCols, 'Args:', args);
   
   let query = supabase
     .from('vehicles')
     .select(selectCols)
-    .eq('status', 'disponivel') // CORRIGIDO: usar 'disponivel' em português
-    .order('created_at', { ascending: false })
-    .limit(args.limit || 5);
+    .eq('status', 'disponivel');
 
+  // Aplicar filtros
   if (args.brand) {
     query = query.ilike('brand', `%${args.brand}%`);
   }
@@ -757,6 +756,31 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
     query = query.ilike('fuel_type', `%${args.fuel_type}%`);
   }
 
+  // ORDENAÇÃO DINÂMICA - corrigido para suportar order_by
+  if (args.order_by) {
+    const orderField = args.order_by.startsWith('-') ? args.order_by.slice(1) : args.order_by;
+    const ascending = !args.order_by.startsWith('-');
+    
+    // Mapear nomes de campos para nomes reais do schema
+    const fieldMap: Record<string, string> = {
+      'price': 'price_sale',
+      'preco': 'price_sale',
+      'year': 'year_model',
+      'ano': 'year_model',
+      'km': 'mileage',
+      'mileage': 'mileage'
+    };
+    
+    const realField = fieldMap[orderField] || orderField;
+    console.log(`[searchVehicles] Ordering by ${realField} (${ascending ? 'ASC' : 'DESC'})`);
+    query = query.order(realField, { ascending });
+  } else {
+    // Default: ordenar por preço crescente para encontrar mais baratos primeiro
+    query = query.order('price_sale', { ascending: true });
+  }
+
+  query = query.limit(args.limit || 5);
+
   const { data, error } = await query;
 
   if (error) {
@@ -771,16 +795,19 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
     };
   }
 
+  console.log(`[searchVehicles] Found ${data.length} vehicles, first: ${data[0]?.brand} ${data[0]?.model} - R$ ${data[0]?.price_sale}`);
+
   return {
     message: `Encontrei ${data.length} veículo(s) disponível(is).`,
     vehicles: data.map((v: any) => ({
       id: v.id,
       nome: `${v.brand} ${v.model} ${v.year_manufacture || ''}/${v.year_model || ''}`.trim(),
       preco: `R$ ${(v.price_sale || 0).toLocaleString('pt-BR')}`,
+      preco_valor: v.price_sale || 0, // valor numérico para comparações
       km: `${(v.mileage || 0).toLocaleString('pt-BR')} km`,
       combustivel: v.fuel_type,
       cor: v.color,
-      foto: v.images?.[0] || null // CORRIGIDO: images em vez de photos
+      foto: v.images?.[0] || null
     }))
   };
 }

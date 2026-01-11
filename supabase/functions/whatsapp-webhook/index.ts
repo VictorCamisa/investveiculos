@@ -361,6 +361,45 @@ async function handleAIAgentResponse(
     const serviceRoleKey = Deno.env.get('MY_SUPABASE_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     
     console.log('Calling AI agent chat for agent:', agent.id);
+
+    // CORRIGIDO: Buscar conversa existente para manter contexto
+    let conversationId: string | null = null;
+    
+    // Tentar encontrar conversa ativa para este lead/telefone
+    const { data: existingConversation } = await supabase
+      .from('ai_agent_conversations')
+      .select('id')
+      .eq('agent_id', agent.id)
+      .eq('status', 'active')
+      .or(`lead_id.eq.${leadId || 'null'},metadata->>phone.eq.${phone}`)
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .single();
+    
+    if (existingConversation) {
+      conversationId = existingConversation.id;
+      console.log('Found existing conversation:', conversationId);
+    } else {
+      // Se não encontrou por lead_id, tentar buscar pela sessão do telefone
+      const { data: phoneConversation } = await supabase
+        .from('ai_agent_conversations')
+        .select('id')
+        .eq('agent_id', agent.id)
+        .eq('status', 'active')
+        .eq('channel', 'whatsapp')
+        .gte('started_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24h
+        .order('started_at', { ascending: false })
+        .limit(1);
+      
+      // Verificar se a conversa tem mensagens com esse telefone
+      if (phoneConversation && phoneConversation.length > 0) {
+        // Verificar através do lead associado se o telefone bate
+        if (leadId) {
+          conversationId = phoneConversation[0].id;
+          console.log('Using recent conversation for lead:', conversationId);
+        }
+      }
+    }
     
     const aiResponse = await fetch(`${supabaseUrl}/functions/v1/ai-agent-chat`, {
       method: 'POST',
@@ -371,6 +410,7 @@ async function handleAIAgentResponse(
       body: JSON.stringify({
         agent_id: agent.id,
         message: messageContent,
+        conversation_id: conversationId, // CORRIGIDO: Passar conversation_id existente
         lead_id: leadId,
         phone,
         channel: 'whatsapp',
@@ -385,6 +425,20 @@ async function handleAIAgentResponse(
 
     const aiData = await aiResponse.json();
     const agentReply = aiData.response;
+
+    // Atualizar o conversation_id retornado para uso futuro
+    if (aiData.conversation_id && !conversationId) {
+      console.log('New conversation created:', aiData.conversation_id);
+      
+      // Atualizar a conversa com o telefone nos metadados para futuras buscas
+      await supabase
+        .from('ai_agent_conversations')
+        .update({ 
+          metadata: { phone },
+          lead_id: leadId 
+        })
+        .eq('id', aiData.conversation_id);
+    }
 
     if (!agentReply) {
       console.log('No response from AI agent');
