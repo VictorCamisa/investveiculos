@@ -2872,6 +2872,7 @@ export type Database = {
           lead_id: string | null
           name: string | null
           phone: string
+          unread_count: number | null
         }
         Insert: {
           created_at?: string | null
@@ -2881,6 +2882,7 @@ export type Database = {
           lead_id?: string | null
           name?: string | null
           phone: string
+          unread_count?: number | null
         }
         Update: {
           created_at?: string | null
@@ -2890,6 +2892,7 @@ export type Database = {
           lead_id?: string | null
           name?: string | null
           phone?: string
+          unread_count?: number | null
         }
         Relationships: [
           {
