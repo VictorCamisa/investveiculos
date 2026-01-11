@@ -631,7 +631,7 @@ async function executeToolFunction(
 async function searchVehicles(supabase: any, args: any): Promise<any> {
   let query = supabase
     .from('vehicles')
-    .select('id, brand, model, year, price, mileage, fuel_type, color, photos, status')
+    .select('id, brand, model, year_model, year_manufacture, price_sale, mileage, fuel_type, color, photos, status')
     .eq('status', 'available')
     .order('created_at', { ascending: false })
     .limit(args.limit || 5);
@@ -643,16 +643,16 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
     query = query.ilike('model', `%${args.model}%`);
   }
   if (args.year_min) {
-    query = query.gte('year', args.year_min);
+    query = query.gte('year_model', args.year_min);
   }
   if (args.year_max) {
-    query = query.lte('year', args.year_max);
+    query = query.lte('year_model', args.year_max);
   }
   if (args.price_min) {
-    query = query.gte('price', args.price_min);
+    query = query.gte('price_sale', args.price_min);
   }
   if (args.price_max) {
-    query = query.lte('price', args.price_max);
+    query = query.lte('price_sale', args.price_max);
   }
   if (args.fuel_type) {
     query = query.ilike('fuel_type', `%${args.fuel_type}%`);
@@ -676,8 +676,8 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
     message: `Encontrei ${data.length} veículo(s) disponível(is).`,
     vehicles: data.map((v: any) => ({
       id: v.id,
-      nome: `${v.brand} ${v.model} ${v.year}`,
-      preco: `R$ ${(v.price || 0).toLocaleString('pt-BR')}`,
+      nome: `${v.brand} ${v.model} ${v.year_manufacture}/${v.year_model}`,
+      preco: `R$ ${(v.price_sale || 0).toLocaleString('pt-BR')}`,
       km: `${(v.mileage || 0).toLocaleString('pt-BR')} km`,
       combustivel: v.fuel_type,
       cor: v.color,
