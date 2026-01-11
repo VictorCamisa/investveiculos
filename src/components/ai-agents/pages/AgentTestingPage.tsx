@@ -7,67 +7,22 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { ScrollArea } from '@/components/ui/scroll-area';
 import { 
   Plus, 
   FlaskConical, 
   Play, 
   CheckCircle, 
   XCircle, 
-  MessageSquare,
-  Bot,
-  User,
-  Eye,
-  EyeOff,
-  Wrench,
-  Send
 } from 'lucide-react';
-import { useAIAgentTests } from '@/hooks/useAIAgents';
-
-interface ChatMessage {
-  role: 'user' | 'assistant';
-  content: string;
-  thinking?: string;
-  toolCalls?: { name: string; result: string }[];
-}
+import { useAIAgentTests, useAIAgent } from '@/hooks/useAIAgents';
+import { AgentChatPanel } from '@/components/ai-agents/AgentChatPanel';
 
 export default function AgentTestingPage() {
   const { agentId } = useParams<{ agentId: string }>();
+  const { data: agent } = useAIAgent(agentId);
   const { data: tests, isLoading } = useAIAgentTests(agentId);
   
   const [sandboxMode, setSandboxMode] = useState(true);
-  const [showThinking, setShowThinking] = useState(false);
-  const [showToolCalls, setShowToolCalls] = useState(true);
-  const [inputMessage, setInputMessage] = useState('');
-  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([
-    {
-      role: 'assistant',
-      content: 'Olá! Sou o assistente de vendas. Como posso ajudá-lo hoje?',
-    }
-  ]);
-
-  const handleSendMessage = () => {
-    if (!inputMessage.trim()) return;
-
-    // Add user message
-    const userMessage: ChatMessage = { role: 'user', content: inputMessage };
-    setChatMessages(prev => [...prev, userMessage]);
-
-    // Simulate assistant response
-    setTimeout(() => {
-      const assistantMessage: ChatMessage = {
-        role: 'assistant',
-        content: 'Entendi que você está interessado no Virtus TSI 2024! Temos 3 unidades disponíveis em nosso estoque. Qual cor você prefere?',
-        thinking: 'O usuário mencionou Virtus TSI 2024. Devo buscar no estoque e apresentar as opções disponíveis. Vou usar a ferramenta buscar_veiculo.',
-        toolCalls: [
-          { name: 'buscar_veiculo', result: '3 veículos encontrados: Branco, Preto, Cinza' }
-        ]
-      };
-      setChatMessages(prev => [...prev, assistantMessage]);
-    }, 1500);
-
-    setInputMessage('');
-  };
 
   const testScenarios = [
     { id: '1', name: 'Lead interessado em SUV', passed: true, lastRun: '10/01/2026' },
@@ -106,102 +61,14 @@ export default function AgentTestingPage() {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-2">
-        {/* Chat de Teste */}
-        <Card className="lg:row-span-2">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MessageSquare className="h-5 w-5" />
-              Chat de Teste
-            </CardTitle>
-            <CardDescription>
-              Simule conversas com o agente
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[400px] px-4">
-              <div className="space-y-4 py-4">
-                {chatMessages.map((msg, index) => (
-                  <div key={index}>
-                    <div className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                      {msg.role === 'assistant' && (
-                        <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center">
-                          <Bot className="h-4 w-4 text-primary" />
-                        </div>
-                      )}
-                      <div className={`max-w-[80%] rounded-lg p-3 ${
-                        msg.role === 'user' 
-                          ? 'bg-primary text-primary-foreground' 
-                          : 'bg-muted'
-                      }`}>
-                        <p className="text-sm">{msg.content}</p>
-                      </div>
-                      {msg.role === 'user' && (
-                        <div className="w-8 h-8 rounded-full bg-muted flex items-center justify-center">
-                          <User className="h-4 w-4" />
-                        </div>
-                      )}
-                    </div>
-
-                    {/* Thinking */}
-                    {msg.thinking && showThinking && (
-                      <div className="ml-11 mt-2 p-2 rounded bg-yellow-500/10 border border-yellow-500/20">
-                        <p className="text-xs text-yellow-700 dark:text-yellow-400">
-                          <strong>💭 Pensamento:</strong> {msg.thinking}
-                        </p>
-                      </div>
-                    )}
-
-                    {/* Tool Calls */}
-                    {msg.toolCalls && showToolCalls && (
-                      <div className="ml-11 mt-2 space-y-1">
-                        {msg.toolCalls.map((tool, i) => (
-                          <div key={i} className="p-2 rounded bg-blue-500/10 border border-blue-500/20">
-                            <p className="text-xs text-blue-700 dark:text-blue-400">
-                              <Wrench className="h-3 w-3 inline mr-1" />
-                              <strong>{tool.name}:</strong> {tool.result}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </ScrollArea>
-
-            <div className="p-4 border-t">
-              <div className="flex gap-2 mb-3">
-                <Button
-                  variant={showThinking ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setShowThinking(!showThinking)}
-                >
-                  {showThinking ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
-                  Pensamentos
-                </Button>
-                <Button
-                  variant={showToolCalls ? "secondary" : "outline"}
-                  size="sm"
-                  onClick={() => setShowToolCalls(!showToolCalls)}
-                >
-                  {showToolCalls ? <Eye className="h-3 w-3 mr-1" /> : <EyeOff className="h-3 w-3 mr-1" />}
-                  Ferramentas
-                </Button>
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  placeholder="Digite sua mensagem..."
-                  value={inputMessage}
-                  onChange={(e) => setInputMessage(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                />
-                <Button onClick={handleSendMessage}>
-                  <Send className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+        {/* Chat de Teste Real */}
+        {agentId && (
+          <AgentChatPanel
+            agentId={agentId}
+            agentName={agent?.name || 'Agente'}
+            className="lg:row-span-2 min-h-[500px]"
+          />
+        )}
 
         {/* Cenários de Teste */}
         <Card>
