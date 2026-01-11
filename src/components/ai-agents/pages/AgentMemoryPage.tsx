@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 import {
   Select,
   SelectContent,
@@ -27,9 +28,36 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Save, Database, HardDrive, Clock, Plus, Table2, CheckCircle2, XCircle, RefreshCw, Plug, AlertCircle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { 
+  Loader2, 
+  Save, 
+  Database, 
+  HardDrive, 
+  Clock, 
+  Plus, 
+  Table2, 
+  CheckCircle2, 
+  XCircle, 
+  RefreshCw, 
+  Plug, 
+  AlertCircle,
+  Trash2,
+  Zap,
+  Info
+} from 'lucide-react';
 import { SHORT_TERM_MEMORY_TYPES, VECTOR_DB_PROVIDERS } from '@/types/ai-agents';
 import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface SupabaseTable {
   name: string;
@@ -50,6 +78,7 @@ type FormData = z.infer<typeof formSchema>;
 
 export function AgentMemoryPage() {
   const { agentId } = useParams();
+  const queryClient = useQueryClient();
   const { data: agent, isLoading } = useAIAgent(agentId);
   const { data: dataSources = [], isLoading: loadingDataSources } = useAIAgentDataSources(agentId);
   const updateAgent = useUpdateAIAgent();
@@ -60,6 +89,9 @@ export function AgentMemoryPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [isLoadingTables, setIsLoadingTables] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
+  const [deleteDataSourceId, setDeleteDataSourceId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [isSyncing, setIsSyncing] = useState<string | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -79,23 +111,24 @@ export function AgentMemoryPage() {
   useEffect(() => {
     if (agent) {
       form.reset({
-        short_term_memory_type: agent.short_term_memory_type,
+        short_term_memory_type: agent.short_term_memory_type || 'local',
         redis_host: agent.redis_host || '',
         redis_port: agent.redis_port || 6379,
-        context_window_size: agent.context_window_size,
-        long_term_memory_enabled: agent.long_term_memory_enabled,
-        vector_db_provider: agent.vector_db_provider,
+        context_window_size: agent.context_window_size || 10,
+        long_term_memory_enabled: agent.long_term_memory_enabled || false,
+        vector_db_provider: agent.vector_db_provider || 'supabase',
       });
     }
   }, [agent, form]);
 
-  // Carregar tabelas já conectadas
+  // Carregar tabelas já conectadas e marcar como conectado se houver
   useEffect(() => {
     if (dataSources.length > 0) {
       const connectedTables = dataSources
         .filter(ds => ds.source_type === 'supabase')
         .map(ds => ds.table_name || '');
       setSelectedTables(connectedTables);
+      setIsConnected(true);
     }
   }, [dataSources]);
 
@@ -105,21 +138,19 @@ export function AgentMemoryPage() {
     setConnectionError(null);
     
     try {
-      // Buscar tabelas do schema public usando uma query direta
-      // Usamos as tabelas que sabemos que existem no sistema
       const knownTables = [
         'vehicles', 'leads', 'customers', 'negotiations', 'sales', 
         'vehicle_costs', 'profiles', 'financial_transactions', 
         'financial_categories', 'marketing_campaigns', 'notifications',
         'lead_interactions', 'lead_qualifications', 'follow_up_flows',
-        'commission_rules', 'sale_commissions', 'salesperson_goals'
+        'commission_rules', 'sale_commissions', 'salesperson_goals',
+        'whatsapp_messages', 'whatsapp_contacts', 'whatsapp_instances'
       ];
       
       const tables: SupabaseTable[] = [];
       
       for (const tableName of knownTables) {
         try {
-          // Tenta fazer uma query count para verificar se a tabela existe
           const { count, error } = await supabase
             .from(tableName as any)
             .select('*', { count: 'exact', head: true });
@@ -170,6 +201,9 @@ export function AgentMemoryPage() {
       commission_rules: 'Regras de comissão',
       sale_commissions: 'Comissões de vendas',
       salesperson_goals: 'Metas de vendedores',
+      whatsapp_messages: 'Mensagens do WhatsApp',
+      whatsapp_contacts: 'Contatos do WhatsApp',
+      whatsapp_instances: 'Instâncias WhatsApp',
     };
     return descriptions[tableName] || 'Tabela do sistema';
   };
@@ -181,6 +215,13 @@ export function AgentMemoryPage() {
   };
 
   const handleToggleTable = (tableName: string) => {
+    // Não permitir desmarcar tabelas já conectadas pelo checkbox (usar botão de remover)
+    const isAlreadyConnected = dataSources.some(ds => ds.table_name === tableName);
+    if (isAlreadyConnected) {
+      toast.info('Use o botão de remover para desconectar esta tabela.');
+      return;
+    }
+    
     setSelectedTables(prev => 
       prev.includes(tableName) 
         ? prev.filter(t => t !== tableName)
@@ -191,19 +232,22 @@ export function AgentMemoryPage() {
   const handleConnectTables = async () => {
     if (!agentId) return;
     
-    // Tabelas já conectadas
     const existingTables = dataSources
       .filter(ds => ds.source_type === 'supabase')
       .map(ds => ds.table_name);
     
-    // Novas tabelas para conectar
     const newTables = selectedTables.filter(t => !existingTables.includes(t));
+    
+    if (newTables.length === 0) {
+      toast.info('Nenhuma nova tabela para conectar.');
+      return;
+    }
     
     for (const tableName of newTables) {
       const tableInfo = supabaseTables.find(t => t.name === tableName);
       await createDataSource.mutateAsync({
         agent_id: agentId,
-        name: tableInfo?.name || tableName,
+        name: tableInfo?.description || tableName,
         source_type: 'supabase',
         table_name: tableName,
         is_active: true,
@@ -211,8 +255,76 @@ export function AgentMemoryPage() {
       });
     }
     
-    if (newTables.length > 0) {
-      toast.success(`${newTables.length} tabela(s) conectada(s) com sucesso!`);
+    toast.success(`${newTables.length} tabela(s) conectada(s) com sucesso!`);
+  };
+
+  const handleDeleteDataSource = async () => {
+    if (!deleteDataSourceId) return;
+    
+    setIsDeleting(true);
+    try {
+      const { error } = await (supabase
+        .from('ai_agent_data_sources') as any)
+        .delete()
+        .eq('id', deleteDataSourceId);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['ai-agent-data-sources', agentId] });
+      toast.success('Fonte de dados removida!');
+      
+      // Atualizar seleção local
+      const removedDs = dataSources.find(ds => ds.id === deleteDataSourceId);
+      if (removedDs?.table_name) {
+        setSelectedTables(prev => prev.filter(t => t !== removedDs.table_name));
+      }
+    } catch (error) {
+      console.error('Error deleting data source:', error);
+      toast.error('Erro ao remover fonte de dados');
+    } finally {
+      setIsDeleting(false);
+      setDeleteDataSourceId(null);
+    }
+  };
+
+  const handleSyncDataSource = async (dataSourceId: string) => {
+    setIsSyncing(dataSourceId);
+    try {
+      // Atualizar last_sync_at e sync_status
+      const { error } = await (supabase
+        .from('ai_agent_data_sources') as any)
+        .update({ 
+          last_sync_at: new Date().toISOString(),
+          sync_status: 'synced',
+        })
+        .eq('id', dataSourceId);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['ai-agent-data-sources', agentId] });
+      toast.success('Sincronização concluída!');
+    } catch (error) {
+      console.error('Error syncing data source:', error);
+      toast.error('Erro ao sincronizar');
+    } finally {
+      setIsSyncing(null);
+    }
+  };
+
+  const handleToggleDataSourceActive = async (dataSourceId: string, isActive: boolean) => {
+    try {
+      const { error } = await (supabase
+        .from('ai_agent_data_sources') as any)
+        .update({ is_active: isActive })
+        .eq('id', dataSourceId);
+      
+      if (error) throw error;
+      
+      queryClient.invalidateQueries({ queryKey: ['ai-agent-data-sources', agentId] });
+      toast.success(isActive ? 'Fonte de dados ativada!' : 'Fonte de dados desativada!');
+    } catch (error) {
+      console.error('Error toggling data source:', error);
+      toast.error('Erro ao alterar status');
     }
   };
 
@@ -222,17 +334,19 @@ export function AgentMemoryPage() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      <div className="space-y-6 max-w-4xl">
+        <Skeleton className="h-48 w-full" />
+        <Skeleton className="h-64 w-full" />
       </div>
     );
   }
 
-  const connectedTablesCount = dataSources.filter(ds => ds.source_type === 'supabase').length;
+  const connectedDataSources = dataSources.filter(ds => ds.source_type === 'supabase');
+  const pendingTables = selectedTables.filter(t => !dataSources.some(ds => ds.table_name === t));
 
   return (
     <div className="space-y-6 max-w-4xl">
-      {/* Supabase Connection Status */}
+      {/* Supabase Connection / Data Sources */}
       <Card className="border-primary/20">
         <CardHeader>
           <div className="flex items-center gap-3">
@@ -245,7 +359,7 @@ export function AgentMemoryPage() {
             </div>
             <div className="flex-1">
               <CardTitle className="flex items-center gap-2">
-                Conexão Supabase
+                Fontes de Dados
                 {isConnected ? (
                   <Badge className="bg-green-500/10 text-green-600 border-green-500/20 ml-2">
                     <CheckCircle2 className="h-3 w-3 mr-1" />
@@ -257,23 +371,77 @@ export function AgentMemoryPage() {
                     Não conectado
                   </Badge>
                 )}
-                {connectedTablesCount > 0 && (
-                  <Badge variant="outline" className="ml-1">
-                    {connectedTablesCount} tabela(s) ativa(s)
-                  </Badge>
-                )}
               </CardTitle>
               <CardDescription>
                 {isConnected 
-                  ? 'Conectado ao Supabase. Selecione as tabelas que o agente pode acessar.'
-                  : 'Clique em "Conectar ao Supabase" para buscar as tabelas disponíveis.'
+                  ? `${connectedDataSources.length} tabela(s) conectada(s) ao agente`
+                  : 'Conecte tabelas do Supabase para o agente consultar'
                 }
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          {!isConnected ? (
+          {/* Connected Data Sources */}
+          {connectedDataSources.length > 0 && (
+            <div className="mb-6">
+              <h4 className="text-sm font-medium mb-3 flex items-center gap-2">
+                <Zap className="h-4 w-4 text-primary" />
+                Tabelas Conectadas
+              </h4>
+              <div className="space-y-2">
+                {connectedDataSources.map((ds) => (
+                  <div
+                    key={ds.id}
+                    className="flex items-center justify-between p-3 rounded-lg border bg-muted/30"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="h-8 w-8 rounded-lg bg-primary/10 flex items-center justify-center">
+                        <Table2 className="h-4 w-4 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm">{ds.table_name}</p>
+                        <p className="text-xs text-muted-foreground">{ds.name}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Badge variant={ds.is_active ? 'default' : 'secondary'} className="text-xs">
+                        {ds.is_active ? 'Ativo' : 'Inativo'}
+                      </Badge>
+                      <Switch
+                        checked={ds.is_active ?? true}
+                        onCheckedChange={(checked) => handleToggleDataSourceActive(ds.id, checked)}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8"
+                        onClick={() => handleSyncDataSource(ds.id)}
+                        disabled={isSyncing === ds.id}
+                      >
+                        {isSyncing === ds.id ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4" />
+                        )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-8 w-8 text-destructive hover:text-destructive"
+                        onClick={() => setDeleteDataSourceId(ds.id)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Add More Tables */}
+          {!isConnected || supabaseTables.length === 0 ? (
             <div className="space-y-4">
               {connectionError && (
                 <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-2">
@@ -288,7 +456,7 @@ export function AgentMemoryPage() {
                 </div>
                 <h3 className="font-semibold mb-2">Conecte ao Supabase</h3>
                 <p className="text-sm text-muted-foreground mb-4 max-w-sm">
-                  O agente usará as tabelas do seu banco de dados Supabase para responder perguntas sobre veículos, leads, vendas e mais.
+                  O agente usará as tabelas do banco de dados para responder perguntas sobre veículos, leads, vendas e mais.
                 </p>
                 <Button 
                   onClick={fetchSupabaseTables} 
@@ -307,9 +475,10 @@ export function AgentMemoryPage() {
           ) : (
             <div className="space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-sm text-muted-foreground">
-                  {supabaseTables.length} tabela(s) disponível(is)
-                </p>
+                <h4 className="text-sm font-medium flex items-center gap-2">
+                  <Plus className="h-4 w-4" />
+                  Adicionar Tabelas
+                </h4>
                 <Button 
                   variant="outline" 
                   size="sm" 
@@ -321,64 +490,69 @@ export function AgentMemoryPage() {
                   ) : (
                     <RefreshCw className="mr-2 h-4 w-4" />
                   )}
-                  Atualizar
+                  Atualizar Lista
                 </Button>
               </div>
               
               <div className="grid gap-3 sm:grid-cols-2">
-                {supabaseTables.map((table) => {
-                  const isTableConnected = getTableStatus(table.name);
-                  const isSelected = selectedTables.includes(table.name);
-                  
-                  return (
-                    <div
-                      key={table.name}
-                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                        isSelected 
-                          ? 'border-primary bg-primary/5' 
-                          : 'border-border hover:border-primary/50'
-                      }`}
-                      onClick={() => handleToggleTable(table.name)}
-                    >
-                      <Checkbox
-                        checked={isSelected}
-                        onCheckedChange={() => handleToggleTable(table.name)}
-                      />
-                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                        <Table2 className="h-4 w-4 text-muted-foreground" />
+                {supabaseTables
+                  .filter(table => !dataSources.some(ds => ds.table_name === table.name))
+                  .map((table) => {
+                    const isSelected = selectedTables.includes(table.name);
+                    
+                    return (
+                      <div
+                        key={table.name}
+                        className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                          isSelected 
+                            ? 'border-primary bg-primary/5' 
+                            : 'border-border hover:border-primary/50'
+                        }`}
+                        onClick={() => handleToggleTable(table.name)}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleToggleTable(table.name)}
+                        />
+                        <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                          <Table2 className="h-4 w-4 text-muted-foreground" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm">{table.name}</p>
+                          <p className="text-xs text-muted-foreground truncate">
+                            {table.description}
+                            {table.rowCount !== undefined && (
+                              <span className="ml-1">• {table.rowCount} registros</span>
+                            )}
+                          </p>
+                        </div>
                       </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium text-sm">{table.name}</p>
-                        <p className="text-xs text-muted-foreground truncate">
-                          {table.description}
-                          {table.rowCount !== undefined && (
-                            <span className="ml-1">• {table.rowCount} registros</span>
-                          )}
-                        </p>
-                      </div>
-                      {isTableConnected ? (
-                        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                      ) : isSelected ? (
-                        <Badge variant="outline" className="text-xs shrink-0">Pendente</Badge>
-                      ) : null}
-                    </div>
-                  );
-                })}
+                    );
+                  })}
               </div>
               
-              <div className="flex items-center justify-between pt-4 border-t">
-                <p className="text-sm text-muted-foreground">
-                  {selectedTables.length} tabela(s) selecionada(s)
-                </p>
-                <Button 
-                  onClick={handleConnectTables}
-                  disabled={createDataSource.isPending || selectedTables.length === 0}
-                >
-                  {createDataSource.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                  <Plus className="mr-2 h-4 w-4" />
-                  Conectar Tabelas
-                </Button>
-              </div>
+              {pendingTables.length > 0 && (
+                <div className="flex items-center justify-between pt-4 border-t">
+                  <p className="text-sm text-muted-foreground">
+                    {pendingTables.length} tabela(s) selecionada(s) para adicionar
+                  </p>
+                  <Button 
+                    onClick={handleConnectTables}
+                    disabled={createDataSource.isPending}
+                  >
+                    {createDataSource.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                    <Plus className="mr-2 h-4 w-4" />
+                    Conectar Tabelas
+                  </Button>
+                </div>
+              )}
+              
+              {supabaseTables.filter(t => !dataSources.some(ds => ds.table_name === t.name)).length === 0 && (
+                <div className="text-center py-4 text-sm text-muted-foreground">
+                  <Info className="h-5 w-5 mx-auto mb-2" />
+                  Todas as tabelas disponíveis já estão conectadas
+                </div>
+              )}
             </div>
           )}
         </CardContent>
@@ -394,7 +568,7 @@ export function AgentMemoryPage() {
             <div>
               <CardTitle>Memória de Curto Prazo</CardTitle>
               <CardDescription>
-                Armazena o contexto da conversa atual para respostas coerentes.
+                Armazena o contexto da conversa atual para respostas coerentes
               </CardDescription>
             </div>
           </div>
@@ -443,7 +617,7 @@ export function AgentMemoryPage() {
                           min={1}
                           max={50}
                           {...field}
-                          onChange={(e) => field.onChange(parseInt(e.target.value))}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 10)}
                         />
                       </FormControl>
                       <FormDescription>
@@ -481,7 +655,7 @@ export function AgentMemoryPage() {
                           <Input 
                             type="number" 
                             {...field}
-                            onChange={(e) => field.onChange(parseInt(e.target.value))}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 6379)}
                           />
                         </FormControl>
                         <FormMessage />
@@ -491,6 +665,7 @@ export function AgentMemoryPage() {
                 </div>
               )}
 
+              {/* Long Term Memory */}
               <div className="border-t pt-6">
                 <div className="flex items-center gap-3 mb-6">
                   <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
@@ -567,6 +742,29 @@ export function AgentMemoryPage() {
           </Form>
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={!!deleteDataSourceId} onOpenChange={() => setDeleteDataSourceId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover Fonte de Dados</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover esta fonte de dados? O agente não poderá mais consultar esta tabela.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={handleDeleteDataSource}
+              className="bg-destructive hover:bg-destructive/90"
+              disabled={isDeleting}
+            >
+              {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
