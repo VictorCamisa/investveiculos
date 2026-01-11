@@ -12,10 +12,25 @@ serve(async (req) => {
   }
 
   try {
-    // Use custom secrets to bypass reserved remix secrets
-    const supabaseUrl = Deno.env.get('MY_SUPABASE_URL') ?? Deno.env.get('SUPABASE_URL') ?? '';
-    const serviceRoleKey = Deno.env.get('MY_SUPABASE_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
-    const supabase = createClient(supabaseUrl, serviceRoleKey);
+    // Use Supabase environment variables - service role key bypasses RLS
+    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    
+    console.log('Supabase URL configured:', !!supabaseUrl);
+    console.log('Service Role Key configured:', !!serviceRoleKey, 'length:', serviceRoleKey?.length || 0);
+    
+    if (!supabaseUrl || !serviceRoleKey) {
+      console.error('Missing Supabase configuration!');
+      throw new Error('Missing Supabase URL or Service Role Key');
+    }
+    
+    // Create client with service role - this bypasses RLS
+    const supabase = createClient(supabaseUrl, serviceRoleKey, {
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false
+      }
+    });
 
     const payload = await req.json();
     console.log('WhatsApp Webhook received:', JSON.stringify(payload, null, 2));
