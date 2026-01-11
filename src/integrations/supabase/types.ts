@@ -611,6 +611,7 @@ export type Database = {
           deployment_channels: string[] | null
           description: string | null
           embed_code: string | null
+          enable_voice: boolean | null
           id: string
           llm_model: string | null
           llm_provider: string | null
@@ -632,6 +633,7 @@ export type Database = {
           updated_at: string | null
           vector_db_config: Json | null
           vector_db_provider: string | null
+          voice_id: string | null
           webhook_url: string | null
           whatsapp_auto_reply: boolean | null
           whatsapp_instance_id: string | null
@@ -644,6 +646,7 @@ export type Database = {
           deployment_channels?: string[] | null
           description?: string | null
           embed_code?: string | null
+          enable_voice?: boolean | null
           id?: string
           llm_model?: string | null
           llm_provider?: string | null
@@ -665,6 +668,7 @@ export type Database = {
           updated_at?: string | null
           vector_db_config?: Json | null
           vector_db_provider?: string | null
+          voice_id?: string | null
           webhook_url?: string | null
           whatsapp_auto_reply?: boolean | null
           whatsapp_instance_id?: string | null
@@ -677,6 +681,7 @@ export type Database = {
           deployment_channels?: string[] | null
           description?: string | null
           embed_code?: string | null
+          enable_voice?: boolean | null
           id?: string
           llm_model?: string | null
           llm_provider?: string | null
@@ -698,6 +703,7 @@ export type Database = {
           updated_at?: string | null
           vector_db_config?: Json | null
           vector_db_provider?: string | null
+          voice_id?: string | null
           webhook_url?: string | null
           whatsapp_auto_reply?: boolean | null
           whatsapp_instance_id?: string | null

@@ -98,6 +98,11 @@ export function AgentLLMConfigPage() {
         max_tokens: agent.max_tokens,
         system_prompt: agent.system_prompt || '',
       });
+      
+      // Load voice settings from agent
+      setEnableTTS(agent.enable_voice || false);
+      setSelectedVoice(agent.voice_id || 'JBFqnCBsd6RMkjVDRZzb');
+      
       // Se tiver api_key_encrypted, é porque usa chave própria
       if (agent.api_key_encrypted) {
         setApiKeySource('custom');
@@ -163,7 +168,17 @@ export function AgentLLMConfigPage() {
 
   const onSubmit = async (data: FormData) => {
     if (agentId) {
-      await updateAgent.mutateAsync({ id: agentId, ...data });
+      // Include voice settings in the update
+      const voiceId = selectedVoice.startsWith('custom:') 
+        ? selectedVoice.replace('custom:', '') 
+        : selectedVoice;
+      
+      await updateAgent.mutateAsync({ 
+        id: agentId, 
+        ...data,
+        enable_voice: enableTTS,
+        voice_id: voiceId,
+      });
     }
   };
 
