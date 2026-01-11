@@ -754,6 +754,76 @@ serve(async (req) => {
       await saveMessageToRedis(redisClient, currentConversationId, assistantMessage);
     }
 
+    // ============= AUTO-QUALIFY NEGOTIATION AFTER 4+ MESSAGES =============
+    if (lead_id) {
+      try {
+        // Count total messages in this conversation
+        const { count: messageCount, error: countError } = await supabase
+          .from('ai_agent_messages')
+          .select('*', { count: 'exact', head: true })
+          .eq('conversation_id', currentConversationId);
+
+        console.log(`[Auto-Qualify] Message count for conversation ${currentConversationId}: ${messageCount}`);
+
+        // If 4 or more messages, move negotiation to "qualificando"
+        if (!countError && messageCount && messageCount >= 4) {
+          // Find the negotiation for this lead that's still in initial status
+          const { data: negotiation, error: negError } = await supabase
+            .from('negotiations')
+            .select('id, status')
+            .eq('lead_id', lead_id)
+            .in('status', ['novo', 'em_andamento', 'inicial', 'contato_inicial'])
+            .maybeSingle();
+
+          if (negotiation && !negError) {
+            // Update to "qualificando" status
+            const { error: updateError } = await supabase
+              .from('negotiations')
+              .update({ 
+                status: 'qualificando',
+                notes: 'Status atualizado automaticamente após 4+ mensagens de conversa com IA.',
+                updated_at: new Date().toISOString()
+              })
+              .eq('id', negotiation.id);
+
+            if (!updateError) {
+              console.log(`[Auto-Qualify] Negotiation ${negotiation.id} moved to "qualificando" status`);
+              
+              // Create notification for managers about new qualified lead
+              const { data: managers } = await supabase
+                .from('user_roles')
+                .select('user_id')
+                .eq('role', 'gerente');
+              
+              if (managers && managers.length > 0) {
+                const { data: leadInfo } = await supabase
+                  .from('leads')
+                  .select('name, phone')
+                  .eq('id', lead_id)
+                  .single();
+                
+                for (const manager of managers) {
+                  await supabase.from('notifications').insert({
+                    user_id: manager.user_id,
+                    type: 'lead_qualified',
+                    title: '🎯 Lead em Qualificação',
+                    message: `${leadInfo?.name || 'Lead'} (${leadInfo?.phone || 'sem telefone'}) entrou em qualificação após conversa com IA`,
+                    link: '/crm',
+                  });
+                }
+              }
+            } else {
+              console.error('[Auto-Qualify] Error updating negotiation:', updateError);
+            }
+          } else {
+            console.log('[Auto-Qualify] No eligible negotiation found for lead:', lead_id);
+          }
+        }
+      } catch (qualifyError) {
+        console.error('[Auto-Qualify] Error in auto-qualification:', qualifyError);
+      }
+    }
+
     // 10. Generate TTS if enabled
     let audioBase64: string | null = null;
     if (enable_tts && elevenLabsApiKey && assistantContent) {
