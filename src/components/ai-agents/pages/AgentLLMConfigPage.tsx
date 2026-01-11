@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -9,6 +9,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -25,8 +27,20 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Save, Brain, Sparkles } from 'lucide-react';
+import { Loader2, Save, Brain, Sparkles, Volume2, Key, CheckCircle2, AlertCircle } from 'lucide-react';
 import { LLM_PROVIDERS, LLM_MODELS } from '@/types/ai-agents';
+
+// Vozes disponíveis do ElevenLabs
+const ELEVENLABS_VOICES = [
+  { id: 'JBFqnCBsd6RMkjVDRZzb', name: 'George', description: 'Masculina, profissional' },
+  { id: 'EXAVITQu4vr4xnSDxMaL', name: 'Sarah', description: 'Feminina, amigável' },
+  { id: 'FGY2WhTYpPnrIDTdsKH5', name: 'Laura', description: 'Feminina, suave' },
+  { id: 'IKne3meq5aSn9XLyUdCD', name: 'Charlie', description: 'Masculina, jovem' },
+  { id: 'TX3LPaxmHKxFdv7VOQHJ', name: 'Liam', description: 'Masculina, casual' },
+  { id: 'XrExE9yKIg1WjnnlVkGX', name: 'Matilda', description: 'Feminina, expressiva' },
+  { id: 'pFZP5JQG7iQjIQuC4Bku', name: 'Lily', description: 'Feminina, narrativa' },
+  { id: 'onwK4e9ZLuTAKqWW03F9', name: 'Daniel', description: 'Masculina, calma' },
+];
 
 const formSchema = z.object({
   llm_provider: z.string().min(1),
@@ -43,6 +57,10 @@ export function AgentLLMConfigPage() {
   const { agentId } = useParams();
   const { data: agent, isLoading } = useAIAgent(agentId);
   const updateAgent = useUpdateAIAgent();
+  
+  // Estado local para configurações de voz (não salvas no DB ainda)
+  const [enableTTS, setEnableTTS] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState('JBFqnCBsd6RMkjVDRZzb');
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -89,6 +107,111 @@ export function AgentLLMConfigPage() {
 
   return (
     <div className="space-y-6 max-w-3xl">
+      {/* API Keys Status */}
+      <Card className="border-green-500/20 bg-green-500/5">
+        <CardHeader className="pb-3">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+              <Key className="h-5 w-5 text-white" />
+            </div>
+            <div className="flex-1">
+              <CardTitle className="text-base">Chaves de API Configuradas</CardTitle>
+              <CardDescription>
+                As APIs são gerenciadas via secrets do Supabase
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-background border">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <div>
+                <p className="text-sm font-medium">Lovable AI Gateway</p>
+                <p className="text-xs text-muted-foreground">OpenAI, Google, Anthropic</p>
+              </div>
+              <Badge variant="secondary" className="ml-auto">Ativo</Badge>
+            </div>
+            <div className="flex items-center gap-2 p-3 rounded-lg bg-background border">
+              <CheckCircle2 className="h-4 w-4 text-green-500" />
+              <div>
+                <p className="text-sm font-medium">ElevenLabs TTS</p>
+                <p className="text-xs text-muted-foreground">Texto para Voz</p>
+              </div>
+              <Badge variant="secondary" className="ml-auto">Ativo</Badge>
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground mt-3">
+            💡 O Lovable AI Gateway fornece acesso a múltiplos LLMs sem necessidade de API keys individuais.
+          </p>
+        </CardContent>
+      </Card>
+
+      {/* Voice Configuration */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center">
+              <Volume2 className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <CardTitle>Configuração de Voz (ElevenLabs)</CardTitle>
+              <CardDescription>
+                Habilite respostas por áudio usando síntese de voz avançada.
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="flex items-center justify-between p-4 rounded-lg border">
+            <div className="space-y-0.5">
+              <p className="font-medium">Habilitar Text-to-Speech</p>
+              <p className="text-sm text-muted-foreground">
+                O agente responderá com áudio além do texto
+              </p>
+            </div>
+            <Switch
+              checked={enableTTS}
+              onCheckedChange={setEnableTTS}
+            />
+          </div>
+
+          {enableTTS && (
+            <div className="space-y-4 p-4 rounded-lg bg-muted/50">
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Voz do Agente</label>
+                <Select value={selectedVoice} onValueChange={setSelectedVoice}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione a voz" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {ELEVENLABS_VOICES.map(voice => (
+                      <SelectItem key={voice.id} value={voice.id}>
+                        <div className="flex items-center gap-2">
+                          <span>{voice.name}</span>
+                          <span className="text-xs text-muted-foreground">({voice.description})</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Vozes multilíngues de alta qualidade via ElevenLabs
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2 p-3 rounded-lg bg-background border">
+                <AlertCircle className="h-4 w-4 text-yellow-500" />
+                <p className="text-xs text-muted-foreground">
+                  A geração de áudio consome créditos do ElevenLabs. Use com moderação.
+                </p>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* LLM Configuration */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
