@@ -12,12 +12,13 @@ serve(async (req) => {
   }
 
   try {
-    // Use Supabase environment variables - service role key bypasses RLS
-    const supabaseUrl = Deno.env.get('SUPABASE_URL') ?? '';
-    const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
+    // Use custom MY_SUPABASE secrets to bypass reserved/truncated Supabase secrets
+    const supabaseUrl = Deno.env.get('MY_SUPABASE_URL') ?? Deno.env.get('SUPABASE_URL') ?? '';
+    const serviceRoleKey = Deno.env.get('MY_SUPABASE_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
     
-    console.log('Supabase URL configured:', !!supabaseUrl);
-    console.log('Service Role Key configured:', !!serviceRoleKey, 'length:', serviceRoleKey?.length || 0);
+    console.log('Using MY_SUPABASE_URL:', !!Deno.env.get('MY_SUPABASE_URL'));
+    console.log('Using MY_SUPABASE_SERVICE_KEY:', !!Deno.env.get('MY_SUPABASE_SERVICE_KEY'));
+    console.log('Service Role Key length:', serviceRoleKey?.length || 0);
     
     if (!supabaseUrl || !serviceRoleKey) {
       console.error('Missing Supabase configuration!');
