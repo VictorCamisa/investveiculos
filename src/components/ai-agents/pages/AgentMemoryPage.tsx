@@ -4,6 +4,7 @@ import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAIAgent, useUpdateAIAgent, useAIAgentDataSources, useCreateAIAgentDataSource } from '@/hooks/useAIAgents';
+import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,21 +27,15 @@ import {
   FormLabel,
   FormMessage,
 } from '@/components/ui/form';
-import { Loader2, Save, Database, HardDrive, Clock, Plus, Table2, CheckCircle2, XCircle } from 'lucide-react';
+import { Loader2, Save, Database, HardDrive, Clock, Plus, Table2, CheckCircle2, XCircle, RefreshCw, Plug, AlertCircle } from 'lucide-react';
 import { SHORT_TERM_MEMORY_TYPES, VECTOR_DB_PROVIDERS } from '@/types/ai-agents';
 import { toast } from 'sonner';
 
-// Tabelas do sistema disponíveis para conexão
-const SUPABASE_TABLES = [
-  { name: 'vehicles', label: 'Veículos', description: 'Estoque de veículos' },
-  { name: 'leads', label: 'Leads', description: 'Leads e oportunidades' },
-  { name: 'customers', label: 'Clientes', description: 'Base de clientes' },
-  { name: 'negotiations', label: 'Negociações', description: 'Pipeline de vendas' },
-  { name: 'sales', label: 'Vendas', description: 'Vendas realizadas' },
-  { name: 'vehicle_costs', label: 'Custos de Veículos', description: 'Custos por veículo' },
-  { name: 'profiles', label: 'Usuários', description: 'Equipe de vendas' },
-  { name: 'financial_transactions', label: 'Financeiro', description: 'Transações financeiras' },
-];
+interface SupabaseTable {
+  name: string;
+  description: string;
+  rowCount?: number;
+}
 
 const formSchema = z.object({
   short_term_memory_type: z.string(),
@@ -61,6 +56,10 @@ export function AgentMemoryPage() {
   const createDataSource = useCreateAIAgentDataSource();
   
   const [selectedTables, setSelectedTables] = useState<string[]>([]);
+  const [supabaseTables, setSupabaseTables] = useState<SupabaseTable[]>([]);
+  const [isConnected, setIsConnected] = useState(false);
+  const [isLoadingTables, setIsLoadingTables] = useState(false);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -100,6 +99,81 @@ export function AgentMemoryPage() {
     }
   }, [dataSources]);
 
+  // Função para buscar tabelas do Supabase
+  const fetchSupabaseTables = async () => {
+    setIsLoadingTables(true);
+    setConnectionError(null);
+    
+    try {
+      // Buscar tabelas do schema public usando uma query direta
+      // Usamos as tabelas que sabemos que existem no sistema
+      const knownTables = [
+        'vehicles', 'leads', 'customers', 'negotiations', 'sales', 
+        'vehicle_costs', 'profiles', 'financial_transactions', 
+        'financial_categories', 'marketing_campaigns', 'notifications',
+        'lead_interactions', 'lead_qualifications', 'follow_up_flows',
+        'commission_rules', 'sale_commissions', 'salesperson_goals'
+      ];
+      
+      const tables: SupabaseTable[] = [];
+      
+      for (const tableName of knownTables) {
+        try {
+          // Tenta fazer uma query count para verificar se a tabela existe
+          const { count, error } = await supabase
+            .from(tableName as any)
+            .select('*', { count: 'exact', head: true });
+          
+          if (!error) {
+            tables.push({
+              name: tableName,
+              description: getTableDescription(tableName),
+              rowCount: count || 0,
+            });
+          }
+        } catch (e) {
+          // Tabela não acessível, ignorar
+        }
+      }
+      
+      if (tables.length > 0) {
+        setSupabaseTables(tables);
+        setIsConnected(true);
+        toast.success(`${tables.length} tabelas encontradas no Supabase!`);
+      } else {
+        setConnectionError('Nenhuma tabela encontrada ou sem permissão de acesso.');
+      }
+    } catch (error) {
+      console.error('Error fetching tables:', error);
+      setConnectionError('Erro ao conectar ao Supabase. Verifique suas credenciais.');
+    } finally {
+      setIsLoadingTables(false);
+    }
+  };
+
+  const getTableDescription = (tableName: string): string => {
+    const descriptions: Record<string, string> = {
+      vehicles: 'Estoque de veículos',
+      leads: 'Leads e oportunidades',
+      customers: 'Base de clientes',
+      negotiations: 'Pipeline de vendas',
+      sales: 'Vendas realizadas',
+      vehicle_costs: 'Custos por veículo',
+      profiles: 'Usuários do sistema',
+      financial_transactions: 'Transações financeiras',
+      financial_categories: 'Categorias financeiras',
+      marketing_campaigns: 'Campanhas de marketing',
+      notifications: 'Notificações do sistema',
+      lead_interactions: 'Interações com leads',
+      lead_qualifications: 'Qualificações de leads',
+      follow_up_flows: 'Fluxos de follow-up',
+      commission_rules: 'Regras de comissão',
+      sale_commissions: 'Comissões de vendas',
+      salesperson_goals: 'Metas de vendedores',
+    };
+    return descriptions[tableName] || 'Tabela do sistema';
+  };
+
   const onSubmit = async (data: FormData) => {
     if (agentId) {
       await updateAgent.mutateAsync({ id: agentId, ...data });
@@ -126,10 +200,10 @@ export function AgentMemoryPage() {
     const newTables = selectedTables.filter(t => !existingTables.includes(t));
     
     for (const tableName of newTables) {
-      const tableInfo = SUPABASE_TABLES.find(t => t.name === tableName);
+      const tableInfo = supabaseTables.find(t => t.name === tableName);
       await createDataSource.mutateAsync({
         agent_id: agentId,
-        name: tableInfo?.label || tableName,
+        name: tableInfo?.name || tableName,
         source_type: 'supabase',
         table_name: tableName,
         is_active: true,
@@ -154,80 +228,159 @@ export function AgentMemoryPage() {
     );
   }
 
+  const connectedTablesCount = dataSources.filter(ds => ds.source_type === 'supabase').length;
+
   return (
     <div className="space-y-6 max-w-4xl">
-      {/* Supabase Data Sources */}
+      {/* Supabase Connection Status */}
       <Card className="border-primary/20">
         <CardHeader>
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center">
+            <div className={`h-10 w-10 rounded-xl flex items-center justify-center ${
+              isConnected 
+                ? 'bg-gradient-to-br from-emerald-500 to-green-600' 
+                : 'bg-gradient-to-br from-gray-400 to-gray-500'
+            }`}>
               <Database className="h-5 w-5 text-white" />
             </div>
             <div className="flex-1">
               <CardTitle className="flex items-center gap-2">
                 Conexão Supabase
-                <Badge variant="secondary" className="ml-2">
-                  {dataSources.filter(ds => ds.source_type === 'supabase').length} tabelas conectadas
-                </Badge>
+                {isConnected ? (
+                  <Badge className="bg-green-500/10 text-green-600 border-green-500/20 ml-2">
+                    <CheckCircle2 className="h-3 w-3 mr-1" />
+                    Conectado
+                  </Badge>
+                ) : (
+                  <Badge variant="secondary" className="ml-2">
+                    <AlertCircle className="h-3 w-3 mr-1" />
+                    Não conectado
+                  </Badge>
+                )}
+                {connectedTablesCount > 0 && (
+                  <Badge variant="outline" className="ml-1">
+                    {connectedTablesCount} tabela(s) ativa(s)
+                  </Badge>
+                )}
               </CardTitle>
               <CardDescription>
-                Conecte o agente às tabelas do seu sistema para acesso aos dados em tempo real.
+                {isConnected 
+                  ? 'Conectado ao Supabase. Selecione as tabelas que o agente pode acessar.'
+                  : 'Clique em "Conectar ao Supabase" para buscar as tabelas disponíveis.'
+                }
               </CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
-            <div className="grid gap-3 sm:grid-cols-2">
-              {SUPABASE_TABLES.map((table) => {
-                const isConnected = getTableStatus(table.name);
-                const isSelected = selectedTables.includes(table.name);
-                
-                return (
-                  <div
-                    key={table.name}
-                    className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
-                      isSelected 
-                        ? 'border-primary bg-primary/5' 
-                        : 'border-border hover:border-primary/50'
-                    }`}
-                    onClick={() => handleToggleTable(table.name)}
-                  >
-                    <Checkbox
-                      checked={isSelected}
-                      onCheckedChange={() => handleToggleTable(table.name)}
-                    />
-                    <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
-                      <Table2 className="h-4 w-4 text-muted-foreground" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-sm">{table.label}</p>
-                      <p className="text-xs text-muted-foreground truncate">{table.description}</p>
-                    </div>
-                    {isConnected ? (
-                      <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
-                    ) : isSelected ? (
-                      <Badge variant="outline" className="text-xs shrink-0">Pendente</Badge>
-                    ) : null}
-                  </div>
-                );
-              })}
+          {!isConnected ? (
+            <div className="space-y-4">
+              {connectionError && (
+                <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm flex items-center gap-2">
+                  <XCircle className="h-4 w-4 shrink-0" />
+                  {connectionError}
+                </div>
+              )}
+              
+              <div className="flex flex-col items-center justify-center py-8 text-center">
+                <div className="h-16 w-16 rounded-full bg-muted flex items-center justify-center mb-4">
+                  <Plug className="h-8 w-8 text-muted-foreground" />
+                </div>
+                <h3 className="font-semibold mb-2">Conecte ao Supabase</h3>
+                <p className="text-sm text-muted-foreground mb-4 max-w-sm">
+                  O agente usará as tabelas do seu banco de dados Supabase para responder perguntas sobre veículos, leads, vendas e mais.
+                </p>
+                <Button 
+                  onClick={fetchSupabaseTables} 
+                  disabled={isLoadingTables}
+                  size="lg"
+                >
+                  {isLoadingTables ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Database className="mr-2 h-4 w-4" />
+                  )}
+                  Conectar ao Supabase
+                </Button>
+              </div>
             </div>
-            
-            <div className="flex items-center justify-between pt-4 border-t">
-              <p className="text-sm text-muted-foreground">
-                {selectedTables.length} tabela(s) selecionada(s)
-              </p>
-              <Button 
-                onClick={handleConnectTables}
-                disabled={createDataSource.isPending || selectedTables.length === 0}
-              >
-                {createDataSource.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <Plus className="mr-2 h-4 w-4" />
-                Conectar Tabelas
-              </Button>
+          ) : (
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <p className="text-sm text-muted-foreground">
+                  {supabaseTables.length} tabela(s) disponível(is)
+                </p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={fetchSupabaseTables}
+                  disabled={isLoadingTables}
+                >
+                  {isLoadingTables ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                  )}
+                  Atualizar
+                </Button>
+              </div>
+              
+              <div className="grid gap-3 sm:grid-cols-2">
+                {supabaseTables.map((table) => {
+                  const isTableConnected = getTableStatus(table.name);
+                  const isSelected = selectedTables.includes(table.name);
+                  
+                  return (
+                    <div
+                      key={table.name}
+                      className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-all ${
+                        isSelected 
+                          ? 'border-primary bg-primary/5' 
+                          : 'border-border hover:border-primary/50'
+                      }`}
+                      onClick={() => handleToggleTable(table.name)}
+                    >
+                      <Checkbox
+                        checked={isSelected}
+                        onCheckedChange={() => handleToggleTable(table.name)}
+                      />
+                      <div className="h-8 w-8 rounded-lg bg-muted flex items-center justify-center">
+                        <Table2 className="h-4 w-4 text-muted-foreground" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-sm">{table.name}</p>
+                        <p className="text-xs text-muted-foreground truncate">
+                          {table.description}
+                          {table.rowCount !== undefined && (
+                            <span className="ml-1">• {table.rowCount} registros</span>
+                          )}
+                        </p>
+                      </div>
+                      {isTableConnected ? (
+                        <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />
+                      ) : isSelected ? (
+                        <Badge variant="outline" className="text-xs shrink-0">Pendente</Badge>
+                      ) : null}
+                    </div>
+                  );
+                })}
+              </div>
+              
+              <div className="flex items-center justify-between pt-4 border-t">
+                <p className="text-sm text-muted-foreground">
+                  {selectedTables.length} tabela(s) selecionada(s)
+                </p>
+                <Button 
+                  onClick={handleConnectTables}
+                  disabled={createDataSource.isPending || selectedTables.length === 0}
+                >
+                  {createDataSource.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                  <Plus className="mr-2 h-4 w-4" />
+                  Conectar Tabelas
+                </Button>
+              </div>
             </div>
-          </div>
+          )}
         </CardContent>
       </Card>
 
