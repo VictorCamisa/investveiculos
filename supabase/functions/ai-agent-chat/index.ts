@@ -731,7 +731,7 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
   let query = supabase
     .from('vehicles')
     .select(selectCols)
-    .eq('status', 'available')
+    .eq('status', 'disponivel') // CORRIGIDO: usar 'disponivel' em português
     .order('created_at', { ascending: false })
     .limit(args.limit || 5);
 
