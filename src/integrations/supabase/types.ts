@@ -2777,6 +2777,8 @@ export type Database = {
           created_at: string | null
           id: string
           instance_id: string | null
+          last_message_at: string | null
+          lead_id: string | null
           name: string | null
           phone: string
         }
@@ -2784,6 +2786,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           instance_id?: string | null
+          last_message_at?: string | null
+          lead_id?: string | null
           name?: string | null
           phone: string
         }
@@ -2791,6 +2795,8 @@ export type Database = {
           created_at?: string | null
           id?: string
           instance_id?: string | null
+          last_message_at?: string | null
+          lead_id?: string | null
           name?: string | null
           phone?: string
         }
@@ -2903,6 +2909,13 @@ export type Database = {
           created_at: string | null
           direction: string | null
           id: string
+          instance_id: string | null
+          lead_id: string | null
+          message_id: string | null
+          message_type: string | null
+          remote_jid: string | null
+          sent_by: string | null
+          status: string | null
         }
         Insert: {
           contact_id?: string | null
@@ -2910,6 +2923,13 @@ export type Database = {
           created_at?: string | null
           direction?: string | null
           id?: string
+          instance_id?: string | null
+          lead_id?: string | null
+          message_id?: string | null
+          message_type?: string | null
+          remote_jid?: string | null
+          sent_by?: string | null
+          status?: string | null
         }
         Update: {
           contact_id?: string | null
@@ -2917,6 +2937,13 @@ export type Database = {
           created_at?: string | null
           direction?: string | null
           id?: string
+          instance_id?: string | null
+          lead_id?: string | null
+          message_id?: string | null
+          message_type?: string | null
+          remote_jid?: string | null
+          sent_by?: string | null
+          status?: string | null
         }
         Relationships: [
           {
