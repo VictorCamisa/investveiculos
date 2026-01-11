@@ -1,6 +1,7 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
+import type { Database } from '@/integrations/supabase/types';
 import type { 
   AIAgent, 
   AIAgentTool, 
@@ -12,6 +13,9 @@ import type {
   AIAgentNotification,
   AIAgentTest
 } from '@/types/ai-agents';
+
+type AIAgentUpdate = Database['public']['Tables']['ai_agents']['Update'];
+type AIAgentToolUpdate = Database['public']['Tables']['ai_agent_tools']['Update'];
 
 // =============================================
 // AGENTS CRUD
@@ -100,10 +104,18 @@ export function useUpdateAIAgent() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<AIAgent> & { id: string }) => {
-      const { tools, guardrails, ...dbUpdates } = updates;
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      const { tools, guardrails, workflows, ...rest } = updates;
+      
+      // Build clean update object with proper typing
+      const updatePayload = Object.fromEntries(
+        Object.entries(rest).filter(([, v]) => v !== undefined)
+      ) as AIAgentUpdate;
+
       const { data, error } = await supabase
         .from('ai_agents')
-        .update(dbUpdates as any)
+        // @ts-expect-error - Supabase types issue with update payload
+        .update(updatePayload)
         .eq('id', id)
         .select()
         .single();
@@ -201,7 +213,8 @@ export function useUpdateAIAgentTool() {
     mutationFn: async ({ id, ...updates }: Partial<AIAgentTool> & { id: string }) => {
       const { data, error } = await supabase
         .from('ai_agent_tools')
-        .update(updates as any)
+        // @ts-expect-error - Supabase types issue with update payload
+        .update(updates)
         .eq('id', id)
         .select()
         .single();
