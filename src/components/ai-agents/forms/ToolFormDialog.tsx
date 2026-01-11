@@ -1,7 +1,4 @@
-import { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
+import { useEffect, useState } from 'react';
 import { useCreateAIAgentTool, useUpdateAIAgentTool } from '@/hooks/useAIAgents';
 import {
   Dialog,
@@ -11,38 +8,11 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '@/components/ui/form';
-import { Loader2, Save } from 'lucide-react';
-import { AUTH_METHODS } from '@/types/ai-agents';
+import { Label } from '@/components/ui/label';
+import { Loader2, Save, Car, Users, Calendar, MessageSquare, BarChart3 } from 'lucide-react';
 import type { AIAgentTool } from '@/types/ai-agents';
-
-const formSchema = z.object({
-  name: z.string().min(1, 'Nome é obrigatório').regex(/^[a-z_][a-z0-9_]*$/, 'Use apenas letras minúsculas, números e underscores'),
-  description: z.string().min(1, 'Descrição é obrigatória'),
-  endpoint_url: z.string().url('URL inválida').optional().or(z.literal('')),
-  function_schema: z.string().min(1, 'Schema é obrigatório'),
-  auth_method: z.string(),
-  orchestration_rules: z.string().optional(),
-});
-
-type FormData = z.infer<typeof formSchema>;
+import { toast } from 'sonner';
 
 interface ToolFormDialogProps {
   open: boolean;
@@ -51,88 +21,91 @@ interface ToolFormDialogProps {
   tool?: AIAgentTool | null;
 }
 
-const defaultSchema = `{
-  "type": "function",
-  "function": {
-    "name": "nome_da_funcao",
-    "description": "Descrição do que a função faz",
-    "parameters": {
-      "type": "object",
-      "properties": {
-        "parametro1": {
-          "type": "string",
-          "description": "Descrição do parâmetro"
-        }
-      },
-      "required": ["parametro1"]
-    }
+// Templates de orquestração prontos
+const ORCHESTRATION_TEMPLATES = [
+  {
+    id: 'search_stock',
+    label: 'Consultar Estoque',
+    icon: Car,
+    rule: 'Quando o cliente perguntar sobre veículos, carros, motos ou preços, buscar no estoque'
+  },
+  {
+    id: 'create_lead',
+    label: 'Criar Lead',
+    icon: Users,
+    rule: 'Quando o cliente fornecer nome ou telefone, criar um lead no CRM'
+  },
+  {
+    id: 'schedule_visit',
+    label: 'Agendar Visita',
+    icon: Calendar,
+    rule: 'Quando o cliente quiser visitar a loja ou fazer test-drive, agendar uma visita'
+  },
+  {
+    id: 'send_whatsapp',
+    label: 'Enviar WhatsApp',
+    icon: MessageSquare,
+    rule: 'Quando precisar enviar fotos ou informações, usar o WhatsApp'
+  },
+  {
+    id: 'sales_stats',
+    label: 'Ver Estatísticas',
+    icon: BarChart3,
+    rule: 'Quando perguntarem sobre performance ou vendas, mostrar estatísticas'
   }
-}`;
+];
 
 export function ToolFormDialog({ open, onOpenChange, agentId, tool }: ToolFormDialogProps) {
   const createTool = useCreateAIAgentTool();
   const updateTool = useUpdateAIAgentTool();
   const isEditing = !!tool;
 
-  const form = useForm<FormData>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: '',
-      description: '',
-      endpoint_url: '',
-      function_schema: defaultSchema,
-      auth_method: 'none',
-      orchestration_rules: '',
-    },
-  });
+  const [rule, setRule] = useState('');
 
   useEffect(() => {
     if (tool) {
-      form.reset({
-        name: tool.name,
-        description: tool.description,
-        endpoint_url: tool.endpoint_url || '',
-        function_schema: JSON.stringify(tool.function_schema, null, 2),
-        auth_method: tool.auth_method,
-        orchestration_rules: tool.orchestration_rules || '',
-      });
+      setRule(tool.orchestration_rules || tool.description || '');
     } else {
-      form.reset({
-        name: '',
-        description: '',
-        endpoint_url: '',
-        function_schema: defaultSchema,
-        auth_method: 'none',
-        orchestration_rules: '',
-      });
+      setRule('');
     }
-  }, [tool, form, open]);
+  }, [tool, open]);
 
-  const onSubmit = async (data: FormData) => {
+  const handleTemplateClick = (template: typeof ORCHESTRATION_TEMPLATES[0]) => {
+    setRule(template.rule);
+  };
+
+  const onSubmit = async () => {
+    if (!rule.trim()) {
+      toast.error('Escreva uma regra de orquestração');
+      return;
+    }
+
     try {
-      const parsedSchema = JSON.parse(data.function_schema);
-      
       const toolData = {
         agent_id: agentId,
-        name: data.name,
-        description: data.description,
-        endpoint_url: data.endpoint_url || null,
-        function_schema: parsedSchema,
-        auth_method: data.auth_method,
-        orchestration_rules: data.orchestration_rules || null,
+        name: `regra_${Date.now()}`,
+        description: rule,
+        orchestration_rules: rule,
+        function_schema: { type: 'orchestration_rule' },
+        auth_method: 'none',
+        is_active: true
       };
 
       if (isEditing) {
-        await updateTool.mutateAsync({ id: tool.id, ...toolData });
+        await updateTool.mutateAsync({ 
+          id: tool.id, 
+          description: rule,
+          orchestration_rules: rule 
+        });
       } else {
         await createTool.mutateAsync(toolData);
       }
 
       onOpenChange(false);
-    } catch (e) {
-      if (e instanceof SyntaxError) {
-        form.setError('function_schema', { message: 'JSON inválido' });
-      }
+      toast.success(isEditing ? 'Regra atualizada!' : 'Regra criada com sucesso!');
+    } catch (error) {
+      console.error('Error saving rule:', error);
+      toast.error('Erro ao salvar regra');
     }
   };
 
@@ -140,157 +113,66 @@ export function ToolFormDialog({ open, onOpenChange, agentId, tool }: ToolFormDi
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>{isEditing ? 'Editar Ferramenta' : 'Nova Ferramenta'}</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Regra' : 'Nova Regra de Orquestração'}</DialogTitle>
           <DialogDescription>
-            Configure uma ferramenta que o agente poderá usar para realizar ações ou consultar dados.
+            Defina em linguagem natural quando o agente deve usar uma capacidade específica.
           </DialogDescription>
         </DialogHeader>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-            <div className="grid gap-4 md:grid-cols-2">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome da Ferramenta</FormLabel>
-                    <FormControl>
-                      <Input 
-                        placeholder="buscar_veiculo" 
-                        className="font-mono"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Use snake_case (ex: criar_lead)
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="auth_method"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Método de Autenticação</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {AUTH_METHODS.map(method => (
-                          <SelectItem key={method.value} value={method.value}>
-                            {method.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+        <div className="space-y-4">
+          {/* Templates */}
+          {!isEditing && (
+            <div>
+              <Label className="text-sm">Templates rápidos</Label>
+              <div className="flex flex-wrap gap-2 mt-2">
+                {ORCHESTRATION_TEMPLATES.map(template => {
+                  const Icon = template.icon;
+                  return (
+                    <Button 
+                      key={template.id}
+                      variant="outline" 
+                      size="sm"
+                      type="button"
+                      onClick={() => handleTemplateClick(template)}
+                    >
+                      <Icon className="h-3 w-3 mr-1" />
+                      {template.label}
+                    </Button>
+                  );
+                })}
+              </div>
             </div>
+          )}
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Busca veículos disponíveis no estoque por marca, modelo ou faixa de preço"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Explique ao LLM quando e como usar esta ferramenta
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
+          {/* Regra */}
+          <div>
+            <Label htmlFor="rule">Regra de Orquestração</Label>
+            <Textarea
+              id="rule"
+              placeholder="Ex: Quando o cliente perguntar sobre preços, buscar veículos disponíveis no estoque"
+              value={rule}
+              onChange={(e) => setRule(e.target.value)}
+              className="min-h-[100px] mt-2"
             />
+            <p className="text-xs text-muted-foreground mt-1">
+              Escreva em linguagem natural quando e como o agente deve agir
+            </p>
+          </div>
 
-            <FormField
-              control={form.control}
-              name="endpoint_url"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>URL do Endpoint</FormLabel>
-                  <FormControl>
-                    <Input 
-                      placeholder="https://api.example.com/vehicles/search"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    URL da Edge Function ou API externa
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="function_schema"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Schema da Função (JSON)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      className="min-h-[200px] font-mono text-sm"
-                      placeholder={defaultSchema}
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Defina o schema da função seguindo o formato OpenAI Function Calling
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="orchestration_rules"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Regra de Orquestração (Opcional)</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Usar quando o lead perguntar sobre disponibilidade ou preço de veículos"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormDescription>
-                    Defina quando o agente deve usar esta ferramenta
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isPending}>
-                {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                <Save className="mr-2 h-4 w-4" />
-                {isEditing ? 'Salvar' : 'Criar Ferramenta'}
-              </Button>
-            </div>
-          </form>
-        </Form>
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-4">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button onClick={onSubmit} disabled={isPending || !rule.trim()}>
+              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              <Save className="mr-2 h-4 w-4" />
+              {isEditing ? 'Salvar' : 'Criar Regra'}
+            </Button>
+          </div>
+        </div>
       </DialogContent>
     </Dialog>
   );

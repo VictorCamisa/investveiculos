@@ -302,6 +302,19 @@ serve(async (req) => {
     
     console.log('Connected Supabase tables:', connectedTables);
 
+    // 1.2 Load orchestration rules (tools configured as rules)
+    const { data: orchestrationTools } = await supabase
+      .from('ai_agent_tools')
+      .select('orchestration_rules, description')
+      .eq('agent_id', agent_id)
+      .eq('is_active', true);
+    
+    const orchestrationRules = (orchestrationTools || [])
+      .filter((t: any) => t.orchestration_rules)
+      .map((t: any) => t.orchestration_rules);
+    
+    console.log('Orchestration rules:', orchestrationRules);
+
     // 2. Get or create conversation
     let currentConversationId = conversation_id;
     if (!currentConversationId) {
@@ -341,7 +354,8 @@ serve(async (req) => {
     });
 
     // 5. Build messages array for LLM
-    const systemPrompt = agent.system_prompt || buildDefaultSystemPrompt(agent);
+    const baseSystemPrompt = agent.system_prompt || buildDefaultSystemPrompt(agent);
+    const systemPrompt = buildEnhancedSystemPrompt(baseSystemPrompt, orchestrationRules, connectedTables);
     
     const messages = [
       { role: 'system', content: systemPrompt },
@@ -553,6 +567,26 @@ INFORMAÇÕES DA LOJA:
 - Horário de funcionamento: Segunda a Sexta 8h-18h, Sábado 8h-12h
 
 Mantenha suas respostas concisas mas informativas. Sempre que possível, faça perguntas para entender melhor as necessidades do cliente.`;
+}
+
+function buildEnhancedSystemPrompt(basePrompt: string, orchestrationRules: string[], connectedTables: string[]): string {
+  let enhancedPrompt = basePrompt;
+  
+  // Add connected tables info
+  if (connectedTables.length > 0) {
+    enhancedPrompt += `\n\nTABELAS DISPONÍVEIS PARA CONSULTA:
+Você tem acesso às seguintes tabelas do banco de dados: ${connectedTables.join(', ')}.
+Use a ferramenta query_database para consultar dados dessas tabelas quando necessário.`;
+  }
+  
+  // Add orchestration rules
+  if (orchestrationRules.length > 0) {
+    enhancedPrompt += `\n\nREGRAS DE ORQUESTRAÇÃO:
+Siga estas regras para decidir quando usar as ferramentas disponíveis:
+${orchestrationRules.map((rule, i) => `${i + 1}. ${rule}`).join('\n')}`;
+  }
+  
+  return enhancedPrompt;
 }
 
 async function executeToolFunction(
