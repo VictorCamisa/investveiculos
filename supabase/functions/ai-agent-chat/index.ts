@@ -116,23 +116,34 @@ interface ExtractedQualification {
   vehicle_usage: 'trabalho' | 'lazer_familia' | 'misto' | null;
 }
 
+// Remove accents for better matching
+function normalizeText(text: string): string {
+  return text
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
 function extractMoneyValue(text: string): number | null {
+  const normalizedText = normalizeText(text);
+  
   // Match patterns like: R$ 50.000, R$50000, 50 mil, 50000, 50k
   const patterns = [
-    /R\$\s*([\d.,]+)/gi,
+    /r\$\s*([\d.,]+)/gi,
     /(\d+[\d.,]*)\s*(?:mil|k)/gi,
     /(\d{4,})/g, // Match numbers with 4+ digits
   ];
   
   for (const pattern of patterns) {
-    const matches = text.matchAll(pattern);
+    const matches = normalizedText.matchAll(pattern);
     for (const match of matches) {
       let value = match[1].replace(/\./g, '').replace(',', '.');
       let num = parseFloat(value);
       
       // If matched "mil" or "k", multiply by 1000
-      if (text.toLowerCase().includes('mil') || text.toLowerCase().includes('k')) {
-        num *= 1000;
+      if (normalizedText.includes('mil') || normalizedText.includes('k')) {
+        if (num < 1000) num *= 1000;
       }
       
       if (!isNaN(num) && num > 100) { // Ignore small numbers
@@ -144,10 +155,19 @@ function extractMoneyValue(text: string): number | null {
 }
 
 function extractQualificationData(messages: any[]): ExtractedQualification {
-  const allText = messages
+  // Get user messages
+  const userText = messages
     .filter(m => m.role === 'user')
-    .map(m => m.content.toLowerCase())
+    .map(m => normalizeText(m.content))
     .join(' ');
+  
+  // Get assistant messages (for vehicle mentions)
+  const assistantText = messages
+    .filter(m => m.role === 'assistant')
+    .map(m => normalizeText(m.content))
+    .join(' ');
+  
+  const allText = userText + ' ' + assistantText;
   
   const qualification: ExtractedQualification = {
     vehicle_interest: null,
@@ -162,55 +182,92 @@ function extractQualificationData(messages: any[]): ExtractedQualification {
     vehicle_usage: null,
   };
   
-  // Extract vehicle interest from context (look for brand/model mentions)
-  const vehiclePatterns = [
-    /(?:procuro|quero|interesse|gostei|vi)\s+(?:um|o)?\s*([\w\s]+?)(?:\s+(?:20\d{2}|usado|seminovo|zero))?/i,
-    /(?:corolla|civic|onix|hb20|polo|gol|creta|kicks|compass|tracker|cruze)/i,
+  // ========== EXTRACT VEHICLE INTEREST ==========
+  // Look for brand/model mentions in ASSISTANT messages (where vehicles are shown)
+  const vehicleBrands = [
+    'toyota', 'honda', 'hyundai', 'chevrolet', 'volkswagen', 'vw', 'fiat', 'ford', 
+    'renault', 'jeep', 'nissan', 'peugeot', 'citroen', 'kia', 'bmw', 'mercedes', 
+    'audi', 'mitsubishi', 'suzuki', 'caoa', 'chery', 'jac'
+  ];
+  const vehicleModels = [
+    'corolla', 'civic', 'onix', 'hb20', 'polo', 'gol', 'creta', 'kicks', 'compass',
+    'tracker', 'cruze', 'focus', 'fiesta', 'ka', 'argo', 'cronos', 'toro', 'renegade',
+    't-cross', 'tcross', 'nivus', 'taos', 'hilux', 'ranger', 'saveiro', 'strada',
+    'mobi', 'uno', 'kwid', 'sandero', 'logan', 'duster', 'captur', 'kicks', 'versa',
+    'yaris', 'etios', 'fit', 'city', 'hr-v', 'hrv', 'wr-v', 'wrv', 'sentra', 'march',
+    'celta', 'prisma', 'spin', 'cobalt', 'montana', 'fox', 'up', 'voyage', 'virtus',
+    '208', '2008', '308', '3008', '408', 'c3', 'c4', 'aircross', 'doblò', 'doblo',
+    'palio', 'siena', 'punto', 'bravo', 'linea', 'soul', 'sportage', 'cerato',
+    'sorento', 'tucson', 'santa fe', 'ix35', 'clio', 'megane', 'fluence', 'symbol'
   ];
   
-  for (const pattern of vehiclePatterns) {
-    const match = allText.match(pattern);
-    if (match) {
-      qualification.vehicle_interest = match[0].trim();
+  // Find vehicle interest from user or assistant context
+  for (const model of vehicleModels) {
+    const modelPattern = new RegExp(`(\\w+)?\\s*${model}\\s*(\\d{4})?`, 'i');
+    const assistantMatch = assistantText.match(modelPattern);
+    const userMatch = userText.match(modelPattern);
+    
+    if (userMatch) {
+      qualification.vehicle_interest = userMatch[0].trim();
+      break;
+    } else if (assistantMatch) {
+      qualification.vehicle_interest = assistantMatch[0].trim();
       break;
     }
   }
   
-  // Extract budget values
-  const budgetMatch = allText.match(/(?:at[eé]|máximo|no máximo|limite)\s*(?:de)?\s*R?\$?\s*([\d.,]+\s*(?:mil|k)?)/i);
-  if (budgetMatch) {
-    qualification.budget_max = extractMoneyValue(budgetMatch[0]);
+  // ========== EXTRACT BUDGET ==========
+  const budgetMaxPatterns = [
+    /(?:ate|maximo|no maximo|limite|teto)\s*(?:de)?\s*r?\$?\s*([\d.,]+\s*(?:mil|k)?)/i,
+    /(?:nao|n[aã]o)\s*(?:quero|vou|posso)\s*(?:passar|gastar)\s*(?:de|dos)?\s*r?\$?\s*([\d.,]+\s*(?:mil|k)?)/i,
+  ];
+  
+  for (const pattern of budgetMaxPatterns) {
+    const match = userText.match(pattern);
+    if (match) {
+      qualification.budget_max = extractMoneyValue(match[0]);
+      break;
+    }
   }
   
-  const minBudgetMatch = allText.match(/(?:a partir|mínimo|pelo menos|acima)\s*(?:de)?\s*R?\$?\s*([\d.,]+\s*(?:mil|k)?)/i);
-  if (minBudgetMatch) {
-    qualification.budget_min = extractMoneyValue(minBudgetMatch[0]);
+  const budgetMinPatterns = [
+    /(?:a partir|minimo|pelo menos|acima)\s*(?:de)?\s*r?\$?\s*([\d.,]+\s*(?:mil|k)?)/i,
+  ];
+  
+  for (const pattern of budgetMinPatterns) {
+    const match = userText.match(pattern);
+    if (match) {
+      qualification.budget_min = extractMoneyValue(match[0]);
+      break;
+    }
   }
   
-  // Extract down payment
+  // ========== EXTRACT DOWN PAYMENT ==========
   const entradaPatterns = [
-    /entrada\s*(?:de)?\s*R?\$?\s*([\d.,]+\s*(?:mil|k)?)/i,
-    /(?:tenho|posso dar|consigo)\s*R?\$?\s*([\d.,]+\s*(?:mil|k)?)\s*(?:de)?\s*entrada/i,
-    /(?:dar|pagar)\s*R?\$?\s*([\d.,]+\s*(?:mil|k)?)\s*(?:de)?\s*entrada/i,
+    /entrada\s*(?:de)?\s*r?\$?\s*([\d.,]+\s*(?:mil|k)?)/i,
+    /(?:tenho|posso|consigo)\s*(?:dar)?\s*r?\$?\s*([\d.,]+\s*(?:mil|k)?)\s*(?:de)?\s*entrada/i,
+    /dar\s*r?\$?\s*([\d.,]+\s*(?:mil|k)?)\s*(?:de)?\s*entrada/i,
+    /r?\$?\s*([\d.,]+\s*(?:mil|k)?)\s*de\s*entrada/i,
   ];
   
   for (const pattern of entradaPatterns) {
-    const match = allText.match(pattern);
+    const match = userText.match(pattern);
     if (match) {
       qualification.down_payment = extractMoneyValue(match[0]);
       break;
     }
   }
   
-  // Extract max installment
+  // ========== EXTRACT MAX INSTALLMENT ==========
   const parcelaPatterns = [
-    /parcela\s*(?:de)?\s*(?:at[eé])?\s*R?\$?\s*([\d.,]+)/i,
-    /(?:pagar|consigo|cabe)\s*(?:at[eé])?\s*R?\$?\s*([\d.,]+)\s*(?:por m[eê]s|mensal|de parcela)/i,
-    /(?:mensal|por m[eê]s)\s*(?:de)?\s*R?\$?\s*([\d.,]+)/i,
+    /parcela\s*(?:de)?\s*(?:ate)?\s*r?\$?\s*([\d.,]+)/i,
+    /(?:pagar|consigo|cabe)\s*(?:ate)?\s*r?\$?\s*([\d.,]+)\s*(?:por mes|mensal|de parcela)/i,
+    /(?:mensal|por mes)\s*(?:de)?\s*r?\$?\s*([\d.,]+)/i,
+    /r?\$?\s*([\d.,]+)\s*(?:por mes|mensal)/i,
   ];
   
   for (const pattern of parcelaPatterns) {
-    const match = allText.match(pattern);
+    const match = userText.match(pattern);
     if (match) {
       const value = extractMoneyValue(match[0]);
       if (value && value < 10000) { // Parcelas geralmente são menores
@@ -220,65 +277,94 @@ function extractQualificationData(messages: any[]): ExtractedQualification {
     }
   }
   
-  // Extract payment method
-  if (allText.includes('financ')) {
+  // ========== EXTRACT PAYMENT METHOD ==========
+  if (userText.includes('financ') || userText.includes('financiar')) {
     qualification.payment_method = 'financiamento';
-  } else if (allText.includes('à vista') || allText.includes('a vista') || allText.includes('dinheiro')) {
+  } else if (userText.includes('a vista') || userText.includes('avista') || userText.includes('dinheiro') || userText.includes('pix')) {
     qualification.payment_method = 'a_vista';
-  } else if (allText.includes('cons[oó]rcio')) {
+  } else if (userText.includes('consorcio')) {
     qualification.payment_method = 'consorcio';
   }
   
-  // Detect trade-in
+  // ========== DETECT TRADE-IN (IMPROVED) ==========
   const tradeInPatterns = [
-    /tenho\s+(?:um|uma|o|a)?\s*([\w\s]+?)\s*(?:para|pra|na)?\s*troca/i,
-    /(?:quero|vou|posso)\s*(?:dar|trocar|entregar)\s+(?:meu|minha)?\s*([\w\s]+)/i,
-    /(?:carro|veículo|moto)\s*(?:para|na)\s*troca/i,
-    /(?:dar|usar|colocar)\s*(?:na|como)\s*troca/i,
+    // "tenho um gol 2015 pra troca"
+    /tenho\s+(?:um|uma|o|a|meu|minha)?\s*([\w\s]+?\d{4}[^\s]*)\s*(?:para|pra|na|de)?\s*troca/i,
+    // "vou dar meu gol na troca"
+    /(?:vou|quero|posso)\s*(?:dar|trocar|entregar)\s+(?:meu|minha|o|a)?\s*([\w\s]+?\d{4}[^\s]*)/i,
+    // "gol g5 2015 com 120 mil km"
+    /(?:meu|minha|tenho|um|uma)\s*((?:gol|palio|uno|celta|corsa|fiesta|ka|clio|fox|polo|civic|corolla|hb20|onix)[\w\s]*\d{4})/i,
+    // Simple patterns
+    /(?:dar|usar|colocar)\s*(?:na|como|de)\s*troca/i,
+    /(?:veiculo|carro|moto)\s*(?:para|na|de)\s*troca/i,
+    /(?:tenho|possuo)\s*(?:um|uma)?\s*(?:carro|veiculo|moto)\s*(?:para|pra|na)?\s*troca/i,
   ];
   
   for (const pattern of tradeInPatterns) {
-    const match = allText.match(pattern);
+    const match = userText.match(pattern);
     if (match) {
       qualification.has_trade_in = true;
       if (match[1] && match[1].length > 2) {
-        qualification.trade_in_vehicle = match[1].trim();
+        // Clean up the vehicle name
+        qualification.trade_in_vehicle = match[1]
+          .replace(/\s+/g, ' ')
+          .replace(/com\s*\d+\s*(?:mil|k)?\s*(?:km)?/i, '')
+          .trim();
       }
       break;
     }
   }
   
-  // Also detect by simple keywords
-  if (!qualification.has_trade_in && (allText.includes('troca') || allText.includes('usado na troca'))) {
-    qualification.has_trade_in = true;
+  // Also detect by simple keywords if not already found
+  if (!qualification.has_trade_in) {
+    const tradeKeywords = ['na troca', 'pra troca', 'de troca', 'dar na troca', 'tenho carro', 'tenho veiculo'];
+    if (tradeKeywords.some(kw => userText.includes(kw))) {
+      qualification.has_trade_in = true;
+    }
   }
   
-  // Extract purchase timeline
-  if (allText.includes('urgente') || allText.includes('hoje') || allText.includes('amanhã') || 
-      allText.includes('imediato') || allText.includes('essa semana') || allText.includes('agora')) {
+  // ========== EXTRACT PURCHASE TIMELINE (IMPROVED) ==========
+  // IMEDIATO: highest urgency
+  const imediatoKeywords = [
+    'urgente', 'hoje', 'amanha', 'imediato', 'essa semana', 'agora', 
+    'ja', 'preciso logo', 'rapido', 'o quanto antes', 'proxima semana',
+    'semana que vem', 'na semana'
+  ];
+  if (imediatoKeywords.some(kw => userText.includes(kw))) {
     qualification.purchase_timeline = 'imediato';
-  } else if (allText.includes('esse mês') || allText.includes('próxima semana') || 
-             allText.includes('30 dias') || allText.includes('um mês')) {
+  }
+  // 30 DIAS
+  else if (userText.includes('esse mes') || userText.includes('30 dias') || 
+           userText.includes('um mes') || userText.includes('1 mes') ||
+           userText.includes('proximo mes') || userText.includes('mes que vem')) {
     qualification.purchase_timeline = 'ate_30_dias';
-  } else if (allText.includes('3 meses') || allText.includes('alguns meses') || 
-             allText.includes('6 meses') || allText.includes('seis meses')) {
+  }
+  // 3-6 MESES
+  else if (userText.includes('3 meses') || userText.includes('alguns meses') || 
+           userText.includes('6 meses') || userText.includes('seis meses') ||
+           userText.includes('tres meses') || userText.includes('meio ano')) {
     qualification.purchase_timeline = '3_a_6_meses';
-  } else if (allText.includes('pesquisando') || allText.includes('só olhando') || 
-             allText.includes('ver preço') || allText.includes('sem pressa')) {
+  }
+  // PESQUISANDO
+  else if (userText.includes('pesquisando') || userText.includes('so olhando') || 
+           userText.includes('ver preco') || userText.includes('sem pressa') ||
+           userText.includes('nao tenho pressa') || userText.includes('conhecer')) {
     qualification.purchase_timeline = 'pesquisando';
   }
   
-  // Extract vehicle usage
-  if (allText.includes('trabalho') || allText.includes('uber') || allText.includes('99') || 
-      allText.includes('serviço') || allText.includes('entregar')) {
+  // ========== EXTRACT VEHICLE USAGE ==========
+  if (userText.includes('trabalho') || userText.includes('uber') || userText.includes('99') || 
+      userText.includes('servico') || userText.includes('entregar') || userText.includes('aplicativo')) {
     qualification.vehicle_usage = 'trabalho';
-  } else if (allText.includes('família') || allText.includes('passeio') || 
-             allText.includes('lazer') || allText.includes('viagem')) {
+  } else if (userText.includes('familia') || userText.includes('passeio') || 
+             userText.includes('lazer') || userText.includes('viagem') || userText.includes('filhos')) {
     qualification.vehicle_usage = 'lazer_familia';
-  } else if (allText.includes('misto') || allText.includes('trabalho e lazer') || 
-             allText.includes('tudo') || allText.includes('dia a dia')) {
+  } else if (userText.includes('misto') || userText.includes('trabalho e lazer') || 
+             userText.includes('tudo') || userText.includes('dia a dia') || userText.includes('dia-a-dia')) {
     qualification.vehicle_usage = 'misto';
   }
+  
+  console.log('[extractQualificationData] Extracted:', JSON.stringify(qualification, null, 2));
   
   return qualification;
 }
@@ -286,51 +372,63 @@ function extractQualificationData(messages: any[]): ExtractedQualification {
 function calculateQualificationScore(data: ExtractedQualification): number {
   let score = 0;
   
-  // Timeline - most important factor
+  // Timeline - most important factor (INCREASED POINTS)
   switch (data.purchase_timeline) {
-    case 'imediato': score += 25; break;
-    case 'ate_30_dias': score += 18; break;
-    case '3_a_6_meses': score += 8; break;
-    case 'pesquisando': score += 2; break;
+    case 'imediato': score += 30; break; // Increased from 25
+    case 'ate_30_dias': score += 20; break; // Increased from 18
+    case '3_a_6_meses': score += 10; break; // Increased from 8
+    case 'pesquisando': score += 3; break; // Increased from 2
   }
   
   // Trade-in indicates serious buyer
   if (data.has_trade_in) {
-    score += 15;
-    if (data.trade_in_vehicle) score += 5; // Extra if they specified the vehicle
+    score += 18; // Increased from 15
+    if (data.trade_in_vehicle) score += 7; // Increased from 5 - Extra if they specified the vehicle
   }
   
   // Down payment defined
   if (data.down_payment !== null) {
-    score += 12;
+    score += 15; // Increased from 12
     if (data.down_payment >= 10000) score += 5; // Substantial down payment
   }
   
   // Budget defined shows research/planning
   if (data.budget_max !== null || data.budget_min !== null) {
-    score += 10;
+    score += 12; // Increased from 10
   }
   
   // Payment method defined
   if (data.payment_method !== null) {
-    score += 8;
+    score += 10; // Increased from 8
     if (data.payment_method === 'a_vista') score += 5; // Cash buyer more serious
   }
   
   // Vehicle interest defined
   if (data.vehicle_interest !== null) {
-    score += 8;
+    score += 10; // Increased from 8
   }
   
   // Max installment defined (indicates financial planning)
   if (data.max_installment !== null) {
-    score += 7;
+    score += 8; // Increased from 7
   }
   
   // Vehicle usage defined
   if (data.vehicle_usage !== null) {
     score += 5;
   }
+  
+  console.log(`[calculateQualificationScore] Score breakdown:
+    - Timeline (${data.purchase_timeline}): ${data.purchase_timeline === 'imediato' ? 30 : data.purchase_timeline === 'ate_30_dias' ? 20 : data.purchase_timeline === '3_a_6_meses' ? 10 : data.purchase_timeline === 'pesquisando' ? 3 : 0}
+    - Trade-in: ${data.has_trade_in ? 18 + (data.trade_in_vehicle ? 7 : 0) : 0}
+    - Down payment: ${data.down_payment !== null ? 15 + (data.down_payment >= 10000 ? 5 : 0) : 0}
+    - Budget: ${(data.budget_max !== null || data.budget_min !== null) ? 12 : 0}
+    - Payment method: ${data.payment_method !== null ? 10 + (data.payment_method === 'a_vista' ? 5 : 0) : 0}
+    - Vehicle interest: ${data.vehicle_interest !== null ? 10 : 0}
+    - Max installment: ${data.max_installment !== null ? 8 : 0}
+    - Vehicle usage: ${data.vehicle_usage !== null ? 5 : 0}
+    = TOTAL: ${score}
+  `);
   
   return Math.min(score, 100); // Cap at 100
 }
@@ -1026,7 +1124,15 @@ serve(async (req) => {
     }
 
     // ============= AUTO-QUALIFY WITH AI QUALIFICATION EXTRACTION =============
-    let qualificationResult: { salespersonName?: string; qualified?: boolean } = {};
+    let qualificationResult: { 
+      salespersonName?: string; 
+      qualified?: boolean; 
+      vehicleInterest?: string | null;
+      tradeInVehicle?: string | null;
+      hasTradeIn?: boolean;
+      leadName?: string;
+      noSalesperson?: boolean;
+    } = {};
     
     if (lead_id) {
       try {
@@ -1079,8 +1185,8 @@ serve(async (req) => {
               }
             }
 
-            // PHASE 2: If score >= 50, fully qualify with Round Robin
-            const QUALIFICATION_THRESHOLD = 50;
+            // PHASE 2: If score >= 45, fully qualify with Round Robin (threshold lowered from 50)
+            const QUALIFICATION_THRESHOLD = 45;
             
             if (qualificationScore >= QUALIFICATION_THRESHOLD) {
               console.log(`[Auto-Qualify] Score ${qualificationScore} >= ${QUALIFICATION_THRESHOLD}, triggering full qualification`);
@@ -1175,10 +1281,14 @@ serve(async (req) => {
                   }
                 }
                 
-                // Store result to modify AI response
+                // Store result to modify AI response with context
                 qualificationResult = {
                   salespersonName: salesperson.name,
-                  qualified: true
+                  qualified: true,
+                  vehicleInterest: qualificationData.vehicle_interest || leadInfo?.vehicle_interest,
+                  tradeInVehicle: qualificationData.trade_in_vehicle,
+                  hasTradeIn: qualificationData.has_trade_in,
+                  leadName: leadInfo?.name?.split(' ')[0] || 'você', // First name only
                 };
                 
               } else {
@@ -1214,6 +1324,13 @@ serve(async (req) => {
                     updated_at: new Date().toISOString()
                   })
                   .eq('id', negotiation.id);
+                
+                // Set fallback result (no salesperson available)
+                qualificationResult = {
+                  qualified: true,
+                  noSalesperson: true,
+                  leadName: leadInfo?.name?.split(' ')[0] || 'você',
+                };
               }
             } else {
               console.log(`[Auto-Qualify] Score ${qualificationScore} < ${QUALIFICATION_THRESHOLD}, not qualifying yet`);
@@ -1227,19 +1344,43 @@ serve(async (req) => {
       }
     }
 
-    // Append handover message if qualification happened
-    if (qualificationResult.qualified && qualificationResult.salespersonName) {
-      const handoverMessage = `\n\n📞 **Ótimas notícias!** Com base nas informações que você compartilhou, vou passar seu atendimento para ${qualificationResult.salespersonName}, nosso especialista que vai te ajudar a encontrar o veículo ideal. Ele entrará em contato em breve para dar continuidade!`;
-      assistantContent += handoverMessage;
+    // Append humanized handover message if qualification happened
+    if (qualificationResult.qualified) {
+      let handoverMessage = '';
       
-      // Update the saved message with handover
-      await supabase
-        .from('ai_agent_messages')
-        .update({ content: assistantContent })
-        .eq('conversation_id', currentConversationId)
-        .eq('role', 'assistant')
-        .order('created_at', { ascending: false })
-        .limit(1);
+      if (qualificationResult.salespersonName) {
+        // Build personalized context
+        let context = '';
+        if (qualificationResult.vehicleInterest && qualificationResult.hasTradeIn && qualificationResult.tradeInVehicle) {
+          context = `, que vai ajudar você com a avaliação do seu ${qualificationResult.tradeInVehicle} e encontrar as melhores condições`;
+          if (qualificationResult.vehicleInterest) {
+            context += ` para o ${qualificationResult.vehicleInterest}`;
+          }
+        } else if (qualificationResult.hasTradeIn && qualificationResult.tradeInVehicle) {
+          context = `, que vai fazer a avaliação do seu ${qualificationResult.tradeInVehicle} e te apresentar as melhores opções`;
+        } else if (qualificationResult.vehicleInterest) {
+          context = `, que vai te ajudar a fechar negócio no ${qualificationResult.vehicleInterest}`;
+        } else {
+          context = `, que vai te ajudar a encontrar o veículo ideal`;
+        }
+        
+        handoverMessage = `\n\n✅ Perfeito, ${qualificationResult.leadName}! Com as informações que você passou, vou te conectar agora com o **${qualificationResult.salespersonName}**, nosso especialista${context}. Ele entrará em contato em breve pelo WhatsApp! 🚗`;
+      } else if (qualificationResult.noSalesperson) {
+        handoverMessage = `\n\n✅ Perfeito, ${qualificationResult.leadName}! Suas informações foram registradas e um de nossos especialistas entrará em contato em breve para dar continuidade ao seu atendimento! 🚗`;
+      }
+      
+      if (handoverMessage) {
+        assistantContent += handoverMessage;
+        
+        // Update the saved message with handover
+        await supabase
+          .from('ai_agent_messages')
+          .update({ content: assistantContent })
+          .eq('conversation_id', currentConversationId)
+          .eq('role', 'assistant')
+          .order('created_at', { ascending: false })
+          .limit(1);
+      }
     }
 
     // 10. Generate TTS if enabled
@@ -1329,6 +1470,15 @@ function buildDefaultSystemPrompt(agent: any): string {
 
 Seu objetivo principal é: ${objective}
 
+═══════════════════════════════════════════════════════════════
+⚠️ REGRAS CRÍTICAS - LEIA PRIMEIRO!
+═══════════════════════════════════════════════════════════════
+1. NUNCA diga "vou repassar para um consultor/vendedor" até ter coletado as informações abaixo
+2. NUNCA prometa que alguém entrará em contato sem antes coletar as informações
+3. Continue a conversa normalmente, ajudando o cliente e coletando informações
+4. O sistema irá automaticamente transferir para um vendedor quando tiver dados suficientes
+5. Seu trabalho é ser útil, tirar dúvidas e COLETAR informações naturalmente
+
 INSTRUÇÕES GERAIS:
 1. Seja sempre cordial, profissional e empático
 2. Responda SEMPRE em português brasileiro
@@ -1343,39 +1493,35 @@ INSTRUÇÕES GERAIS:
 ═══════════════════════════════════════════════════════════════
 Durante a conversa, colete NATURALMENTE as seguintes informações do cliente:
 
-1. **PRAZO DE COMPRA** (Prioridade Alta)
-   - Pergunte "Para quando você está pensando em comprar?" ou "Está com urgência?"
-   - Respostas esperadas: imediato, 30 dias, 3-6 meses, apenas pesquisando
+1. **PRAZO DE COMPRA** (Prioridade ALTA - pergunte cedo!)
+   - Pergunte "Para quando você está pensando em fechar negócio?" ou "Tem urgência?"
+   - Exemplos de respostas: "essa semana", "próxima semana", "esse mês", "3 meses", "só pesquisando"
 
-2. **ORÇAMENTO** (Prioridade Alta)
-   - Pergunte "Qual valor você está pensando em investir?" ou "Tem um limite de preço?"
-   - Busque descobrir valor máximo e mínimo
-
-3. **ENTRADA** (Prioridade Média)
-   - Pergunte "Você tem algum valor de entrada?" ou "Vai dar entrada?"
-   - Importante para financiamento
-
-4. **TROCA** (Prioridade Média)
+2. **TROCA** (Prioridade ALTA)
    - Pergunte "Você tem veículo para dar na troca?" 
-   - Se sim, pergunte qual veículo é
+   - Se sim: "Qual modelo e ano do seu veículo atual?"
+   - Exemplo: "Tenho um Gol G5 2015"
 
-5. **FORMA DE PAGAMENTO** (Prioridade Média)
-   - Pergunte "Vai ser à vista ou financiado?"
-   - Opções: à vista, financiamento, consórcio
+3. **FORMA DE PAGAMENTO** (Prioridade ALTA)
+   - Pergunte "Vai ser à vista ou pretende financiar?"
+   - Se financiar: "Tem ideia do valor de entrada?" e "Qual parcela caberia no seu bolso?"
 
-6. **VALOR DA PARCELA** (Se for financiamento)
-   - Pergunte "Quanto você consegue pagar de parcela mensal?"
+4. **ORÇAMENTO** (Prioridade MÉDIA)
+   - Pergunte "Qual faixa de preço você está buscando?" ou "Tem um limite de valor?"
+   - Busque descobrir valor máximo
 
-7. **USO DO VEÍCULO** (Prioridade Baixa)
+5. **USO DO VEÍCULO** (Prioridade BAIXA)
    - Pergunte "O carro vai ser para trabalho, família ou uso misto?"
 
-NÃO faça todas as perguntas de uma vez! Vá inserindo naturalmente na conversa.
-Quanto mais informações coletadas, mais rápido o cliente será atendido por um vendedor.
+DICAS DE COLETA:
+- NÃO faça todas as perguntas de uma vez! Intercale com informações sobre veículos
+- Após mostrar um veículo, aproveite para perguntar sobre prazo ou forma de pagamento
+- Seja natural: "Esse [modelo] está R$ X. Você pensaria em financiar ou prefere à vista?"
 
 INFORMAÇÕES DA LOJA:
 - Trabalhamos com veículos seminovos de qualidade
-- Oferecemos financiamento facilitado
-- Aceitamos veículos na troca
+- Oferecemos financiamento facilitado com as melhores taxas
+- Aceitamos veículos na troca com avaliação justa
 - Horário de funcionamento: Segunda a Sexta 8h-18h, Sábado 8h-12h
 
 Mantenha suas respostas concisas mas informativas. Sempre que possível, faça perguntas para entender melhor as necessidades do cliente.`;
