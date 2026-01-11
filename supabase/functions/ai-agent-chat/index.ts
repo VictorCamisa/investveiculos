@@ -538,10 +538,9 @@ serve(async (req) => {
     if (useRedis) {
       console.log(`[Memory] Redis configured: ${agent.redis_host}:${agent.redis_port || 6379}`);
       
-      // Buscar senha do Redis nos secrets se configurada
-      const redisPassword = agent.redis_password_encrypted 
-        ? Deno.env.get('REDIS_PASSWORD') 
-        : undefined;
+      // Sempre buscar senha do Redis nos secrets (independente de redis_password_encrypted)
+      const redisPassword = Deno.env.get('REDIS_PASSWORD') || undefined;
+      console.log(`[Redis] Password configured: ${redisPassword ? 'yes' : 'no'}`);
       
       redisClient = await getRedisClient({
         host: agent.redis_host,
