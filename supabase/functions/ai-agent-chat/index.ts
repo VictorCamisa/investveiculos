@@ -1,10 +1,106 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { connect } from "https://deno.land/x/redis@v0.32.3/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
+
+// ============= REDIS MEMORY SYSTEM =============
+interface RedisConfig {
+  host: string;
+  port: number;
+  password?: string;
+}
+
+interface RedisMessage {
+  role: string;
+  content: string;
+  timestamp: number;
+}
+
+async function getRedisClient(config: RedisConfig): Promise<any> {
+  try {
+    console.log(`[Redis] Connecting to ${config.host}:${config.port}...`);
+    const client = await connect({
+      hostname: config.host,
+      port: config.port,
+      password: config.password,
+    });
+    console.log('[Redis] Connected successfully');
+    return client;
+  } catch (error) {
+    console.error('[Redis] Connection failed:', error);
+    return null;
+  }
+}
+
+async function getMessagesFromRedis(
+  redisClient: any, 
+  conversationId: string, 
+  limit: number
+): Promise<RedisMessage[]> {
+  const key = `chat:${conversationId}:messages`;
+  try {
+    const messages = await redisClient.lrange(key, -limit, -1);
+    return messages.map((m: string) => JSON.parse(m));
+  } catch (error) {
+    console.error('[Redis] Error reading messages:', error);
+    return [];
+  }
+}
+
+async function saveMessageToRedis(
+  redisClient: any, 
+  conversationId: string, 
+  message: RedisMessage,
+  ttlSeconds: number = 86400 // 24 horas
+): Promise<void> {
+  const key = `chat:${conversationId}:messages`;
+  try {
+    await redisClient.rpush(key, JSON.stringify(message));
+    await redisClient.expire(key, ttlSeconds);
+    console.log('[Redis] Message saved');
+  } catch (error) {
+    console.error('[Redis] Error saving message:', error);
+  }
+}
+
+async function saveContextToRedis(
+  redisClient: any,
+  conversationId: string,
+  context: any,
+  ttlSeconds: number = 86400
+): Promise<void> {
+  const key = `chat:${conversationId}:context`;
+  try {
+    // Merge com contexto existente
+    const existingRaw = await redisClient.get(key);
+    const existing = existingRaw ? JSON.parse(existingRaw) : {};
+    const merged = { ...existing, ...context, updated_at: Date.now() };
+    
+    await redisClient.set(key, JSON.stringify(merged));
+    await redisClient.expire(key, ttlSeconds);
+    console.log('[Redis] Context saved:', Object.keys(context));
+  } catch (error) {
+    console.error('[Redis] Error saving context:', error);
+  }
+}
+
+async function getContextFromRedis(
+  redisClient: any,
+  conversationId: string
+): Promise<any> {
+  const key = `chat:${conversationId}:context`;
+  try {
+    const data = await redisClient.get(key);
+    return data ? JSON.parse(data) : {};
+  } catch (error) {
+    console.error('[Redis] Error reading context:', error);
+    return {};
+  }
+}
 
 // ============= SCHEMA VALIDATION SYSTEM =============
 // Cache de schemas das tabelas para evitar queries repetidas
@@ -333,6 +429,9 @@ serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Redis client - declarado fora do try para poder fechar no finally
+  let redisClient: any = null;
+
   try {
     const supabaseUrl = Deno.env.get('MY_SUPABASE_URL') ?? Deno.env.get('SUPABASE_URL') ?? '';
     const serviceRoleKey = Deno.env.get('MY_SUPABASE_SERVICE_KEY') ?? Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '';
@@ -428,33 +527,96 @@ serve(async (req) => {
       currentConversationId = newConversation.id;
     }
 
-// 3. Load conversation history - RESPEITAR CONFIGURAÇÃO DO AGENTE
+    // ============= 3. LOAD CONVERSATION HISTORY - REDIS OU SUPABASE =============
     const contextWindowSize = agent.context_window_size || 20;
-    const { data: history } = await supabase
-      .from('ai_agent_messages')
-      .select('role, content')
-      .eq('conversation_id', currentConversationId)
-      .order('created_at', { ascending: true })
-      .limit(contextWindowSize);
+    let history: any[] = [];
+    let conversationContext: any = {};
     
-    console.log(`[Memory] Loaded ${history?.length || 0} messages (window: ${contextWindowSize})`);
+    // Verificar se Redis está configurado
+    const useRedis = agent.short_term_memory_type === 'redis' && agent.redis_host;
     
-    // 3.1 Load conversation context (último veículo mencionado, etc.)
-    const { data: conversationData } = await supabase
-      .from('ai_agent_conversations')
-      .select('metadata')
-      .eq('id', currentConversationId)
-      .single();
+    if (useRedis) {
+      console.log(`[Memory] Redis configured: ${agent.redis_host}:${agent.redis_port || 6379}`);
+      
+      // Buscar senha do Redis nos secrets se configurada
+      const redisPassword = agent.redis_password_encrypted 
+        ? Deno.env.get('REDIS_PASSWORD') 
+        : undefined;
+      
+      redisClient = await getRedisClient({
+        host: agent.redis_host,
+        port: agent.redis_port || 6379,
+        password: redisPassword,
+      });
+      
+      if (redisClient) {
+        // Carregar mensagens do Redis
+        const redisHistory = await getMessagesFromRedis(
+          redisClient, 
+          currentConversationId, 
+          contextWindowSize
+        );
+        
+        // Converter formato Redis para formato esperado
+        history = redisHistory.map(m => ({ role: m.role, content: m.content }));
+        
+        // Carregar contexto do Redis
+        conversationContext = await getContextFromRedis(
+          redisClient, 
+          currentConversationId
+        );
+        
+        console.log(`[Redis] Loaded ${history.length} messages from Redis`);
+        console.log(`[Redis] Context:`, conversationContext);
+      } else {
+        console.warn('[Memory] Redis connection failed, falling back to Supabase');
+      }
+    }
     
-    const conversationContext = conversationData?.metadata || {};
+    // Fallback para Supabase se Redis não está configurado ou falhou
+    if (!useRedis || !redisClient) {
+      console.log('[Memory] Using Supabase for short-term memory');
+      
+      const { data: supabaseHistory } = await supabase
+        .from('ai_agent_messages')
+        .select('role, content')
+        .eq('conversation_id', currentConversationId)
+        .order('created_at', { ascending: true })
+        .limit(contextWindowSize);
+      
+      history = supabaseHistory || [];
+      
+      // Carregar contexto do Supabase (metadata da conversa)
+      const { data: conversationData } = await supabase
+        .from('ai_agent_conversations')
+        .select('metadata')
+        .eq('id', currentConversationId)
+        .single();
+      
+      conversationContext = conversationData?.metadata || {};
+    }
+    
+    console.log(`[Memory] Total messages loaded: ${history.length} (window: ${contextWindowSize})`);
     console.log('[Memory] Conversation context:', conversationContext);
 
-    // 4. Save user message
+    // ============= 4. SAVE USER MESSAGE =============
+    const userMessage: RedisMessage = {
+      role: 'user',
+      content: message,
+      timestamp: Date.now(),
+    };
+    
+    // Sempre salvar no Supabase (source of truth)
     await supabase.from('ai_agent_messages').insert({
       conversation_id: currentConversationId,
       role: 'user',
       content: message,
     });
+    
+    // Também salvar no Redis para recuperação rápida
+    if (redisClient) {
+      await saveMessageToRedis(redisClient, currentConversationId, userMessage);
+    }
 
     // 5. Build messages array for LLM
     const baseSystemPrompt = agent.system_prompt || buildDefaultSystemPrompt(agent);
@@ -530,7 +692,8 @@ serve(async (req) => {
           supabaseUrl,
           serviceRoleKey,
           connectedTables,
-          conversationId: currentConversationId
+          conversationId: currentConversationId,
+          redisClient // Passar o cliente Redis para salvar contexto
         });
         
         toolResults.push({
@@ -570,7 +733,14 @@ serve(async (req) => {
       assistantContent = choice?.message?.content || 'Desculpe, não consegui processar sua mensagem.';
     }
 
-    // 9. Save assistant message
+    // ============= 9. SAVE ASSISTANT MESSAGE =============
+    const assistantMessage: RedisMessage = {
+      role: 'assistant',
+      content: assistantContent,
+      timestamp: Date.now(),
+    };
+    
+    // Sempre salvar no Supabase
     await supabase.from('ai_agent_messages').insert({
       conversation_id: currentConversationId,
       role: 'assistant',
@@ -579,6 +749,11 @@ serve(async (req) => {
       tool_results: toolResults.length > 0 ? toolResults : null,
       tokens_used: llmData.usage?.total_tokens || null,
     });
+    
+    // Salvar no Redis também
+    if (redisClient) {
+      await saveMessageToRedis(redisClient, currentConversationId, assistantMessage);
+    }
 
     // 10. Generate TTS if enabled
     let audioBase64: string | null = null;
@@ -634,6 +809,7 @@ serve(async (req) => {
       audio: audioBase64,
       tool_calls: toolCalls,
       tool_results: toolResults,
+      memory_type: redisClient ? 'redis' : 'supabase', // Indicar qual tipo de memória está sendo usado
     }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -645,6 +821,16 @@ serve(async (req) => {
       status: 500,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
+  } finally {
+    // ============= FECHAR CONEXÃO REDIS =============
+    if (redisClient) {
+      try {
+        await redisClient.close();
+        console.log('[Redis] Connection closed');
+      } catch (e) {
+        console.error('[Redis] Error closing connection:', e);
+      }
+    }
   }
 });
 
@@ -743,7 +929,15 @@ async function executeToolFunction(
   supabase: any, 
   functionName: string, 
   args: any,
-  context: { lead_id?: string; phone?: string; supabaseUrl: string; serviceRoleKey: string; connectedTables?: string[]; conversationId?: string }
+  context: { 
+    lead_id?: string; 
+    phone?: string; 
+    supabaseUrl: string; 
+    serviceRoleKey: string; 
+    connectedTables?: string[]; 
+    conversationId?: string;
+    redisClient?: any; // Cliente Redis para salvar contexto
+  }
 ): Promise<any> {
   console.log(`Executing ${functionName} with args:`, args);
 
@@ -755,11 +949,19 @@ async function executeToolFunction(
       // Salvar contexto dos veículos encontrados
       if (result.vehicles && result.vehicles.length > 0 && context.conversationId) {
         const firstVehicle = result.vehicles[0];
-        await updateConversationContext(supabase, context.conversationId, {
+        const newContext = {
           last_vehicle_id: firstVehicle.id,
           last_vehicle_name: firstVehicle.nome,
           vehicles_shown: result.vehicles.map((v: any) => ({ id: v.id, nome: v.nome, preco: v.preco }))
-        });
+        };
+        
+        // Salvar no Redis se disponível
+        if (context.redisClient) {
+          await saveContextToRedis(context.redisClient, context.conversationId, newContext);
+        }
+        
+        // Sempre salvar no Supabase também
+        await updateConversationContext(supabase, context.conversationId, newContext);
       }
       return result;
     
@@ -776,10 +978,18 @@ async function executeToolFunction(
       result = await getVehicleDetails(supabase, args.vehicle_id);
       // Salvar contexto do veículo consultado
       if (result && !result.error && context.conversationId) {
-        await updateConversationContext(supabase, context.conversationId, {
+        const newContext = {
           last_vehicle_id: result.id,
           last_vehicle_name: result.nome
-        });
+        };
+        
+        // Salvar no Redis se disponível
+        if (context.redisClient) {
+          await saveContextToRedis(context.redisClient, context.conversationId, newContext);
+        }
+        
+        // Sempre salvar no Supabase também
+        await updateConversationContext(supabase, context.conversationId, newContext);
       }
       return result;
     
@@ -797,7 +1007,7 @@ async function executeToolFunction(
   }
 }
 
-// Função para atualizar contexto da conversa
+// Função para atualizar contexto da conversa no Supabase
 async function updateConversationContext(supabase: any, conversationId: string, newContext: any): Promise<void> {
   try {
     // Buscar metadata atual
