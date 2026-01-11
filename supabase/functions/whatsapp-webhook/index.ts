@@ -105,12 +105,15 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
     message.message?.extendedTextMessage?.text ||
     '';
   
-  // If it's an audio message, try to transcribe it
-  if (isAudioMessage) {
-    console.log('Audio message detected, attempting transcription...');
-    const audioUrl = audioMessage.url || audioMessage.mediaUrl;
-    if (audioUrl) {
-      const transcription = await transcribeAudio(audioUrl);
+  // If it's an audio message, try to transcribe it via Evolution API
+  if (isAudioMessage && message.key?.id) {
+    console.log('Audio message detected, attempting transcription via Evolution API...');
+    
+    // Get decrypted audio from Evolution API
+    const audioBase64 = await getAudioBase64FromEvolution(instanceName, message.key);
+    
+    if (audioBase64) {
+      const transcription = await transcribeAudioFromBase64(audioBase64);
       if (transcription) {
         content = transcription;
         console.log('Audio transcribed:', content.substring(0, 50));
@@ -118,7 +121,7 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
         content = '[Áudio não transcrito]';
       }
     } else {
-      content = '[Áudio]';
+      content = '[Áudio - falha ao obter mídia]';
     }
   }
   
@@ -532,8 +535,55 @@ async function handleAIAgentResponse(
   }
 }
 
+// Get audio base64 from Evolution API (decrypts WhatsApp media)
+async function getAudioBase64FromEvolution(
+  instanceName: string,
+  messageKey: any
+): Promise<string | null> {
+  const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+  const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
+  
+  if (!evolutionApiUrl || !evolutionApiKey) {
+    console.error('Missing Evolution API configuration');
+    return null;
+  }
+  
+  try {
+    console.log('[Evolution] Getting base64 from media message...');
+    
+    const response = await fetch(`${evolutionApiUrl}/chat/getBase64FromMediaMessage/${instanceName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': evolutionApiKey,
+      },
+      body: JSON.stringify({
+        message: {
+          key: {
+            id: messageKey.id
+          }
+        },
+        convertToMp4: false
+      }),
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[Evolution] Failed to get base64:', response.status, errorText);
+      return null;
+    }
+    
+    const data = await response.json();
+    console.log('[Evolution] Got base64 audio, length:', data.base64?.length || 0);
+    return data.base64 || null;
+  } catch (error) {
+    console.error('[Evolution] Error getting base64:', error);
+    return null;
+  }
+}
+
 // Transcribe audio using OpenAI Whisper via Lovable Gateway
-async function transcribeAudio(audioUrl: string): Promise<string | null> {
+async function transcribeAudioFromBase64(audioBase64: string): Promise<string | null> {
   const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
   
   if (!LOVABLE_API_KEY) {
@@ -542,17 +592,14 @@ async function transcribeAudio(audioUrl: string): Promise<string | null> {
   }
   
   try {
-    console.log('Downloading audio from:', audioUrl.substring(0, 50));
-    
-    // Download the audio
-    const audioResponse = await fetch(audioUrl);
-    if (!audioResponse.ok) {
-      console.error('Failed to download audio:', audioResponse.status);
-      return null;
+    // Decode base64 to buffer
+    const binaryString = atob(audioBase64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) {
+      bytes[i] = binaryString.charCodeAt(i);
     }
     
-    const audioBuffer = await audioResponse.arrayBuffer();
-    const audioBlob = new Blob([audioBuffer], { type: 'audio/ogg' });
+    const audioBlob = new Blob([bytes], { type: 'audio/ogg' });
     
     // Create FormData for Whisper API
     const formData = new FormData();
@@ -577,7 +624,7 @@ async function transcribeAudio(audioUrl: string): Promise<string | null> {
     }
     
     const data = await response.json();
-    console.log('Transcription successful');
+    console.log('Transcription successful:', data.text?.substring(0, 50));
     return data.text || null;
   } catch (error) {
     console.error('Error transcribing audio:', error);
@@ -594,12 +641,15 @@ async function sendWhatsAppAudio(
   evolutionApiKey: string
 ): Promise<boolean> {
   const formattedPhone = phone.replace(/\D/g, '');
-  const remoteJid = formattedPhone.includes('@') ? formattedPhone : `${formattedPhone}@s.whatsapp.net`;
+  // Evolution API expects just the number without @s.whatsapp.net
+  const number = formattedPhone.startsWith('55') ? formattedPhone : `55${formattedPhone}`;
   
   try {
-    console.log('[WhatsApp] Sending audio message...');
+    console.log('[WhatsApp] Sending audio message to:', number);
+    console.log('[WhatsApp] Audio base64 length:', audioBase64.length);
     
-    // Evolution API expects base64 audio with data URI prefix
+    // Evolution API accepts base64 directly (without data URI prefix)
+    // The audio from ElevenLabs is already in MP3 format
     const response = await fetch(`${evolutionApiUrl}/message/sendWhatsAppAudio/${instanceName}`, {
       method: 'POST',
       headers: {
@@ -607,15 +657,39 @@ async function sendWhatsAppAudio(
         'apikey': evolutionApiKey,
       },
       body: JSON.stringify({
-        number: remoteJid,
-        audio: `data:audio/mp3;base64,${audioBase64}`,
+        number: number,
+        audio: audioBase64,
+        delay: 1000,
       }),
     });
 
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[WhatsApp] Failed to send audio:', response.status, errorText);
-      return false;
+      
+      // Try with data URI prefix as fallback
+      console.log('[WhatsApp] Retrying with data URI prefix...');
+      const retryResponse = await fetch(`${evolutionApiUrl}/message/sendWhatsAppAudio/${instanceName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': evolutionApiKey,
+        },
+        body: JSON.stringify({
+          number: number,
+          audio: `data:audio/mpeg;base64,${audioBase64}`,
+          delay: 1000,
+        }),
+      });
+      
+      if (!retryResponse.ok) {
+        const retryError = await retryResponse.text();
+        console.error('[WhatsApp] Retry also failed:', retryResponse.status, retryError);
+        return false;
+      }
+      
+      console.log('[WhatsApp] Audio sent successfully with data URI');
+      return true;
     }
     
     console.log('[WhatsApp] Audio message sent successfully');
