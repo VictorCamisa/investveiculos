@@ -100,9 +100,10 @@ export function useUpdateAIAgent() {
 
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<AIAgent> & { id: string }) => {
+      const { tools, guardrails, ...dbUpdates } = updates;
       const { data, error } = await supabase
         .from('ai_agents')
-        .update(updates as any)
+        .update(dbUpdates as any)
         .eq('id', id)
         .select()
         .single();
