@@ -164,6 +164,10 @@ export interface AIAgent {
   // Output Config
   output_format: string;
   
+  // Voice Config (TTS/STT)
+  enable_voice: boolean;
+  voice_id: string | null;
+  
   // Deployment
   deployment_channels: string[];
   embed_code: string | null;

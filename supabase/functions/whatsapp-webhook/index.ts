@@ -93,12 +93,38 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
   const message = data;
   const remoteJid = message.key?.remoteJid;
   const fromMe = message.key?.fromMe;
-  const content =
-    message.message?.conversation ||
-    message.message?.extendedTextMessage?.text ||
-    '[Mídia]';
   const pushName = message.pushName;
   const messageId = message.key?.id;
+  
+  // Detect audio messages for transcription
+  const audioMessage = message.message?.audioMessage;
+  const isAudioMessage = !!audioMessage;
+  
+  let content =
+    message.message?.conversation ||
+    message.message?.extendedTextMessage?.text ||
+    '';
+  
+  // If it's an audio message, try to transcribe it
+  if (isAudioMessage) {
+    console.log('Audio message detected, attempting transcription...');
+    const audioUrl = audioMessage.url || audioMessage.mediaUrl;
+    if (audioUrl) {
+      const transcription = await transcribeAudio(audioUrl);
+      if (transcription) {
+        content = transcription;
+        console.log('Audio transcribed:', content.substring(0, 50));
+      } else {
+        content = '[Áudio não transcrito]';
+      }
+    } else {
+      content = '[Áudio]';
+    }
+  }
+  
+  if (!content) {
+    content = '[Mídia]';
+  }
 
   const { phone, remoteJidToStore } = extractPhoneAndJid(message, payload);
 
@@ -281,7 +307,7 @@ async function handleAIAgentResponse(
     // Find an active AI agent connected to this WhatsApp instance
     const { data: agent, error: agentError } = await supabase
       .from('ai_agents')
-      .select('id, status, whatsapp_auto_reply, transfer_to_human_enabled, transfer_keywords')
+      .select('id, status, whatsapp_auto_reply, transfer_to_human_enabled, transfer_keywords, enable_voice, voice_id')
       .eq('whatsapp_instance_id', instanceId)
       .eq('status', 'active')
       .eq('whatsapp_auto_reply', true)
@@ -410,10 +436,12 @@ async function handleAIAgentResponse(
       body: JSON.stringify({
         agent_id: agent.id,
         message: messageContent,
-        conversation_id: conversationId, // CORRIGIDO: Passar conversation_id existente
+        conversation_id: conversationId,
         lead_id: leadId,
         phone,
         channel: 'whatsapp',
+        enable_tts: agent.enable_voice || false,
+        voice_id: agent.voice_id || 'JBFqnCBsd6RMkjVDRZzb',
       }),
     });
 
@@ -447,11 +475,153 @@ async function handleAIAgentResponse(
 
     console.log('AI Agent response:', agentReply.substring(0, 100));
 
-    // Send the AI response via WhatsApp
+    // Check if we should send audio response
+    if (aiData.audio && agent.enable_voice) {
+      console.log('Sending voice response via WhatsApp...');
+      const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+      const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
+      
+      if (evolutionApiUrl && evolutionApiKey) {
+        const audioSent = await sendWhatsAppAudio(
+          instanceName,
+          phone,
+          aiData.audio,
+          evolutionApiUrl,
+          evolutionApiKey
+        );
+        
+        if (audioSent) {
+          // Also save the text message to database for history
+          if (supabase) {
+            const { data: instance } = await supabase
+              .from('whatsapp_instances')
+              .select('id')
+              .eq('instance_name', instanceName)
+              .single();
+            
+            const formattedPhone = phone.replace(/\D/g, '');
+            const { data: contact } = await supabase
+              .from('whatsapp_contacts')
+              .select('id, lead_id')
+              .eq('phone', formattedPhone)
+              .single();
+            
+            await supabase.from('whatsapp_messages').insert({
+              instance_id: instance?.id,
+              contact_id: contact?.id,
+              remote_jid: `${formattedPhone}@s.whatsapp.net`,
+              message_id: `ai-audio-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+              direction: 'outgoing',
+              message_type: 'audio',
+              content: `[Áudio]: ${agentReply}`,
+              status: 'sent',
+              lead_id: contact?.lead_id || leadId,
+            });
+          }
+          return; // Audio sent, no need to send text
+        }
+      }
+    }
+
+    // Fallback: Send the AI response as text via WhatsApp
     await sendWhatsAppMessage(instanceName, phone, agentReply, supabase, leadId);
 
   } catch (error) {
     console.error('Error in AI agent integration:', error);
+  }
+}
+
+// Transcribe audio using OpenAI Whisper via Lovable Gateway
+async function transcribeAudio(audioUrl: string): Promise<string | null> {
+  const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+  
+  if (!LOVABLE_API_KEY) {
+    console.error('Missing LOVABLE_API_KEY for audio transcription');
+    return null;
+  }
+  
+  try {
+    console.log('Downloading audio from:', audioUrl.substring(0, 50));
+    
+    // Download the audio
+    const audioResponse = await fetch(audioUrl);
+    if (!audioResponse.ok) {
+      console.error('Failed to download audio:', audioResponse.status);
+      return null;
+    }
+    
+    const audioBuffer = await audioResponse.arrayBuffer();
+    const audioBlob = new Blob([audioBuffer], { type: 'audio/ogg' });
+    
+    // Create FormData for Whisper API
+    const formData = new FormData();
+    formData.append('file', audioBlob, 'audio.ogg');
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'pt');
+    
+    console.log('Sending audio to Whisper for transcription...');
+    
+    const response = await fetch('https://ai.gateway.lovable.dev/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+      },
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('Whisper transcription failed:', response.status, errorText);
+      return null;
+    }
+    
+    const data = await response.json();
+    console.log('Transcription successful');
+    return data.text || null;
+  } catch (error) {
+    console.error('Error transcribing audio:', error);
+    return null;
+  }
+}
+
+// Send audio message via Evolution API
+async function sendWhatsAppAudio(
+  instanceName: string,
+  phone: string,
+  audioBase64: string,
+  evolutionApiUrl: string,
+  evolutionApiKey: string
+): Promise<boolean> {
+  const formattedPhone = phone.replace(/\D/g, '');
+  const remoteJid = formattedPhone.includes('@') ? formattedPhone : `${formattedPhone}@s.whatsapp.net`;
+  
+  try {
+    console.log('[WhatsApp] Sending audio message...');
+    
+    // Evolution API expects base64 audio with data URI prefix
+    const response = await fetch(`${evolutionApiUrl}/message/sendWhatsAppAudio/${instanceName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': evolutionApiKey,
+      },
+      body: JSON.stringify({
+        number: remoteJid,
+        audio: `data:audio/mp3;base64,${audioBase64}`,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[WhatsApp] Failed to send audio:', response.status, errorText);
+      return false;
+    }
+    
+    console.log('[WhatsApp] Audio message sent successfully');
+    return true;
+  } catch (error) {
+    console.error('[WhatsApp] Error sending audio:', error);
+    return false;
   }
 }
 
