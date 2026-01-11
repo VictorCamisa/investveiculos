@@ -455,6 +455,49 @@ async function handleAIAgentResponse(
   }
 }
 
+// Split long messages into smaller parts for more natural conversation
+function splitMessage(message: string): string[] {
+  // If message is short, return as is
+  if (message.length < 150) return [message.trim()];
+  
+  const parts: string[] = [];
+  
+  // First, split by paragraphs (double line breaks)
+  const paragraphs = message.split(/\n\n+/).filter(p => p.trim());
+  
+  for (const para of paragraphs) {
+    const trimmedPara = para.trim();
+    
+    // If paragraph is short enough, add directly
+    if (trimmedPara.length < 200) {
+      parts.push(trimmedPara);
+    } else {
+      // Split by sentences for longer paragraphs
+      const sentences = trimmedPara.split(/(?<=[.!?])\s+/);
+      let currentPart = '';
+      
+      for (const sentence of sentences) {
+        if ((currentPart + ' ' + sentence).length < 200) {
+          currentPart += (currentPart ? ' ' : '') + sentence;
+        } else {
+          if (currentPart.trim()) parts.push(currentPart.trim());
+          currentPart = sentence;
+        }
+      }
+      if (currentPart.trim()) parts.push(currentPart.trim());
+    }
+  }
+  
+  // Limit to 5 parts max, grouping the rest
+  if (parts.length > 5) {
+    const first4 = parts.slice(0, 4);
+    const rest = parts.slice(4).join(' ');
+    return [...first4, rest].filter(p => p.length > 10);
+  }
+  
+  return parts.filter(p => p.length > 10);
+}
+
 // Detect image URLs in text
 function extractImageUrls(text: string): { urls: string[]; textWithoutUrls: string } {
   // Match common image URL patterns (direct image links)
@@ -557,25 +600,36 @@ async function sendWhatsAppMessage(
     
     console.log(`[WhatsApp] Message analysis - Images found: ${imageUrls.length}, Has text: ${textWithoutUrls.length > 0}`);
     
-    // Send text message first (if there's text content)
+    // Send text message in parts for more natural conversation
     if (textWithoutUrls.length > 0) {
-      const response = await fetch(`${evolutionApiUrl}/message/sendText/${instanceName}`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'apikey': evolutionApiKey,
-        },
-        body: JSON.stringify({
-          number: remoteJid,
-          text: textWithoutUrls,
-        }),
-      });
+      const messageParts = splitMessage(textWithoutUrls);
+      console.log(`[WhatsApp] Splitting message into ${messageParts.length} parts`);
+      
+      for (let i = 0; i < messageParts.length; i++) {
+        // Add humanized delay between parts (500-800ms)
+        if (i > 0) {
+          const delay = 500 + Math.random() * 300;
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+        
+        const response = await fetch(`${evolutionApiUrl}/message/sendText/${instanceName}`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'apikey': evolutionApiKey,
+          },
+          body: JSON.stringify({
+            number: remoteJid,
+            text: messageParts[i],
+          }),
+        });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error('Failed to send WhatsApp text message:', response.status, errorText);
-      } else {
-        console.log('WhatsApp text message sent successfully');
+        if (!response.ok) {
+          const errorText = await response.text();
+          console.error(`Failed to send WhatsApp text message part ${i + 1}:`, response.status, errorText);
+        } else {
+          console.log(`WhatsApp text message part ${i + 1}/${messageParts.length} sent successfully`);
+        }
       }
     }
     
