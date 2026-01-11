@@ -286,7 +286,7 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
 
   // ===== AI AGENT INTEGRATION =====
   // Check if there's an active AI agent connected to this WhatsApp instance
-  await handleAIAgentResponse(supabase, instance?.id, effectivePhone, content, leadId, instanceName);
+  await handleAIAgentResponse(supabase, instance?.id, effectivePhone, content, leadId, instanceName, isAudioMessage);
 }
 
 // Handle AI Agent auto-response
@@ -296,7 +296,8 @@ async function handleAIAgentResponse(
   phone: string, 
   messageContent: string, 
   leadId: string | null,
-  instanceName: string
+  instanceName: string,
+  isAudioMessage: boolean = false
 ) {
   if (!instanceId) {
     console.log('No instance ID, skipping AI agent check');
@@ -433,16 +434,16 @@ async function handleAIAgentResponse(
         'Content-Type': 'application/json',
         'Authorization': `Bearer ${serviceRoleKey}`,
       },
-      body: JSON.stringify({
-        agent_id: agent.id,
-        message: messageContent,
-        conversation_id: conversationId,
-        lead_id: leadId,
-        phone,
-        channel: 'whatsapp',
-        enable_tts: agent.enable_voice || false,
-        voice_id: agent.voice_id || 'JBFqnCBsd6RMkjVDRZzb',
-      }),
+                body: JSON.stringify({
+                  agent_id: agent.id,
+                  message: messageContent,
+                  conversation_id: conversationId,
+                  lead_id: leadId,
+                  phone,
+                  channel: 'whatsapp',
+                  enable_tts: agent.enable_voice && isAudioMessage,
+                  voice_id: agent.voice_id || 'JBFqnCBsd6RMkjVDRZzb',
+                }),
     });
 
     if (!aiResponse.ok) {
@@ -475,9 +476,9 @@ async function handleAIAgentResponse(
 
     console.log('AI Agent response:', agentReply.substring(0, 100));
 
-    // Check if we should send audio response
-    if (aiData.audio && agent.enable_voice) {
-      console.log('Sending voice response via WhatsApp...');
+    // Check if we should send audio response (only when client sent audio)
+    if (aiData.audio && agent.enable_voice && isAudioMessage) {
+      console.log('Sending voice response via WhatsApp (client sent audio)...');
       const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
       const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
       
