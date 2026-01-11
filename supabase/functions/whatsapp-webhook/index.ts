@@ -455,6 +455,82 @@ async function handleAIAgentResponse(
   }
 }
 
+// Detect image URLs in text
+function extractImageUrls(text: string): { urls: string[]; textWithoutUrls: string } {
+  // Match common image URL patterns (direct image links)
+  const imageUrlPattern = /(https?:\/\/[^\s]+\.(?:jpg|jpeg|png|gif|webp|bmp)(?:\?[^\s]*)?)/gi;
+  const urls: string[] = [];
+  let textWithoutUrls = text;
+  
+  const matches = text.match(imageUrlPattern);
+  if (matches) {
+    matches.forEach(url => {
+      urls.push(url);
+      textWithoutUrls = textWithoutUrls.replace(url, '').trim();
+    });
+  }
+  
+  // Also check for Supabase storage URLs (they might not end with extension)
+  const supabaseStoragePattern = /(https?:\/\/[^\s]*supabase[^\s]*\/storage\/v1\/object\/[^\s]+)/gi;
+  const supabaseMatches = text.match(supabaseStoragePattern);
+  if (supabaseMatches) {
+    supabaseMatches.forEach(url => {
+      if (!urls.includes(url)) {
+        urls.push(url);
+        textWithoutUrls = textWithoutUrls.replace(url, '').trim();
+      }
+    });
+  }
+  
+  // Clean up extra whitespace
+  textWithoutUrls = textWithoutUrls.replace(/\n{3,}/g, '\n\n').trim();
+  
+  return { urls, textWithoutUrls };
+}
+
+// Send image via Evolution API
+async function sendWhatsAppImage(
+  instanceName: string,
+  phone: string,
+  imageUrl: string,
+  caption: string = '',
+  evolutionApiUrl: string,
+  evolutionApiKey: string
+): Promise<boolean> {
+  const formattedPhone = phone.replace(/\D/g, '');
+  const remoteJid = formattedPhone.includes('@') ? formattedPhone : `${formattedPhone}@s.whatsapp.net`;
+  
+  try {
+    console.log(`[WhatsApp] Sending image: ${imageUrl.substring(0, 80)}...`);
+    
+    const response = await fetch(`${evolutionApiUrl}/message/sendMedia/${instanceName}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'apikey': evolutionApiKey,
+      },
+      body: JSON.stringify({
+        number: remoteJid,
+        mediatype: 'image',
+        media: imageUrl,
+        caption: caption,
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('[WhatsApp] Failed to send image:', response.status, errorText);
+      return false;
+    }
+    
+    console.log('[WhatsApp] Image sent successfully');
+    return true;
+  } catch (error) {
+    console.error('[WhatsApp] Error sending image:', error);
+    return false;
+  }
+}
+
 // Send WhatsApp message via Evolution API and save to database
 async function sendWhatsAppMessage(
   instanceName: string, 
@@ -476,58 +552,76 @@ async function sendWhatsAppMessage(
   const remoteJid = formattedPhone.includes('@') ? formattedPhone : `${formattedPhone}@s.whatsapp.net`;
 
   try {
-    const response = await fetch(`${evolutionApiUrl}/message/sendText/${instanceName}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'apikey': evolutionApiKey,
-      },
-      body: JSON.stringify({
-        number: remoteJid,
-        text: message,
-      }),
-    });
+    // Extract image URLs from message
+    const { urls: imageUrls, textWithoutUrls } = extractImageUrls(message);
+    
+    console.log(`[WhatsApp] Message analysis - Images found: ${imageUrls.length}, Has text: ${textWithoutUrls.length > 0}`);
+    
+    // Send text message first (if there's text content)
+    if (textWithoutUrls.length > 0) {
+      const response = await fetch(`${evolutionApiUrl}/message/sendText/${instanceName}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': evolutionApiKey,
+        },
+        body: JSON.stringify({
+          number: remoteJid,
+          text: textWithoutUrls,
+        }),
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('Failed to send WhatsApp message:', response.status, errorText);
-    } else {
-      console.log('WhatsApp message sent successfully');
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('Failed to send WhatsApp text message:', response.status, errorText);
+      } else {
+        console.log('WhatsApp text message sent successfully');
+      }
+    }
+    
+    // Send images as media messages
+    for (let i = 0; i < imageUrls.length; i++) {
+      const imageUrl = imageUrls[i];
+      // Add small delay between multiple images to avoid rate limiting
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 500));
+      }
+      await sendWhatsAppImage(instanceName, phone, imageUrl, '', evolutionApiUrl, evolutionApiKey);
+    }
+    
+    // Save the outgoing message to the database
+    if (supabase) {
+      // Get instance
+      const { data: instance } = await supabase
+        .from('whatsapp_instances')
+        .select('id')
+        .eq('instance_name', instanceName)
+        .single();
       
-      // Save the outgoing message to the database
-      if (supabase) {
-        // Get instance
-        const { data: instance } = await supabase
-          .from('whatsapp_instances')
-          .select('id')
-          .eq('instance_name', instanceName)
-          .single();
-        
-        // Get contact
-        const { data: contact } = await supabase
-          .from('whatsapp_contacts')
-          .select('id, lead_id')
-          .eq('phone', formattedPhone)
-          .single();
-        
-        // Save the agent's message
-        const { error: insertError } = await supabase.from('whatsapp_messages').insert({
-          instance_id: instance?.id,
-          contact_id: contact?.id,
-          remote_jid: remoteJid,
-          message_id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-          direction: 'outgoing',
-          message_type: 'text',
-          content: message,
-          status: 'sent',
-          lead_id: contact?.lead_id || leadId,
-        });
-        
-        if (insertError) {
-          console.error('Failed to save outgoing message:', insertError);
-        } else {
-          console.log('Outgoing AI message saved to database');
-        }
+      // Get contact
+      const { data: contact } = await supabase
+        .from('whatsapp_contacts')
+        .select('id, lead_id')
+        .eq('phone', formattedPhone)
+        .single();
+      
+      // Save the agent's message (full original message for history)
+      const { error: insertError } = await supabase.from('whatsapp_messages').insert({
+        instance_id: instance?.id,
+        contact_id: contact?.id,
+        remote_jid: remoteJid,
+        message_id: `ai-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+        direction: 'outgoing',
+        message_type: imageUrls.length > 0 ? 'media' : 'text',
+        content: message,
+        status: 'sent',
+        lead_id: contact?.lead_id || leadId,
+      });
+      
+      if (insertError) {
+        console.error('Failed to save outgoing message:', insertError);
+      } else {
+        console.log('Outgoing AI message saved to database');
       }
     }
   } catch (error) {
