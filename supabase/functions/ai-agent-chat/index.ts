@@ -102,6 +102,277 @@ async function getContextFromRedis(
   }
 }
 
+// ============= QUALIFICATION EXTRACTION SYSTEM =============
+interface ExtractedQualification {
+  vehicle_interest: string | null;
+  budget_min: number | null;
+  budget_max: number | null;
+  down_payment: number | null;
+  max_installment: number | null;
+  payment_method: 'financiamento' | 'a_vista' | 'consorcio' | 'outro' | null;
+  has_trade_in: boolean;
+  trade_in_vehicle: string | null;
+  purchase_timeline: 'imediato' | 'ate_30_dias' | '3_a_6_meses' | 'pesquisando' | null;
+  vehicle_usage: 'trabalho' | 'lazer_familia' | 'misto' | null;
+}
+
+function extractMoneyValue(text: string): number | null {
+  // Match patterns like: R$ 50.000, R$50000, 50 mil, 50000, 50k
+  const patterns = [
+    /R\$\s*([\d.,]+)/gi,
+    /(\d+[\d.,]*)\s*(?:mil|k)/gi,
+    /(\d{4,})/g, // Match numbers with 4+ digits
+  ];
+  
+  for (const pattern of patterns) {
+    const matches = text.matchAll(pattern);
+    for (const match of matches) {
+      let value = match[1].replace(/\./g, '').replace(',', '.');
+      let num = parseFloat(value);
+      
+      // If matched "mil" or "k", multiply by 1000
+      if (text.toLowerCase().includes('mil') || text.toLowerCase().includes('k')) {
+        num *= 1000;
+      }
+      
+      if (!isNaN(num) && num > 100) { // Ignore small numbers
+        return num;
+      }
+    }
+  }
+  return null;
+}
+
+function extractQualificationData(messages: any[]): ExtractedQualification {
+  const allText = messages
+    .filter(m => m.role === 'user')
+    .map(m => m.content.toLowerCase())
+    .join(' ');
+  
+  const qualification: ExtractedQualification = {
+    vehicle_interest: null,
+    budget_min: null,
+    budget_max: null,
+    down_payment: null,
+    max_installment: null,
+    payment_method: null,
+    has_trade_in: false,
+    trade_in_vehicle: null,
+    purchase_timeline: null,
+    vehicle_usage: null,
+  };
+  
+  // Extract vehicle interest from context (look for brand/model mentions)
+  const vehiclePatterns = [
+    /(?:procuro|quero|interesse|gostei|vi)\s+(?:um|o)?\s*([\w\s]+?)(?:\s+(?:20\d{2}|usado|seminovo|zero))?/i,
+    /(?:corolla|civic|onix|hb20|polo|gol|creta|kicks|compass|tracker|cruze)/i,
+  ];
+  
+  for (const pattern of vehiclePatterns) {
+    const match = allText.match(pattern);
+    if (match) {
+      qualification.vehicle_interest = match[0].trim();
+      break;
+    }
+  }
+  
+  // Extract budget values
+  const budgetMatch = allText.match(/(?:at[eé]|máximo|no máximo|limite)\s*(?:de)?\s*R?\$?\s*([\d.,]+\s*(?:mil|k)?)/i);
+  if (budgetMatch) {
+    qualification.budget_max = extractMoneyValue(budgetMatch[0]);
+  }
+  
+  const minBudgetMatch = allText.match(/(?:a partir|mínimo|pelo menos|acima)\s*(?:de)?\s*R?\$?\s*([\d.,]+\s*(?:mil|k)?)/i);
+  if (minBudgetMatch) {
+    qualification.budget_min = extractMoneyValue(minBudgetMatch[0]);
+  }
+  
+  // Extract down payment
+  const entradaPatterns = [
+    /entrada\s*(?:de)?\s*R?\$?\s*([\d.,]+\s*(?:mil|k)?)/i,
+    /(?:tenho|posso dar|consigo)\s*R?\$?\s*([\d.,]+\s*(?:mil|k)?)\s*(?:de)?\s*entrada/i,
+    /(?:dar|pagar)\s*R?\$?\s*([\d.,]+\s*(?:mil|k)?)\s*(?:de)?\s*entrada/i,
+  ];
+  
+  for (const pattern of entradaPatterns) {
+    const match = allText.match(pattern);
+    if (match) {
+      qualification.down_payment = extractMoneyValue(match[0]);
+      break;
+    }
+  }
+  
+  // Extract max installment
+  const parcelaPatterns = [
+    /parcela\s*(?:de)?\s*(?:at[eé])?\s*R?\$?\s*([\d.,]+)/i,
+    /(?:pagar|consigo|cabe)\s*(?:at[eé])?\s*R?\$?\s*([\d.,]+)\s*(?:por m[eê]s|mensal|de parcela)/i,
+    /(?:mensal|por m[eê]s)\s*(?:de)?\s*R?\$?\s*([\d.,]+)/i,
+  ];
+  
+  for (const pattern of parcelaPatterns) {
+    const match = allText.match(pattern);
+    if (match) {
+      const value = extractMoneyValue(match[0]);
+      if (value && value < 10000) { // Parcelas geralmente são menores
+        qualification.max_installment = value;
+        break;
+      }
+    }
+  }
+  
+  // Extract payment method
+  if (allText.includes('financ')) {
+    qualification.payment_method = 'financiamento';
+  } else if (allText.includes('à vista') || allText.includes('a vista') || allText.includes('dinheiro')) {
+    qualification.payment_method = 'a_vista';
+  } else if (allText.includes('cons[oó]rcio')) {
+    qualification.payment_method = 'consorcio';
+  }
+  
+  // Detect trade-in
+  const tradeInPatterns = [
+    /tenho\s+(?:um|uma|o|a)?\s*([\w\s]+?)\s*(?:para|pra|na)?\s*troca/i,
+    /(?:quero|vou|posso)\s*(?:dar|trocar|entregar)\s+(?:meu|minha)?\s*([\w\s]+)/i,
+    /(?:carro|veículo|moto)\s*(?:para|na)\s*troca/i,
+    /(?:dar|usar|colocar)\s*(?:na|como)\s*troca/i,
+  ];
+  
+  for (const pattern of tradeInPatterns) {
+    const match = allText.match(pattern);
+    if (match) {
+      qualification.has_trade_in = true;
+      if (match[1] && match[1].length > 2) {
+        qualification.trade_in_vehicle = match[1].trim();
+      }
+      break;
+    }
+  }
+  
+  // Also detect by simple keywords
+  if (!qualification.has_trade_in && (allText.includes('troca') || allText.includes('usado na troca'))) {
+    qualification.has_trade_in = true;
+  }
+  
+  // Extract purchase timeline
+  if (allText.includes('urgente') || allText.includes('hoje') || allText.includes('amanhã') || 
+      allText.includes('imediato') || allText.includes('essa semana') || allText.includes('agora')) {
+    qualification.purchase_timeline = 'imediato';
+  } else if (allText.includes('esse mês') || allText.includes('próxima semana') || 
+             allText.includes('30 dias') || allText.includes('um mês')) {
+    qualification.purchase_timeline = 'ate_30_dias';
+  } else if (allText.includes('3 meses') || allText.includes('alguns meses') || 
+             allText.includes('6 meses') || allText.includes('seis meses')) {
+    qualification.purchase_timeline = '3_a_6_meses';
+  } else if (allText.includes('pesquisando') || allText.includes('só olhando') || 
+             allText.includes('ver preço') || allText.includes('sem pressa')) {
+    qualification.purchase_timeline = 'pesquisando';
+  }
+  
+  // Extract vehicle usage
+  if (allText.includes('trabalho') || allText.includes('uber') || allText.includes('99') || 
+      allText.includes('serviço') || allText.includes('entregar')) {
+    qualification.vehicle_usage = 'trabalho';
+  } else if (allText.includes('família') || allText.includes('passeio') || 
+             allText.includes('lazer') || allText.includes('viagem')) {
+    qualification.vehicle_usage = 'lazer_familia';
+  } else if (allText.includes('misto') || allText.includes('trabalho e lazer') || 
+             allText.includes('tudo') || allText.includes('dia a dia')) {
+    qualification.vehicle_usage = 'misto';
+  }
+  
+  return qualification;
+}
+
+function calculateQualificationScore(data: ExtractedQualification): number {
+  let score = 0;
+  
+  // Timeline - most important factor
+  switch (data.purchase_timeline) {
+    case 'imediato': score += 25; break;
+    case 'ate_30_dias': score += 18; break;
+    case '3_a_6_meses': score += 8; break;
+    case 'pesquisando': score += 2; break;
+  }
+  
+  // Trade-in indicates serious buyer
+  if (data.has_trade_in) {
+    score += 15;
+    if (data.trade_in_vehicle) score += 5; // Extra if they specified the vehicle
+  }
+  
+  // Down payment defined
+  if (data.down_payment !== null) {
+    score += 12;
+    if (data.down_payment >= 10000) score += 5; // Substantial down payment
+  }
+  
+  // Budget defined shows research/planning
+  if (data.budget_max !== null || data.budget_min !== null) {
+    score += 10;
+  }
+  
+  // Payment method defined
+  if (data.payment_method !== null) {
+    score += 8;
+    if (data.payment_method === 'a_vista') score += 5; // Cash buyer more serious
+  }
+  
+  // Vehicle interest defined
+  if (data.vehicle_interest !== null) {
+    score += 8;
+  }
+  
+  // Max installment defined (indicates financial planning)
+  if (data.max_installment !== null) {
+    score += 7;
+  }
+  
+  // Vehicle usage defined
+  if (data.vehicle_usage !== null) {
+    score += 5;
+  }
+  
+  return Math.min(score, 100); // Cap at 100
+}
+
+async function getNextRoundRobinSalesperson(supabase: any): Promise<{ id: string; name: string } | null> {
+  try {
+    // Call the database function to get next salesperson
+    const { data: nextUserId, error: rpcError } = await supabase.rpc('get_next_round_robin_salesperson');
+    
+    if (rpcError || !nextUserId) {
+      console.log('[RoundRobin] No available salesperson from RPC:', rpcError?.message);
+      return null;
+    }
+    
+    // Get salesperson info
+    const { data: profile, error: profileError } = await supabase
+      .from('profiles')
+      .select('id, full_name')
+      .eq('id', nextUserId)
+      .single();
+    
+    if (profileError || !profile) {
+      console.log('[RoundRobin] Could not find profile for user:', nextUserId);
+      return null;
+    }
+    
+    return { id: profile.id, name: profile.full_name || 'Vendedor' };
+  } catch (error) {
+    console.error('[RoundRobin] Error:', error);
+    return null;
+  }
+}
+
+async function incrementRoundRobinCounters(supabase: any, salespersonId: string): Promise<void> {
+  try {
+    await supabase.rpc('increment_round_robin_counters', { p_salesperson_id: salespersonId });
+    console.log('[RoundRobin] Counters incremented for:', salespersonId);
+  } catch (error) {
+    console.error('[RoundRobin] Error incrementing counters:', error);
+  }
+}
+
 // ============= SCHEMA VALIDATION SYSTEM =============
 // Cache de schemas das tabelas para evitar queries repetidas
 let tableSchemas: Record<string, Set<string>> = {};
@@ -754,7 +1025,9 @@ serve(async (req) => {
       await saveMessageToRedis(redisClient, currentConversationId, assistantMessage);
     }
 
-    // ============= AUTO-QUALIFY NEGOTIATION AFTER 4+ MESSAGES =============
+    // ============= AUTO-QUALIFY WITH AI QUALIFICATION EXTRACTION =============
+    let qualificationResult: { salespersonName?: string; qualified?: boolean } = {};
+    
     if (lead_id) {
       try {
         // Count total messages in this conversation
@@ -765,55 +1038,185 @@ serve(async (req) => {
 
         console.log(`[Auto-Qualify] Message count for conversation ${currentConversationId}: ${messageCount}`);
 
-        // If 4 or more messages, move negotiation to "Em Qualificação" (proposta_enviada)
+        // If 4 or more messages, start qualification process
         if (!countError && messageCount && messageCount >= 4) {
-          // Find the negotiation for this lead that's still in "Lead" status (em_andamento)
+          // Find the negotiation for this lead
           const { data: negotiation, error: negError } = await supabase
             .from('negotiations')
             .select('id, status')
             .eq('lead_id', lead_id)
-            .eq('status', 'em_andamento')
+            .in('status', ['em_andamento', 'proposta_enviada']) // Lead or Em Qualificação
             .maybeSingle();
 
           if (negotiation && !negError) {
-            // Update to "Em Qualificação" status (proposta_enviada)
-            const { error: updateError } = await supabase
-              .from('negotiations')
-              .update({ 
-                status: 'proposta_enviada',
-                notes: 'Status atualizado automaticamente para "Em Qualificação" após 4+ mensagens de conversa com IA.',
-                updated_at: new Date().toISOString()
-              })
-              .eq('id', negotiation.id);
+            // Get all messages from conversation for qualification extraction
+            const { data: allMessages } = await supabase
+              .from('ai_agent_messages')
+              .select('role, content')
+              .eq('conversation_id', currentConversationId)
+              .order('created_at', { ascending: true });
 
-            if (!updateError) {
-              console.log(`[Auto-Qualify] Negotiation ${negotiation.id} moved to "proposta_enviada" (Em Qualificação) status`);
+            // Extract qualification data from conversation
+            const qualificationData = extractQualificationData(allMessages || []);
+            const qualificationScore = calculateQualificationScore(qualificationData);
+            
+            console.log(`[Auto-Qualify] Extracted qualification data:`, qualificationData);
+            console.log(`[Auto-Qualify] Qualification score: ${qualificationScore}`);
+
+            // PHASE 1: Move to "Em Qualificação" if still in "Lead" (em_andamento)
+            if (negotiation.status === 'em_andamento') {
+              const { error: updateError } = await supabase
+                .from('negotiations')
+                .update({ 
+                  status: 'proposta_enviada',
+                  notes: 'Status atualizado automaticamente para "Em Qualificação" após 4+ mensagens de conversa com IA.',
+                  updated_at: new Date().toISOString()
+                })
+                .eq('id', negotiation.id);
+
+              if (!updateError) {
+                console.log(`[Auto-Qualify] Negotiation ${negotiation.id} moved to "proposta_enviada" (Em Qualificação) status`);
+              }
+            }
+
+            // PHASE 2: If score >= 50, fully qualify with Round Robin
+            const QUALIFICATION_THRESHOLD = 50;
+            
+            if (qualificationScore >= QUALIFICATION_THRESHOLD) {
+              console.log(`[Auto-Qualify] Score ${qualificationScore} >= ${QUALIFICATION_THRESHOLD}, triggering full qualification`);
               
-              // Create notification for managers about new qualified lead
-              const { data: managers } = await supabase
-                .from('user_roles')
-                .select('user_id')
-                .eq('role', 'gerente');
+              // Get lead info
+              const { data: leadInfo } = await supabase
+                .from('leads')
+                .select('name, phone, vehicle_interest')
+                .eq('id', lead_id)
+                .single();
               
-              if (managers && managers.length > 0) {
-                const { data: leadInfo } = await supabase
-                  .from('leads')
-                  .select('name, phone')
-                  .eq('id', lead_id)
-                  .single();
+              // Get next salesperson via Round Robin
+              const salesperson = await getNextRoundRobinSalesperson(supabase);
+              
+              if (salesperson) {
+                console.log(`[Auto-Qualify] Round Robin selected salesperson: ${salesperson.name} (${salesperson.id})`);
                 
-                for (const manager of managers) {
-                  await supabase.from('notifications').insert({
-                    user_id: manager.user_id,
-                    type: 'lead_qualified',
-                    title: '🎯 Lead em Qualificação',
-                    message: `${leadInfo?.name || 'Lead'} (${leadInfo?.phone || 'sem telefone'}) entrou em qualificação após conversa com IA`,
-                    link: '/crm',
-                  });
+                // Increment round robin counters
+                await incrementRoundRobinCounters(supabase, salesperson.id);
+                
+                // Assign lead to salesperson
+                await supabase
+                  .from('leads')
+                  .update({ assigned_to: salesperson.id, updated_at: new Date().toISOString() })
+                  .eq('id', lead_id);
+                
+                // Create lead assignment record
+                await supabase.from('lead_assignments').insert({
+                  lead_id: lead_id,
+                  user_id: salesperson.id,
+                  assigned_at: new Date().toISOString()
+                });
+                
+                // Save qualification data to lead_qualifications table
+                await supabase.from('lead_qualifications').insert({
+                  lead_id: lead_id,
+                  negotiation_id: negotiation.id,
+                  qualified_by: null, // Qualified by AI
+                  score: qualificationScore,
+                  vehicle_interest: qualificationData.vehicle_interest || leadInfo?.vehicle_interest,
+                  budget_min: qualificationData.budget_min,
+                  budget_max: qualificationData.budget_max,
+                  down_payment: qualificationData.down_payment,
+                  max_installment: qualificationData.max_installment,
+                  payment_method: qualificationData.payment_method,
+                  has_trade_in: qualificationData.has_trade_in,
+                  trade_in_vehicle: qualificationData.trade_in_vehicle,
+                  purchase_timeline: qualificationData.purchase_timeline,
+                  vehicle_usage: qualificationData.vehicle_usage,
+                  engagement_score: Math.min(messageCount * 5, 50), // 5 points per message, max 50
+                  completeness_score: qualificationScore,
+                  notes: 'Qualificação preenchida automaticamente via IA',
+                });
+                
+                // Update negotiation to "Qualificado" (negociando)
+                await supabase
+                  .from('negotiations')
+                  .update({ 
+                    status: 'negociando',
+                    salesperson_id: salesperson.id,
+                    notes: `Qualificado automaticamente pela IA (Score: ${qualificationScore}). Vendedor atribuído: ${salesperson.name}`,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', negotiation.id);
+                
+                console.log(`[Auto-Qualify] Negotiation ${negotiation.id} moved to "negociando" (Qualificado) status`);
+                
+                // Create notification for the assigned salesperson
+                await supabase.from('notifications').insert({
+                  user_id: salesperson.id,
+                  type: 'new_qualified_lead',
+                  title: '🎯 Novo Lead Qualificado!',
+                  message: `${leadInfo?.name || 'Lead'} (${leadInfo?.phone || 'sem telefone'}) foi qualificado pela IA. Score: ${qualificationScore} pontos.`,
+                  link: '/crm',
+                });
+                
+                // Also notify managers
+                const { data: managers } = await supabase
+                  .from('user_roles')
+                  .select('user_id')
+                  .eq('role', 'gerente');
+                
+                if (managers && managers.length > 0) {
+                  for (const manager of managers) {
+                    await supabase.from('notifications').insert({
+                      user_id: manager.user_id,
+                      type: 'lead_qualified',
+                      title: '🎯 Lead Qualificado pela IA',
+                      message: `${leadInfo?.name || 'Lead'} foi qualificado (Score: ${qualificationScore}) e atribuído a ${salesperson.name}`,
+                      link: '/crm',
+                    });
+                  }
                 }
+                
+                // Store result to modify AI response
+                qualificationResult = {
+                  salespersonName: salesperson.name,
+                  qualified: true
+                };
+                
+              } else {
+                console.log('[Auto-Qualify] No salesperson available in Round Robin');
+                
+                // Still save qualification but without salesperson assignment
+                await supabase.from('lead_qualifications').insert({
+                  lead_id: lead_id,
+                  negotiation_id: negotiation.id,
+                  qualified_by: null,
+                  score: qualificationScore,
+                  vehicle_interest: qualificationData.vehicle_interest || leadInfo?.vehicle_interest,
+                  budget_min: qualificationData.budget_min,
+                  budget_max: qualificationData.budget_max,
+                  down_payment: qualificationData.down_payment,
+                  max_installment: qualificationData.max_installment,
+                  payment_method: qualificationData.payment_method,
+                  has_trade_in: qualificationData.has_trade_in,
+                  trade_in_vehicle: qualificationData.trade_in_vehicle,
+                  purchase_timeline: qualificationData.purchase_timeline,
+                  vehicle_usage: qualificationData.vehicle_usage,
+                  engagement_score: Math.min(messageCount * 5, 50),
+                  completeness_score: qualificationScore,
+                  notes: 'Qualificação via IA - Aguardando atribuição manual de vendedor',
+                });
+                
+                // Move to Em Qualificação at least
+                await supabase
+                  .from('negotiations')
+                  .update({ 
+                    status: 'proposta_enviada',
+                    notes: `Qualificado pela IA (Score: ${qualificationScore}) - Aguardando atribuição de vendedor`,
+                    updated_at: new Date().toISOString()
+                  })
+                  .eq('id', negotiation.id);
               }
             } else {
-              console.error('[Auto-Qualify] Error updating negotiation:', updateError);
+              console.log(`[Auto-Qualify] Score ${qualificationScore} < ${QUALIFICATION_THRESHOLD}, not qualifying yet`);
             }
           } else {
             console.log('[Auto-Qualify] No eligible negotiation found for lead:', lead_id);
@@ -822,6 +1225,21 @@ serve(async (req) => {
       } catch (qualifyError) {
         console.error('[Auto-Qualify] Error in auto-qualification:', qualifyError);
       }
+    }
+
+    // Append handover message if qualification happened
+    if (qualificationResult.qualified && qualificationResult.salespersonName) {
+      const handoverMessage = `\n\n📞 **Ótimas notícias!** Com base nas informações que você compartilhou, vou passar seu atendimento para ${qualificationResult.salespersonName}, nosso especialista que vai te ajudar a encontrar o veículo ideal. Ele entrará em contato em breve para dar continuidade!`;
+      assistantContent += handoverMessage;
+      
+      // Update the saved message with handover
+      await supabase
+        .from('ai_agent_messages')
+        .update({ content: assistantContent })
+        .eq('conversation_id', currentConversationId)
+        .eq('role', 'assistant')
+        .order('created_at', { ascending: false })
+        .limit(1);
     }
 
     // 10. Generate TTS if enabled
@@ -911,7 +1329,7 @@ function buildDefaultSystemPrompt(agent: any): string {
 
 Seu objetivo principal é: ${objective}
 
-INSTRUÇÕES:
+INSTRUÇÕES GERAIS:
 1. Seja sempre cordial, profissional e empático
 2. Responda SEMPRE em português brasileiro
 3. Use as ferramentas disponíveis para buscar veículos, criar leads e agendar visitas
@@ -919,6 +1337,40 @@ INSTRUÇÕES:
 5. Sugira test-drive quando apropriado
 6. Forneça informações precisas sobre preços e condições
 7. Seja proativo em oferecer alternativas quando não houver exatamente o que o cliente procura
+
+═══════════════════════════════════════════════════════════════
+🎯 COLETA DE INFORMAÇÕES PARA QUALIFICAÇÃO (MUITO IMPORTANTE!)
+═══════════════════════════════════════════════════════════════
+Durante a conversa, colete NATURALMENTE as seguintes informações do cliente:
+
+1. **PRAZO DE COMPRA** (Prioridade Alta)
+   - Pergunte "Para quando você está pensando em comprar?" ou "Está com urgência?"
+   - Respostas esperadas: imediato, 30 dias, 3-6 meses, apenas pesquisando
+
+2. **ORÇAMENTO** (Prioridade Alta)
+   - Pergunte "Qual valor você está pensando em investir?" ou "Tem um limite de preço?"
+   - Busque descobrir valor máximo e mínimo
+
+3. **ENTRADA** (Prioridade Média)
+   - Pergunte "Você tem algum valor de entrada?" ou "Vai dar entrada?"
+   - Importante para financiamento
+
+4. **TROCA** (Prioridade Média)
+   - Pergunte "Você tem veículo para dar na troca?" 
+   - Se sim, pergunte qual veículo é
+
+5. **FORMA DE PAGAMENTO** (Prioridade Média)
+   - Pergunte "Vai ser à vista ou financiado?"
+   - Opções: à vista, financiamento, consórcio
+
+6. **VALOR DA PARCELA** (Se for financiamento)
+   - Pergunte "Quanto você consegue pagar de parcela mensal?"
+
+7. **USO DO VEÍCULO** (Prioridade Baixa)
+   - Pergunte "O carro vai ser para trabalho, família ou uso misto?"
+
+NÃO faça todas as perguntas de uma vez! Vá inserindo naturalmente na conversa.
+Quanto mais informações coletadas, mais rápido o cliente será atendido por um vendedor.
 
 INFORMAÇÕES DA LOJA:
 - Trabalhamos com veículos seminovos de qualidade
