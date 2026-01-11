@@ -42,6 +42,12 @@ const AgentBasicsPage = lazy(() => import("@/components/ai-agents/pages/AgentBas
 const AgentLLMConfigPage = lazy(() => import("@/components/ai-agents/pages/AgentLLMConfigPage"));
 const AgentMemoryPage = lazy(() => import("@/components/ai-agents/pages/AgentMemoryPage"));
 const AgentToolsPage = lazy(() => import("@/components/ai-agents/pages/AgentToolsPage"));
+const AgentWorkflowsPage = lazy(() => import("@/components/ai-agents/pages/AgentWorkflowsPage"));
+const AgentGuardrailsPage = lazy(() => import("@/components/ai-agents/pages/AgentGuardrailsPage"));
+const AgentMonitoringPage = lazy(() => import("@/components/ai-agents/pages/AgentMonitoringPage"));
+const AgentNotificationsPage = lazy(() => import("@/components/ai-agents/pages/AgentNotificationsPage"));
+const AgentTestingPage = lazy(() => import("@/components/ai-agents/pages/AgentTestingPage"));
+const AgentDeploymentPage = lazy(() => import("@/components/ai-agents/pages/AgentDeploymentPage"));
 
 // Lazy load Marketing pages
 const MarketingCockpit = lazy(() => import("@/components/marketing/MarketingCockpit").then(m => ({ default: m.MarketingCockpit })));
@@ -270,6 +276,12 @@ const App = () => (
                     <Route path=":agentId/llm" element={<AgentLLMConfigPage />} />
                     <Route path=":agentId/memoria" element={<AgentMemoryPage />} />
                     <Route path=":agentId/ferramentas" element={<AgentToolsPage />} />
+                    <Route path=":agentId/workflows" element={<AgentWorkflowsPage />} />
+                    <Route path=":agentId/guardrails" element={<AgentGuardrailsPage />} />
+                    <Route path=":agentId/monitoramento" element={<AgentMonitoringPage />} />
+                    <Route path=":agentId/notificacoes" element={<AgentNotificationsPage />} />
+                    <Route path=":agentId/testes" element={<AgentTestingPage />} />
+                    <Route path=":agentId/implantacao" element={<AgentDeploymentPage />} />
                   </Route>
 
                   {/* Documentation - Manager only */}
