@@ -20,6 +20,18 @@ serve(async (req) => {
     console.log('Using MY_SUPABASE_SERVICE_KEY:', !!Deno.env.get('MY_SUPABASE_SERVICE_KEY'));
     console.log('Service Role Key length:', serviceRoleKey?.length || 0);
     
+    // Decode JWT to check the role - this is CRITICAL for debugging
+    try {
+      const jwtParts = serviceRoleKey.split('.');
+      if (jwtParts.length === 3) {
+        const payload = JSON.parse(atob(jwtParts[1]));
+        console.log('JWT ROLE:', payload.role); // Should be "service_role", NOT "anon"
+        console.log('JWT ref:', payload.ref);
+      }
+    } catch (e) {
+      console.error('Failed to decode JWT:', e);
+    }
+    
     if (!supabaseUrl || !serviceRoleKey) {
       console.error('Missing Supabase configuration!');
       throw new Error('Missing Supabase URL or Service Role Key');
