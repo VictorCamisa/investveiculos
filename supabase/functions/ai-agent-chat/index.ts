@@ -634,11 +634,26 @@ const agentTools = [
     type: "function",
     function: {
       name: "get_vehicle_details",
-      description: "Obtém detalhes completos de um veículo específico pelo ID.",
+      description: "Obtém detalhes completos de um veículo específico pelo ID, incluindo TODAS as fotos reais cadastradas.",
       parameters: {
         type: "object",
         properties: {
           vehicle_id: { type: "string", description: "ID do veículo" }
+        },
+        required: ["vehicle_id"]
+      }
+    }
+  },
+  {
+    type: "function",
+    function: {
+      name: "send_vehicle_photos",
+      description: "OBRIGATÓRIO: Use esta função quando o cliente pedir fotos de um veículo. Esta função busca as fotos REAIS do banco de dados e envia diretamente no WhatsApp. NUNCA invente URLs de fotos - sempre use esta função.",
+      parameters: {
+        type: "object",
+        properties: {
+          vehicle_id: { type: "string", description: "ID do veículo (UUID) para buscar as fotos" },
+          max_photos: { type: "number", description: "Número máximo de fotos a enviar (padrão: 3, máximo: 5)" }
         },
         required: ["vehicle_id"]
       }
@@ -1479,6 +1494,16 @@ Seu objetivo principal é: ${objective}
 4. O sistema irá automaticamente transferir para um vendedor quando tiver dados suficientes
 5. Seu trabalho é ser útil, tirar dúvidas e COLETAR informações naturalmente
 
+═══════════════════════════════════════════════════════════════
+📸 REGRAS CRÍTICAS SOBRE FOTOS DE VEÍCULOS
+═══════════════════════════════════════════════════════════════
+1. NUNCA invente URLs de fotos! URLs como "storage.supabase.co" são FALSAS
+2. NUNCA escreva URLs de imagens diretamente na mensagem
+3. Quando o cliente pedir foto de um veículo, SEMPRE use a função send_vehicle_photos
+4. A função send_vehicle_photos envia as fotos REAIS diretamente no WhatsApp
+5. Se a função retornar que não há fotos, informe ao cliente com naturalidade
+6. Você pode enviar fotos de veículos que foram mostrados anteriormente (use o ID do contexto)
+
 INSTRUÇÕES GERAIS:
 1. Seja sempre cordial, profissional e empático
 2. Responda SEMPRE em português brasileiro
@@ -1659,6 +1684,9 @@ async function executeToolFunction(
         await updateConversationContext(supabase, context.conversationId, newContext);
       }
       return result;
+    
+    case 'send_vehicle_photos':
+      return await sendVehiclePhotos(supabase, args.vehicle_id, args.max_photos, context.phone, context.supabaseUrl, context.serviceRoleKey);
     
     case 'query_database':
       return await queryDatabase(supabase, args, context.connectedTables || []);
@@ -1988,6 +2016,126 @@ async function getVehicleDetails(supabase: any, vehicleId: string): Promise<any>
     preco_compra: data.purchase_price ? `R$ ${data.purchase_price.toLocaleString('pt-BR')}` : null,
     status: data.status
   };
+}
+
+// Send vehicle photos via WhatsApp
+async function sendVehiclePhotos(
+  supabase: any, 
+  vehicleId: string, 
+  maxPhotos: number = 3,
+  phone: string | undefined,
+  supabaseUrl: string,
+  serviceRoleKey: string
+): Promise<any> {
+  if (!phone) {
+    return { error: 'Telefone não disponível para enviar fotos' };
+  }
+  
+  // Get vehicle with images
+  const { data: vehicle, error } = await supabase
+    .from('vehicles')
+    .select('id, brand, model, year_model, images')
+    .eq('id', vehicleId)
+    .single();
+  
+  if (error || !vehicle) {
+    console.error('[sendVehiclePhotos] Vehicle not found:', error);
+    return { error: 'Veículo não encontrado' };
+  }
+  
+  const images = vehicle.images || [];
+  
+  if (images.length === 0) {
+    console.log('[sendVehiclePhotos] No images for vehicle:', vehicleId);
+    return { 
+      success: false, 
+      message: 'Este veículo ainda não tem fotos cadastradas. Posso buscar mais informações ou mostrar outros veículos similares.',
+      vehicleName: `${vehicle.brand} ${vehicle.model} ${vehicle.year_model || ''}`
+    };
+  }
+  
+  // Limit number of photos
+  const photosToSend = images.slice(0, Math.min(maxPhotos || 3, 5));
+  
+  console.log(`[sendVehiclePhotos] Sending ${photosToSend.length} photos for vehicle ${vehicleId}`);
+  
+  try {
+    // Get instance for this conversation
+    const { data: instance } = await supabase
+      .from('whatsapp_instances')
+      .select('instance_name')
+      .eq('status', 'connected')
+      .limit(1)
+      .single();
+    
+    if (!instance) {
+      return { error: 'Nenhuma instância WhatsApp disponível' };
+    }
+    
+    const evolutionApiUrl = Deno.env.get('EVOLUTION_API_URL');
+    const evolutionApiKey = Deno.env.get('EVOLUTION_API_KEY');
+    
+    if (!evolutionApiUrl || !evolutionApiKey) {
+      return { error: 'Configuração do WhatsApp não disponível' };
+    }
+    
+    // Format phone
+    const formattedPhone = phone.replace(/\D/g, '');
+    const remoteJid = formattedPhone.includes('@') ? formattedPhone : `${formattedPhone}@s.whatsapp.net`;
+    
+    let sentCount = 0;
+    const vehicleName = `${vehicle.brand} ${vehicle.model} ${vehicle.year_model || ''}`.trim();
+    
+    // Send each photo
+    for (let i = 0; i < photosToSend.length; i++) {
+      const imageUrl = photosToSend[i];
+      
+      // Add delay between photos to avoid rate limiting
+      if (i > 0) {
+        await new Promise(resolve => setTimeout(resolve, 800));
+      }
+      
+      const caption = i === 0 
+        ? `📸 Fotos do ${vehicleName} (${i + 1}/${photosToSend.length})`
+        : `${i + 1}/${photosToSend.length}`;
+      
+      console.log(`[sendVehiclePhotos] Sending photo ${i + 1}: ${imageUrl.substring(0, 50)}...`);
+      
+      const response = await fetch(`${evolutionApiUrl}/message/sendMedia/${instance.instance_name}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'apikey': evolutionApiKey,
+        },
+        body: JSON.stringify({
+          number: remoteJid,
+          mediatype: 'image',
+          media: imageUrl,
+          caption: caption,
+        }),
+      });
+      
+      if (response.ok) {
+        sentCount++;
+        console.log(`[sendVehiclePhotos] Photo ${i + 1} sent successfully`);
+      } else {
+        const errorText = await response.text();
+        console.error(`[sendVehiclePhotos] Failed to send photo ${i + 1}:`, errorText);
+      }
+    }
+    
+    return { 
+      success: true, 
+      message: `Enviei ${sentCount} foto${sentCount > 1 ? 's' : ''} do ${vehicleName}. Gostou? Posso te passar mais detalhes!`,
+      photosSent: sentCount,
+      totalPhotos: images.length,
+      vehicleName: vehicleName
+    };
+    
+  } catch (error) {
+    console.error('[sendVehiclePhotos] Error:', error);
+    return { error: 'Erro ao enviar fotos' };
+  }
 }
 
 async function updateAgentMetrics(supabase: any, agentId: string, tokensUsed: number): Promise<void> {
