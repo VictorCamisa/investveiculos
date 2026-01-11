@@ -362,27 +362,77 @@ export function AgentLLMConfigPage() {
 
           {enableTTS && (
             <div className="space-y-4 p-4 rounded-lg bg-muted/50">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Voz do Agente</label>
-                <Select value={selectedVoice} onValueChange={setSelectedVoice}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Selecione a voz" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {ELEVENLABS_VOICES.map(voice => (
-                      <SelectItem key={voice.id} value={voice.id}>
-                        <div className="flex items-center gap-2">
-                          <span>{voice.name}</span>
-                          <span className="text-xs text-muted-foreground">({voice.description})</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">
-                  Vozes multilíngues de alta qualidade via ElevenLabs
-                </p>
-              </div>
+              <RadioGroup 
+                value={selectedVoice.startsWith('custom:') ? 'custom' : 'preset'} 
+                onValueChange={(v) => {
+                  if (v === 'preset') {
+                    setSelectedVoice('JBFqnCBsd6RMkjVDRZzb');
+                  } else {
+                    setSelectedVoice('custom:');
+                  }
+                }}
+                className="space-y-3"
+              >
+                <div className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${!selectedVoice.startsWith('custom:') ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                  <RadioGroupItem value="preset" id="preset_voice" className="mt-1" />
+                  <div className="flex-1">
+                    <label htmlFor="preset_voice" className="text-sm font-medium cursor-pointer">
+                      Vozes pré-definidas
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Escolha entre vozes de alta qualidade do ElevenLabs
+                    </p>
+                  </div>
+                </div>
+                
+                <div className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${selectedVoice.startsWith('custom:') ? 'border-primary bg-primary/5' : 'border-border'}`}>
+                  <RadioGroupItem value="custom" id="custom_voice" className="mt-1" />
+                  <div className="flex-1">
+                    <label htmlFor="custom_voice" className="text-sm font-medium cursor-pointer">
+                      Minha voz/agente customizado
+                    </label>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Use o ID de uma voz clonada ou agente do ElevenLabs
+                    </p>
+                  </div>
+                </div>
+              </RadioGroup>
+
+              {!selectedVoice.startsWith('custom:') && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Voz do Agente</label>
+                  <Select value={selectedVoice} onValueChange={setSelectedVoice}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione a voz" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {ELEVENLABS_VOICES.map(voice => (
+                        <SelectItem key={voice.id} value={voice.id}>
+                          <div className="flex items-center gap-2">
+                            <span>{voice.name}</span>
+                            <span className="text-xs text-muted-foreground">({voice.description})</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {selectedVoice.startsWith('custom:') && (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">ID da Voz/Agente ElevenLabs</label>
+                  <Input
+                    placeholder="Ex: abc123xyz..."
+                    value={selectedVoice.replace('custom:', '')}
+                    onChange={(e) => setSelectedVoice(`custom:${e.target.value}`)}
+                    className="font-mono text-sm"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Encontre o ID na <a href="https://elevenlabs.io/app/voice-lab" target="_blank" rel="noopener noreferrer" className="text-primary underline">Voice Lab</a> ou <a href="https://elevenlabs.io/app/conversational-ai" target="_blank" rel="noopener noreferrer" className="text-primary underline">Conversational AI</a> do ElevenLabs
+                  </p>
+                </div>
+              )}
 
               <div className="flex items-center gap-2 p-3 rounded-lg bg-background border">
                 <AlertCircle className="h-4 w-4 text-yellow-500" />
