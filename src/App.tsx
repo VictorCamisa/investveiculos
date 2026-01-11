@@ -1,4 +1,4 @@
-// App v2.3 - Force Vite cache rebuild after CRM fix
+// App v2.4 - Fix dynamic import with error boundary
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -6,7 +6,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "next-themes";
 import { AuthProvider } from "@/contexts/AuthContext";
-import { lazy, Suspense, memo } from "react";
+import { lazy, Suspense, memo, Component, type ReactNode } from "react";
 import { Loader2 } from "lucide-react";
 
 // Eager load only essential components
@@ -119,6 +119,40 @@ const PageLoader = memo(function PageLoader() {
   );
 });
 
+// Error boundary for lazy load failures
+class LazyErrorBoundary extends Component<{ children: ReactNode }, { hasError: boolean }> {
+  constructor(props: { children: ReactNode }) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError() {
+    return { hasError: true };
+  }
+  componentDidCatch(error: Error) {
+    console.error('Lazy load error:', error);
+    // Force reload on chunk load failure
+    if (error.message.includes('dynamically imported module') || error.message.includes('Loading chunk')) {
+      window.location.reload();
+    }
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div className="min-h-[400px] flex flex-col items-center justify-center gap-4">
+          <p className="text-muted-foreground">Erro ao carregar página</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="px-4 py-2 bg-primary text-primary-foreground rounded-md"
+          >
+            Recarregar
+          </button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false}>
@@ -127,6 +161,7 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <AuthProvider>
+            <LazyErrorBoundary>
             <Suspense fallback={<PageLoader />}>
               <Routes>
                 {/* Redirect root to auth */}
@@ -291,9 +326,10 @@ const App = () => (
                     </ProtectedRoute>
                   } />
                 </Route>
-                <Route path="*" element={<NotFound />} />
+              <Route path="*" element={<NotFound />} />
               </Routes>
             </Suspense>
+            </LazyErrorBoundary>
           </AuthProvider>
         </BrowserRouter>
       </TooltipProvider>
