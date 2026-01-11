@@ -435,43 +435,60 @@ async function handleAIAgentResponse(
     
     console.log('Calling AI agent chat for agent:', agent.id);
 
-    // CORRIGIDO: Buscar conversa existente para manter contexto
+    // Buscar conversa existente recente (últimas 4 horas) para manter contexto
+    // Após 4h de inatividade, uma nova conversa é criada automaticamente
     let conversationId: string | null = null;
+    const SESSION_TIMEOUT_HOURS = 4;
+    const sessionCutoff = new Date(Date.now() - SESSION_TIMEOUT_HOURS * 60 * 60 * 1000).toISOString();
     
-    // Tentar encontrar conversa ativa para este lead/telefone
-    const { data: existingConversation } = await supabase
-      .from('ai_agent_conversations')
-      .select('id')
-      .eq('agent_id', agent.id)
-      .eq('status', 'active')
-      .or(`lead_id.eq.${leadId || 'null'},metadata->>phone.eq.${phone}`)
-      .order('started_at', { ascending: false })
-      .limit(1)
-      .single();
-    
-    if (existingConversation) {
-      conversationId = existingConversation.id;
-      console.log('Found existing conversation:', conversationId);
-    } else {
-      // Se não encontrou por lead_id, tentar buscar pela sessão do telefone
-      const { data: phoneConversation } = await supabase
+    // Buscar conversa ativa recente por lead_id
+    if (leadId) {
+      const { data: leadConversation } = await supabase
         .from('ai_agent_conversations')
-        .select('id')
+        .select('id, started_at')
+        .eq('agent_id', agent.id)
+        .eq('lead_id', leadId)
+        .eq('status', 'active')
+        .eq('channel', 'whatsapp')
+        .gte('started_at', sessionCutoff)
+        .order('started_at', { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      
+      if (leadConversation) {
+        conversationId = leadConversation.id;
+        console.log('Found existing conversation for lead:', conversationId);
+      }
+    }
+    
+    // Se não encontrou por lead, buscar por phone nos metadados
+    if (!conversationId && phone) {
+      const { data: allRecentConvs } = await supabase
+        .from('ai_agent_conversations')
+        .select('id, metadata')
         .eq('agent_id', agent.id)
         .eq('status', 'active')
         .eq('channel', 'whatsapp')
-        .gte('started_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()) // Últimas 24h
+        .gte('started_at', sessionCutoff)
         .order('started_at', { ascending: false })
-        .limit(1);
+        .limit(10);
       
-      // Verificar se a conversa tem mensagens com esse telefone
-      if (phoneConversation && phoneConversation.length > 0) {
-        // Verificar através do lead associado se o telefone bate
-        if (leadId) {
-          conversationId = phoneConversation[0].id;
-          console.log('Using recent conversation for lead:', conversationId);
+      if (allRecentConvs) {
+        const matchingConv = allRecentConvs.find((c: { id: string; metadata: any }) => {
+          const meta = c.metadata as Record<string, any> | null;
+          return meta?.phone === phone;
+        });
+        
+        if (matchingConv) {
+          conversationId = matchingConv.id;
+          console.log('Found existing conversation by phone:', conversationId);
         }
       }
+    }
+    
+    // Se não encontrou conversa recente, será criada uma nova pelo ai-agent-chat
+    if (!conversationId) {
+      console.log('No recent conversation found, will create new one');
     }
     
     const aiResponse = await fetch(`${supabaseUrl}/functions/v1/ai-agent-chat`, {
