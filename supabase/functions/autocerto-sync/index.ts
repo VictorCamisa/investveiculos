@@ -201,8 +201,8 @@ serve(async (req) => {
     let errors = 0;
 
     // Process in batches to avoid timeout (max 150 seconds)
-    // Each vehicle takes ~3-5 seconds to process with photos
-    const BATCH_SIZE = 25; // Process 25 vehicles at a time
+    // Each vehicle takes ~1-2 seconds with optimized photo handling
+    const BATCH_SIZE = 10; // Process 10 vehicles at a time for reliability
     const offset = parseInt(requestUrl.searchParams.get('offset') || body.offset?.toString() || '0');
     const vehiclesToProcess = vehicles.slice(offset, offset + BATCH_SIZE);
     const hasMore = offset + BATCH_SIZE < vehicles.length;
@@ -354,11 +354,6 @@ serve(async (req) => {
         if (photosResponse.ok) {
           const photos = await photosResponse.json();
           console.log(`Found ${photos.length} photos for vehicle ${vehicle.Codigo}`);
-          
-          // Log first photo structure to debug
-          if (photos.length > 0) {
-            console.log('Sample photo structure:', JSON.stringify(photos[0], null, 2));
-          }
 
           // Delete existing photos for this vehicle first
           await supabase
@@ -366,56 +361,52 @@ serve(async (req) => {
             .delete()
             .eq('vehicle_id', vehicleId);
 
-          // Insert new photos
-          for (let i = 0; i < photos.length; i++) {
-            const photo = photos[i];
-            // Try multiple possible URL field names - API uses "URL" (uppercase)
+          // Prepare all photos for batch insert
+          const photoInserts = photos.map((photo: Record<string, unknown>, i: number) => {
             const photoUrl = photo.URL || photo.Url || photo.url || photo.UrlFoto || photo.urlFoto || 
                            photo.Foto || photo.foto || photo.Link || photo.link || 
                            photo.Caminho || photo.caminho || photo.Path || photo.path;
             
-            if (!photoUrl) {
-              console.log(`Photo ${i} has no URL. Keys: ${Object.keys(photo).join(', ')}`);
-              continue; // Skip photos without valid URL
-            }
+            if (!photoUrl) return null;
             
             const isPrincipal = photo.Principal === true || photo.principal === true || i === 0;
-            const order = photo.Posicao ?? photo.Ordem ?? photo.ordem ?? photo.Order ?? photo.order ?? i;
+            const order = (photo.Posicao ?? photo.Ordem ?? photo.ordem ?? photo.Order ?? photo.order ?? i) as number;
             
-            const { error: photoError } = await supabase
-              .from('vehicle_images')
-              .insert({
-                vehicle_id: vehicleId,
-                url: photoUrl,
-                image_url: photoUrl,
-                is_main: isPrincipal,
-                is_cover: isPrincipal,
-                display_order: order,
-                order_index: order,
-              });
+            return {
+              vehicle_id: vehicleId,
+              url: photoUrl,
+              image_url: photoUrl,
+              is_main: isPrincipal,
+              is_cover: isPrincipal,
+              display_order: order,
+              order_index: order,
+            };
+          }).filter((p: unknown) => p !== null);
 
-            if (photoError) {
-              console.error('Error inserting photo:', photoError);
+          // Batch insert all photos at once
+          if (photoInserts.length > 0) {
+            const { error: photosInsertError } = await supabase
+              .from('vehicle_images')
+              .insert(photoInserts);
+
+            if (photosInsertError) {
+              console.error('Error batch inserting photos:', photosInsertError);
             } else {
-              console.log(`  Photo ${i + 1} saved: ${photoUrl.substring(0, 50)}...`);
+              console.log(`  Saved ${photoInserts.length} photos for vehicle ${vehicle.Codigo}`);
             }
           }
 
-          // Also update the images array on the vehicle - API uses "URL" (uppercase)
+          // Also update the images array on the vehicle
           const imageUrls = photos.map((p: Record<string, unknown>) => 
             p.URL || p.Url || p.url || p.UrlFoto || p.urlFoto || p.Foto || p.foto || p.Link || p.link
           ).filter((url: unknown) => url != null);
           
-          const { error: updateImagesError } = await supabase
+          await supabase
             .from('vehicles')
             .update({ images: imageUrls })
             .eq('id', vehicleId);
           
-          if (updateImagesError) {
-            console.error('Error updating vehicle images array:', updateImagesError);
-          } else {
-            console.log(`  Updated vehicle ${vehicleId} with ${imageUrls.length} image URLs`);
-          }
+          console.log(`  Updated vehicle ${vehicleId} with ${imageUrls.length} image URLs`);
         } else {
           console.error('Failed to fetch photos:', photosResponse.status);
         }
