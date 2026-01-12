@@ -49,6 +49,7 @@ export function UserFormDialog({ open, onOpenChange, mode, user }: UserFormDialo
 
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
+  const [phone, setPhone] = useState('');
   const [password, setPassword] = useState('');
   const [selectedPermissions, setSelectedPermissions] = useState<
     { module: ModuleName; permission: PermissionType }[]
@@ -58,6 +59,7 @@ export function UserFormDialog({ open, onOpenChange, mode, user }: UserFormDialo
     if (mode === 'edit' && user) {
       setFullName(user.full_name || '');
       setEmail(user.email || '');
+      setPhone((user as any).phone || '');
       setPassword('');
       setSelectedPermissions(
         user.permissions.map((p) => ({
@@ -68,6 +70,7 @@ export function UserFormDialog({ open, onOpenChange, mode, user }: UserFormDialo
     } else if (mode === 'create') {
       setFullName('');
       setEmail('');
+      setPhone('');
       setPassword('');
       setSelectedPermissions([
         { module: 'crm', permission: 'view' },
@@ -112,6 +115,7 @@ export function UserFormDialog({ open, onOpenChange, mode, user }: UserFormDialo
         email,
         password,
         full_name: fullName,
+        phone,
         roles: ['vendedor'],
         permissions: selectedPermissions,
       });
@@ -119,6 +123,7 @@ export function UserFormDialog({ open, onOpenChange, mode, user }: UserFormDialo
       await updateUser.mutateAsync({
         userId: user.id,
         full_name: fullName,
+        phone,
       });
 
       await updatePermissions.mutateAsync({
@@ -186,6 +191,20 @@ export function UserFormDialog({ open, onOpenChange, mode, user }: UserFormDialo
                 </div>
               </>
             )}
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Telefone WhatsApp</Label>
+              <Input
+                id="phone"
+                type="tel"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                placeholder="5511999999999"
+              />
+              <p className="text-xs text-muted-foreground">
+                Formato: código do país + DDD + número (ex: 5511999999999)
+              </p>
+            </div>
 
             {mode === 'edit' && (
               <div className="space-y-2">
