@@ -147,7 +147,7 @@ export function QualificationModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-5xl w-[95vw] max-h-[85vh] p-0 gap-0 overflow-hidden">
+      <DialogContent className="max-w-5xl w-[95vw] max-h-[85vh] p-0 gap-0 flex flex-col">
         <DialogHeader className="px-6 py-4 border-b shrink-0">
           <DialogTitle className="flex items-center gap-2">
             📋 Ficha de Qualificação
@@ -157,7 +157,7 @@ export function QualificationModal({
           </DialogDescription>
         </DialogHeader>
         
-        <div className="flex-1 overflow-auto p-6">
+        <div className="flex-1 overflow-auto p-6 min-h-0">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
             {/* Left Panel - Lead Info + Score */}
             <div className="space-y-4">
@@ -202,7 +202,7 @@ export function QualificationModal({
             </div>
             
             {/* Center Panel - WhatsApp Conversation */}
-            <div className="rounded-lg border bg-card flex flex-col min-h-[300px] max-h-[400px]">
+            <div className="rounded-lg border bg-card flex flex-col h-[350px]">
               <div className="p-3 border-b bg-muted/50 shrink-0">
                 <h3 className="font-semibold text-sm flex items-center gap-2">
                   <MessageCircle className="h-4 w-4" />
@@ -252,7 +252,7 @@ export function QualificationModal({
             </div>
             
             {/* Right Panel - Qualification Form */}
-            <div className="rounded-lg border bg-card flex flex-col min-h-[300px] max-h-[400px]">
+            <div className="rounded-lg border bg-card flex flex-col h-[350px]">
               <div className="p-3 border-b bg-muted/50 shrink-0">
                 <h3 className="font-semibold text-sm">Dados de Qualificação</h3>
               </div>
