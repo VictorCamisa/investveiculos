@@ -81,7 +81,7 @@ export function AppSidebar() {
         { label: 'Marketing', href: '/marketing', icon: Megaphone, requiredModule: 'marketing' },
         { label: 'Relatórios', href: '/relatorios', icon: FileText, requiredModule: 'marketing' },
         { label: 'WhatsApp', href: '/whatsapp', icon: MessageSquare, requiredModule: 'configuracoes' },
-        { label: 'Agentes IA', href: '/ai-agents', icon: Bot, requiredModule: 'configuracoes' },
+        // { label: 'Agentes IA', href: '/ai-agents', icon: Bot, requiredModule: 'configuracoes' }, // Oculto temporariamente
       ],
     },
   ];
