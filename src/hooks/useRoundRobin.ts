@@ -6,14 +6,13 @@ const SUPABASE_URL = 'https://rugbunseyblzapwzevqh.supabase.co';
 
 export interface RoundRobinConfig {
   id: string;
-  salesperson_id: string;
+  user_id: string;
   is_active: boolean;
   priority: number;
-  max_leads_per_day: number | null;
-  current_leads_today: number;
+  daily_limit: number | null;
+  current_count: number;
   last_assigned_at: string | null;
   total_leads_assigned: number;
-  created_at: string;
   updated_at: string;
   salesperson?: {
     id: string;
@@ -24,11 +23,8 @@ export interface RoundRobinConfig {
 export interface LeadAssignment {
   id: string;
   lead_id: string;
-  salesperson_id: string;
+  user_id: string;
   assigned_at: string;
-  assigned_by: string | null;
-  assignment_type: string;
-  notes: string | null;
   lead?: {
     id: string;
     name: string;
@@ -58,7 +54,7 @@ export function useRoundRobinConfig() {
         .from('round_robin_config')
         .select(`
           *,
-          salesperson:profiles!salesperson_id(id, full_name)
+          salesperson:profiles!user_id(id, full_name)
         `)
         .order('priority', { ascending: false });
 
@@ -96,7 +92,7 @@ export function useSalespeopleWithRoles() {
       // Combine data
       return (profiles || []).map((p: any) => {
         const userRole = (roles || []).find((r: any) => r.user_id === p.id);
-        const rrConfig = (rrConfigs || []).find((r: any) => r.salesperson_id === p.id);
+        const rrConfig = (rrConfigs || []).find((r: any) => r.user_id === p.id);
         
         return {
           id: p.id,
@@ -119,7 +115,7 @@ export function useLeadAssignments() {
         .select(`
           *,
           lead:leads(id, name, phone, source, status),
-          salesperson:profiles!salesperson_id(id, full_name)
+          salesperson:profiles!user_id(id, full_name)
         `)
         .order('assigned_at', { ascending: false })
         .limit(100);
@@ -138,14 +134,15 @@ export function useAddToRoundRobin() {
     mutationFn: async (input: { 
       salesperson_id: string; 
       priority?: number; 
-      max_leads_per_day?: number | null 
+      daily_limit?: number | null 
     }) => {
       const { data, error } = await (supabase as any)
         .from('round_robin_config')
         .insert({
-          salesperson_id: input.salesperson_id,
+          user_id: input.salesperson_id,
           priority: input.priority || 0,
-          max_leads_per_day: input.max_leads_per_day,
+          daily_limit: input.daily_limit,
+          is_active: true,
         })
         .select()
         .single();
@@ -173,7 +170,7 @@ export function useUpdateRoundRobinConfig() {
       id: string; 
       is_active?: boolean;
       priority?: number; 
-      max_leads_per_day?: number | null 
+      daily_limit?: number | null 
     }) => {
       const { id, ...updates } = input;
       const { data, error } = await (supabase as any)
@@ -264,7 +261,7 @@ export function useManualLeadAssignment() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: async (input: { lead_id: string; salesperson_id: string; notes?: string }) => {
+    mutationFn: async (input: { lead_id: string; salesperson_id: string }) => {
       // Update the lead's assigned_to
       const { error: leadError } = await (supabase as any)
         .from('leads')
@@ -278,9 +275,7 @@ export function useManualLeadAssignment() {
         .from('lead_assignments')
         .insert({
           lead_id: input.lead_id,
-          salesperson_id: input.salesperson_id,
-          assignment_type: 'manual',
-          notes: input.notes,
+          user_id: input.salesperson_id,
         });
 
       if (assignError) throw assignError;
@@ -338,7 +333,7 @@ export function useCreateUser() {
       if (input.add_to_round_robin && input.role === 'vendedor' && data.user?.id) {
         await (supabase as any)
           .from('round_robin_config')
-          .insert({ salesperson_id: data.user.id });
+          .insert({ user_id: data.user.id, is_active: true });
       }
 
       return data;
