@@ -46,10 +46,11 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
 
   const leadNegotiations = allNegotiations.filter(n => n.lead_id === lead?.id);
+  const negotiationIds = leadNegotiations.map(n => n.id).filter(Boolean);
 
   // Fetch qualification data for this lead
   const { data: qualifications = [] } = useQuery({
-    queryKey: ['lead-qualifications-by-lead', lead?.id],
+    queryKey: ['lead-qualifications-by-lead', lead?.id, negotiationIds],
     queryFn: async () => {
       if (!lead?.id) return [];
       
@@ -60,7 +61,6 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
         .eq('lead_id', lead.id);
       
       // Also get qualifications by negotiation_id
-      const negotiationIds = leadNegotiations.map(n => n.id).filter(Boolean);
       let byNegotiation: any[] = [];
       if (negotiationIds.length > 0) {
         const { data } = await supabase
@@ -78,7 +78,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
       
       return unique;
     },
-    enabled: !!lead?.id,
+    enabled: !!lead?.id && allNegotiations.length >= 0,
   });
 
   const handleAddInteraction = () => {
