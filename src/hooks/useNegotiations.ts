@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import type { Negotiation, NegotiationStatus, LossReasonType } from '@/types/negotiations';
 import { toast } from 'sonner';
+import { notifySalespersonAboutLead } from './useRoundRobin';
 
 // staleTime: 0 garante que invalidateQueries sempre dispara refetch
 const negotiationQueryOptions = {
@@ -222,15 +223,12 @@ export function useUpdateNegotiation() {
                 .eq('id', current.lead_id)
                 .single();
 
-              // Send notification to assigned salesperson
-              // eslint-disable-next-line @typescript-eslint/no-explicit-any
-              await (supabase as any).from('notifications').insert({
-                user_id: nextSalesperson,
-                type: 'new_lead',
-                title: 'Lead Qualificado Atribuído',
-                message: `Um lead qualificado foi atribuído a você: ${lead?.name || 'Sem nome'} (${lead?.phone || 'Sem telefone'})`,
-                link: '/crm',
-              });
+              // Send notification (in-app + WhatsApp) to assigned salesperson
+              await notifySalespersonAboutLead(
+                nextSalesperson, 
+                current.lead_id, 
+                lead?.name || null
+              );
 
               toast.info('Vendedor atribuído automaticamente via Round Robin');
             }
