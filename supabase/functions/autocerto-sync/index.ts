@@ -197,6 +197,7 @@ serve(async (req) => {
 
     let imported = 0;
     let updated = 0;
+    let removed = 0;
     let errors = 0;
 
     // Process in batches to avoid timeout (max 150 seconds)
@@ -205,13 +206,18 @@ serve(async (req) => {
     const offset = parseInt(requestUrl.searchParams.get('offset') || body.offset?.toString() || '0');
     const vehiclesToProcess = vehicles.slice(offset, offset + BATCH_SIZE);
     const hasMore = offset + BATCH_SIZE < vehicles.length;
+    const isFirstBatch = offset === 0;
+    const isLastBatch = !hasMore;
     
     console.log(`Processing batch: offset=${offset}, batch_size=${vehiclesToProcess.length}, total=${vehicles.length}, hasMore=${hasMore}`);
 
     // Log first vehicle to understand the API structure
-    if (vehiclesToProcess.length > 0 && offset === 0) {
+    if (vehiclesToProcess.length > 0 && isFirstBatch) {
       console.log('Sample vehicle from API:', JSON.stringify(vehiclesToProcess[0], null, 2));
     }
+
+    // Collect all plates from Autocerto for cleanup later
+    const autocertoPlates = vehicles.map(v => (v.Placa || '').replace(/[-\s]/g, '').toUpperCase());
 
     for (const vehicle of vehiclesToProcess) {
       try {
@@ -419,19 +425,55 @@ serve(async (req) => {
       }
     }
 
-    console.log(`Batch complete: ${imported} imported, ${updated} updated, ${errors} errors. Offset: ${offset}, HasMore: ${hasMore}`);
+    // On the last batch, remove vehicles that are no longer in Autocerto
+    if (isLastBatch && autocertoPlates.length > 0) {
+      console.log('Last batch - checking for vehicles to remove...');
+      
+      // Get all vehicles with status 'disponivel' from our database
+      const { data: dbVehicles, error: fetchError } = await supabase
+        .from('vehicles')
+        .select('id, plate, status')
+        .eq('status', 'disponivel');
+      
+      if (!fetchError && dbVehicles) {
+        for (const dbVehicle of dbVehicles) {
+          const dbPlateNormalized = (dbVehicle.plate || '').replace(/[-\s]/g, '').toUpperCase();
+          
+          // If vehicle is not in Autocerto anymore, mark as removed
+          if (!autocertoPlates.includes(dbPlateNormalized)) {
+            console.log(`Vehicle ${dbVehicle.plate} not found in Autocerto, marking as vendido`);
+            
+            const { error: removeError } = await supabase
+              .from('vehicles')
+              .update({ status: 'vendido', updated_at: new Date().toISOString() })
+              .eq('id', dbVehicle.id);
+            
+            if (!removeError) {
+              removed++;
+            } else {
+              console.error('Error removing vehicle:', removeError);
+            }
+          }
+        }
+      }
+      
+      console.log(`Removed ${removed} vehicles that are no longer in Autocerto`);
+    }
+
+    console.log(`Batch complete: ${imported} imported, ${updated} updated, ${removed} removed, ${errors} errors. Offset: ${offset}, HasMore: ${hasMore}`);
 
     return new Response(
       JSON.stringify({
         success: true,
         message: hasMore 
           ? `Lote processado! ${imported + updated} veículos sincronizados. Continue para processar mais.`
-          : `Sincronização concluída!`,
+          : `Sincronização concluída! ${removed > 0 ? `${removed} veículos removidos.` : ''}`,
         stats: {
           total: vehicles.length,
           processed: offset + vehiclesToProcess.length,
           imported,
           updated,
+          removed,
           errors,
         },
         hasMore,

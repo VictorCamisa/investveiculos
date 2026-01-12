@@ -15,6 +15,7 @@ interface SyncResult {
   processed: number;
   imported: number;
   updated: number;
+  removed: number;
   errors: number;
 }
 
@@ -45,6 +46,7 @@ export function AutocertoSyncButton({ onSyncComplete }: AutocertoSyncButtonProps
       processed: data.stats.processed,
       imported: (prev?.imported || 0) + data.stats.imported,
       updated: (prev?.updated || 0) + data.stats.updated,
+      removed: (prev?.removed || 0) + (data.stats.removed || 0),
       errors: (prev?.errors || 0) + data.stats.errors,
     }));
 
