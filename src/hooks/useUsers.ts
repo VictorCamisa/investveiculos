@@ -150,6 +150,7 @@ export function useCreateUser() {
       email: string;
       password: string;
       full_name: string;
+      phone?: string;
       roles: AppRole[];
       permissions: { module: ModuleName; permission: PermissionType }[];
     }) => {
@@ -170,6 +171,7 @@ export function useCreateUser() {
           email: input.email,
           password: input.password,
           full_name: input.full_name,
+          phone: input.phone,
           roles: input.roles.length > 0 ? input.roles : ['vendedor'],
           permissions: input.permissions,
         }),
@@ -202,6 +204,7 @@ export function useUpdateUser() {
     mutationFn: async (input: {
       userId: string;
       full_name?: string;
+      phone?: string;
       is_active?: boolean;
       is_master?: boolean;
     }) => {
@@ -210,6 +213,7 @@ export function useUpdateUser() {
       };
       
       if (input.full_name !== undefined) updateData.full_name = input.full_name;
+      if (input.phone !== undefined) updateData.phone = input.phone;
       if (input.is_active !== undefined) updateData.is_active = input.is_active;
       if (input.is_master !== undefined) updateData.is_master = input.is_master;
 
