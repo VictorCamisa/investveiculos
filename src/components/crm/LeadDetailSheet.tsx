@@ -46,27 +46,41 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
 
   const leadNegotiations = allNegotiations.filter(n => n.lead_id === lead?.id);
-  const negotiationIds = leadNegotiations.map(n => n.id).filter(Boolean);
 
-  // Fetch qualification data for this lead
+  // Fetch qualification data for this lead - query directly with subquery to avoid race condition
   const { data: qualifications = [] } = useQuery({
-    queryKey: ['lead-qualifications-by-lead', lead?.id, negotiationIds],
+    queryKey: ['lead-qualifications-by-lead', lead?.id],
     queryFn: async () => {
       if (!lead?.id) return [];
       
       // First get qualifications by lead_id
-      const { data: byLead } = await supabase
+      const { data: byLead, error: error1 } = await supabase
         .from('lead_qualifications')
         .select('*')
         .eq('lead_id', lead.id);
       
+      if (error1) {
+        console.error('Error fetching qualifications by lead_id:', error1);
+      }
+      
+      // Get negotiation IDs for this lead directly from DB
+      const { data: negotiations } = await supabase
+        .from('negotiations')
+        .select('id')
+        .eq('lead_id', lead.id);
+      
+      const negotiationIds = (negotiations || []).map(n => n.id);
+      
       // Also get qualifications by negotiation_id
       let byNegotiation: any[] = [];
       if (negotiationIds.length > 0) {
-        const { data } = await supabase
+        const { data, error: error2 } = await supabase
           .from('lead_qualifications')
           .select('*')
           .in('negotiation_id', negotiationIds);
+        if (error2) {
+          console.error('Error fetching qualifications by negotiation_id:', error2);
+        }
         byNegotiation = data || [];
       }
       
@@ -76,9 +90,11 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
         arr.findIndex(x => x.id === q.id) === i
       );
       
+      console.log('Qualifications found:', unique.length, unique);
+      
       return unique;
     },
-    enabled: !!lead?.id && allNegotiations.length >= 0,
+    enabled: !!lead?.id,
   });
 
   const handleAddInteraction = () => {
