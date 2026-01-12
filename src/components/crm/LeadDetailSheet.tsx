@@ -9,7 +9,8 @@ import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
 import { 
   Phone, Mail, Calendar, User, Car, MessageSquare, 
-  Plus, Clock, CheckCircle2, AlertCircle 
+  Plus, Clock, CheckCircle2, AlertCircle, ClipboardList,
+  Wallet, CreditCard, Timer, Repeat
 } from 'lucide-react';
 import type { Lead } from '@/types/crm';
 import { leadStatusLabels, leadStatusColors, leadSourceLabels } from '@/types/crm';
@@ -20,6 +21,11 @@ import { ptBR } from 'date-fns/locale';
 import { useState } from 'react';
 import { negotiationStatusLabels, negotiationStatusColors } from '@/types/negotiations';
 import { WhatsAppChatModal } from '@/components/whatsapp/WhatsAppChatModal';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { LeadScoreIndicator } from './LeadScoreIndicator';
+import { getScoreClassification, getClassificationLabel } from '@/hooks/useLeadQualification';
+import { PAYMENT_METHODS, PURCHASE_TIMELINES, VEHICLE_USAGE } from '@/types/qualification';
 
 interface LeadDetailSheetProps {
   lead: Lead | null;
@@ -40,6 +46,40 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
 
   const leadNegotiations = allNegotiations.filter(n => n.lead_id === lead?.id);
+
+  // Fetch qualification data for this lead
+  const { data: qualifications = [] } = useQuery({
+    queryKey: ['lead-qualifications-by-lead', lead?.id],
+    queryFn: async () => {
+      if (!lead?.id) return [];
+      
+      // First get qualifications by lead_id
+      const { data: byLead } = await supabase
+        .from('lead_qualifications')
+        .select('*')
+        .eq('lead_id', lead.id);
+      
+      // Also get qualifications by negotiation_id
+      const negotiationIds = leadNegotiations.map(n => n.id).filter(Boolean);
+      let byNegotiation: any[] = [];
+      if (negotiationIds.length > 0) {
+        const { data } = await supabase
+          .from('lead_qualifications')
+          .select('*')
+          .in('negotiation_id', negotiationIds);
+        byNegotiation = data || [];
+      }
+      
+      // Merge and dedupe
+      const allQualifications = [...(byLead || []), ...byNegotiation];
+      const unique = allQualifications.filter((q, i, arr) => 
+        arr.findIndex(x => x.id === q.id) === i
+      );
+      
+      return unique;
+    },
+    enabled: !!lead?.id,
+  });
 
   const handleAddInteraction = () => {
     if (!lead || !interactionDescription.trim()) return;
@@ -89,8 +129,9 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
         </SheetHeader>
 
         <Tabs defaultValue="info" className="flex-1 overflow-hidden flex flex-col min-h-0">
-          <TabsList className="grid w-full grid-cols-3 mx-6 mt-4" style={{ width: 'calc(100% - 3rem)' }}>
+          <TabsList className="grid w-full grid-cols-4 mx-6 mt-4" style={{ width: 'calc(100% - 3rem)' }}>
             <TabsTrigger value="info" className="text-xs sm:text-sm">Info</TabsTrigger>
+            <TabsTrigger value="qualification" className="text-xs sm:text-sm">Qualificação</TabsTrigger>
             <TabsTrigger value="history" className="text-xs sm:text-sm">Histórico</TabsTrigger>
             <TabsTrigger value="negotiations" className="text-xs sm:text-sm">Negociações</TabsTrigger>
           </TabsList>
@@ -224,6 +265,178 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
                   <Plus className="h-4 w-4 mr-2" />
                   Iniciar Negociação
                 </Button>
+              </div>
+            </ScrollArea>
+          </TabsContent>
+
+          {/* Qualification Tab */}
+          <TabsContent value="qualification" className="flex-1 overflow-hidden mt-4 m-0 data-[state=active]:flex data-[state=active]:flex-col min-h-0">
+            <ScrollArea className="flex-1 min-h-0 px-6 pb-6">
+              <div className="space-y-4">
+                {qualifications.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <ClipboardList className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                    <p className="text-sm">Nenhuma qualificação registrada</p>
+                    <p className="text-xs mt-1">Qualifique este lead através da negociação</p>
+                  </div>
+                ) : (
+                  qualifications.map((qual) => {
+                    const score = qual.score || 0;
+                    const classification = getScoreClassification(score);
+                    const classLabel = getClassificationLabel(classification);
+                    
+                    const paymentLabel = PAYMENT_METHODS.find(p => p.value === qual.payment_method)?.label;
+                    const timelineLabel = PURCHASE_TIMELINES.find(t => t.value === qual.purchase_timeline)?.label;
+                    const usageLabel = VEHICLE_USAGE.find(u => u.value === qual.vehicle_usage)?.label;
+                    
+                    return (
+                      <Card key={qual.id} className="overflow-hidden">
+                        <CardContent className="p-0">
+                          {/* Header with Score */}
+                          <div className="bg-muted/50 p-4 border-b flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex flex-col items-center">
+                                <LeadScoreIndicator 
+                                  score={{ data: qual.completeness_score || 0, engagement: qual.engagement_score || 0, total: score }} 
+                                  size="md" 
+                                  showBreakdown={false} 
+                                />
+                              </div>
+                              <div>
+                                <Badge className={
+                                  classification === 'hot' ? 'bg-green-500' :
+                                  classification === 'warm' ? 'bg-yellow-500' : 'bg-blue-500'
+                                }>
+                                  {classLabel}
+                                </Badge>
+                                <p className="text-xs text-muted-foreground mt-1">
+                                  {format(new Date(qual.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Qualification Details */}
+                          <div className="p-4 space-y-4">
+                            {/* Vehicle Interest */}
+                            {qual.vehicle_interest && (
+                              <div className="flex items-start gap-3">
+                                <Car className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Veículo de Interesse</p>
+                                  <p className="text-sm font-medium">{qual.vehicle_interest}</p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Budget */}
+                            {(qual.budget_min || qual.budget_max) && (
+                              <div className="flex items-start gap-3">
+                                <Wallet className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Orçamento</p>
+                                  <p className="text-sm font-medium">
+                                    {qual.budget_min && qual.budget_max 
+                                      ? `${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(qual.budget_min)} - ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(qual.budget_max)}`
+                                      : qual.budget_min 
+                                        ? `A partir de ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(qual.budget_min)}`
+                                        : `Até ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(qual.budget_max!)}`
+                                    }
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Down Payment & Installment */}
+                            <div className="grid grid-cols-2 gap-4">
+                              {qual.down_payment && (
+                                <div className="flex items-start gap-2">
+                                  <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Entrada</p>
+                                    <p className="text-sm font-medium">
+                                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(qual.down_payment)}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                              {qual.max_installment && (
+                                <div className="flex items-start gap-2">
+                                  <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Parcela Máx</p>
+                                    <p className="text-sm font-medium">
+                                      {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(qual.max_installment)}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                            
+                            {/* Payment Method */}
+                            {paymentLabel && (
+                              <div className="flex items-start gap-3">
+                                <CreditCard className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Forma de Pagamento</p>
+                                  <p className="text-sm font-medium">{paymentLabel}</p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Purchase Timeline */}
+                            {timelineLabel && (
+                              <div className="flex items-start gap-3">
+                                <Timer className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Prazo para Compra</p>
+                                  <p className="text-sm font-medium">{timelineLabel}</p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Vehicle Usage */}
+                            {usageLabel && (
+                              <div className="flex items-start gap-3">
+                                <Car className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Uso do Veículo</p>
+                                  <p className="text-sm font-medium">{usageLabel}</p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Trade-in */}
+                            {qual.has_trade_in && (
+                              <div className="flex items-start gap-3">
+                                <Repeat className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Veículo de Troca</p>
+                                  <p className="text-sm font-medium">
+                                    {qual.trade_in_vehicle || 'Sim, possui veículo para troca'}
+                                    {qual.trade_in_value && (
+                                      <span className="text-muted-foreground ml-2">
+                                        ({new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(qual.trade_in_value)})
+                                      </span>
+                                    )}
+                                  </p>
+                                </div>
+                              </div>
+                            )}
+                            
+                            {/* Notes */}
+                            {qual.notes && (
+                              <div className="bg-muted/50 rounded-lg p-3 mt-2">
+                                <p className="text-xs text-muted-foreground mb-1">Observações</p>
+                                <p className="text-sm">{qual.notes}</p>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })
+                )}
               </div>
             </ScrollArea>
           </TabsContent>
