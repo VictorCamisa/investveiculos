@@ -30,7 +30,7 @@ const allNavItems: NavItem[] = [
   { path: '/financeiro', label: 'Financeiro', icon: <DollarSign className="h-4 w-4" />, requiredModule: 'financeiro' },
   { path: '/marketing', label: 'Marketing', icon: <Megaphone className="h-4 w-4" />, requiredModule: 'marketing' },
   { path: '/relatorios', label: 'Relatórios', icon: <FileText className="h-4 w-4" />, requiredModule: 'marketing' },
-  { path: '/ai-agents', label: 'IA', icon: <Bot className="h-4 w-4" /> },
+  // { path: '/ai-agents', label: 'IA', icon: <Bot className="h-4 w-4" /> }, // Oculto temporariamente
 ];
 
 interface MainNavProps {
