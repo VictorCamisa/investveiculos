@@ -26,11 +26,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { LeadCard } from '@/components/crm/LeadCard';
 import { LeadForm } from '@/components/crm/LeadForm';
 import { LeadsPipeline } from '@/components/crm/LeadsPipeline';
+import { LeadDetailSheet } from '@/components/crm/LeadDetailSheet';
 import { useLeads, useCreateLead, useUpdateLead, useDeleteLead } from '@/hooks/useLeads';
+import { useCreateNegotiation } from '@/hooks/useNegotiations';
 import { usePermissions } from '@/hooks/usePermissions';
 import type { Lead, LeadStatus, LeadSource } from '@/types/crm';
 import { leadStatusLabels, leadSourceLabels } from '@/types/crm';
@@ -39,6 +40,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 export default function Leads() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [leadDetailOpen, setLeadDetailOpen] = useState(false);
   const [leadToDelete, setLeadToDelete] = useState<Lead | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<LeadStatus | 'all'>('all');
@@ -47,8 +49,8 @@ export default function Leads() {
 
   const { data: leads, isLoading } = useLeads();
   const createLead = useCreateLead();
-  const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
+  const createNegotiation = useCreateNegotiation();
   const { isGerente } = usePermissions();
 
   const filteredLeads = leads?.filter((lead) => {
@@ -76,20 +78,18 @@ export default function Leads() {
     });
   };
 
-  const handleUpdateLead = (data: { 
-    name: string; 
-    phone: string; 
-    source: LeadSource;
-    status?: LeadStatus;
-    email?: string;
-    notes?: string;
-    vehicle_interest?: string;
-  }) => {
-    if (!selectedLead) return;
-    updateLead.mutate(
-      { id: selectedLead.id, ...data },
-      { onSuccess: () => setSelectedLead(null) }
-    );
+  const handleLeadClick = (lead: Lead) => {
+    setSelectedLead(lead);
+    setLeadDetailOpen(true);
+  };
+
+  const handleStartNegotiation = async (leadId: string, salespersonId?: string) => {
+    await createNegotiation.mutateAsync({
+      lead_id: leadId,
+      salesperson_id: salespersonId || '',
+      status: 'em_andamento',
+    });
+    setLeadDetailOpen(false);
   };
 
   return (
@@ -196,7 +196,7 @@ export default function Leads() {
       ) : viewMode === 'pipeline' ? (
         <LeadsPipeline 
           leads={filteredLeads} 
-          onLeadClick={setSelectedLead} 
+          onLeadClick={handleLeadClick} 
         />
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -204,7 +204,7 @@ export default function Leads() {
             <LeadCard
               key={lead.id}
               lead={lead}
-              onClick={() => setSelectedLead(lead)}
+              onClick={() => handleLeadClick(lead)}
             />
           ))}
           {filteredLeads.length === 0 && (
@@ -215,37 +215,13 @@ export default function Leads() {
         </div>
       )}
 
-      {/* Edit Lead Dialog */}
-      <Dialog open={!!selectedLead} onOpenChange={(open) => !open && setSelectedLead(null)}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Editar Lead</DialogTitle>
-              {isGerente && selectedLead && (
-                <Button
-                  variant="destructive"
-                  size="sm"
-                  onClick={() => {
-                    setLeadToDelete(selectedLead);
-                  }}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir
-                </Button>
-              )}
-            </div>
-          </DialogHeader>
-          <div className="mt-4">
-            {selectedLead && (
-              <LeadForm
-                lead={selectedLead}
-                onSubmit={handleUpdateLead}
-                isLoading={updateLead.isPending}
-              />
-            )}
-          </div>
-        </DialogContent>
-      </Dialog>
+      {/* Lead Detail Sheet */}
+      <LeadDetailSheet
+        lead={selectedLead}
+        open={leadDetailOpen}
+        onOpenChange={setLeadDetailOpen}
+        onStartNegotiation={handleStartNegotiation}
+      />
 
       {/* Delete Confirmation Dialog */}
       <AlertDialog open={!!leadToDelete} onOpenChange={(open) => !open && setLeadToDelete(null)}>

@@ -102,7 +102,7 @@ export function SalesTeamView() {
     await addToRoundRobin.mutateAsync({
       salesperson_id: salespersonId,
       priority: newPriority,
-      max_leads_per_day: newMaxLeads ? parseInt(newMaxLeads) : null,
+      daily_limit: newMaxLeads ? parseInt(newMaxLeads) : null,
     });
     setAddDialogOpen(false);
     setSelectedUser(null);
@@ -204,7 +204,7 @@ export function SalesTeamView() {
               <CardContent className="p-4">
                 <p className="text-sm text-muted-foreground">Leads Atribuídos Hoje</p>
                 <p className="text-2xl font-bold">
-                  {roundRobinConfig?.reduce((sum, c) => sum + c.current_leads_today, 0) || 0}
+                  {roundRobinConfig?.reduce((sum, c) => sum + (c.current_count || 0), 0) || 0}
                 </p>
               </CardContent>
             </Card>
@@ -335,9 +335,9 @@ export function SalesTeamView() {
                           <div className="flex items-center gap-3 text-sm text-muted-foreground">
                             <span>Prioridade: {config.priority}</span>
                             <span>•</span>
-                            <span>Limite: {config.max_leads_per_day || 'Sem limite'}</span>
+                            <span>Limite: {config.daily_limit || 'Sem limite'}</span>
                             <span>•</span>
-                            <span>Hoje: {config.current_leads_today}</span>
+                            <span>Hoje: {config.current_count || 0}</span>
                           </div>
                         </div>
                       </div>
@@ -367,14 +367,14 @@ export function SalesTeamView() {
                       </div>
                     </div>
 
-                    {config.max_leads_per_day && (
+                    {config.daily_limit && (
                       <div className="mt-4">
                         <div className="flex items-center justify-between text-sm mb-1">
                           <span className="text-muted-foreground">Progresso diário</span>
-                          <span>{config.current_leads_today} / {config.max_leads_per_day}</span>
+                          <span>{config.current_count || 0} / {config.daily_limit}</span>
                         </div>
                         <Progress 
-                          value={(config.current_leads_today / config.max_leads_per_day) * 100} 
+                          value={((config.current_count || 0) / config.daily_limit) * 100} 
                           className="h-2"
                         />
                       </div>
@@ -430,9 +430,7 @@ export function SalesTeamView() {
                             {format(new Date(assignment.assigned_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
                           </p>
                         </div>
-                        <Badge variant="outline">
-                          {assignment.assignment_type === 'round_robin' ? 'Automático' : 'Manual'}
-                        </Badge>
+                        <Badge variant="outline">Atribuição</Badge>
                       </div>
                     </div>
                   ))}
