@@ -260,16 +260,20 @@ const SUPABASE_FUNCTIONS_URL = 'https://rugbunseyblzapwzevqh.supabase.co/functio
 
 // Helper function to send WhatsApp notification to salesperson
 export async function notifySalespersonAboutLead(salespersonId: string, leadId: string, leadName: string | null) {
+  console.log('🔔 Iniciando notificação para vendedor:', { salespersonId, leadId, leadName });
+  
   try {
     // Get salesperson phone from profiles
-    const { data: salesperson } = await (supabase as any)
+    const { data: salesperson, error: profileError } = await (supabase as any)
       .from('profiles')
       .select('phone, full_name')
       .eq('id', salespersonId)
       .single();
 
+    console.log('📱 Dados do vendedor:', salesperson, 'Erro:', profileError);
+
     // Create in-app notification
-    await (supabase as any)
+    const { error: notifError } = await (supabase as any)
       .from('notifications')
       .insert({
         user_id: salespersonId,
@@ -280,13 +284,22 @@ export async function notifySalespersonAboutLead(salespersonId: string, leadId: 
         read: false,
       });
 
+    if (notifError) {
+      console.error('❌ Erro ao criar notificação in-app:', notifError);
+    } else {
+      console.log('✅ Notificação in-app criada');
+    }
+
     // Send WhatsApp notification if phone is available
     if (salesperson?.phone) {
+      console.log('📲 Vendedor tem telefone, enviando WhatsApp para:', salesperson.phone);
+      
       const { data: { session } } = await supabase.auth.getSession();
       
       const message = `🚗 *Novo Lead Atribuído!*\n\nOlá ${salesperson.full_name || 'Vendedor'}!\n\nVocê recebeu um novo lead: *${leadName || 'Cliente'}*\n\nAcesse o CRM para ver os detalhes e iniciar o atendimento.`;
       
       try {
+        console.log('🌐 Chamando edge function whatsapp-send...');
         const response = await fetch(`${SUPABASE_FUNCTIONS_URL}/whatsapp-send`, {
           method: 'POST',
           headers: {
@@ -300,19 +313,22 @@ export async function notifySalespersonAboutLead(salespersonId: string, leadId: 
           }),
         });
 
+        const responseText = await response.text();
+        console.log('📨 Resposta whatsapp-send:', response.status, responseText);
+
         if (!response.ok) {
-          console.error('Erro ao enviar WhatsApp:', await response.text());
+          console.error('❌ Erro ao enviar WhatsApp:', responseText);
         } else {
-          console.log('Notificação WhatsApp enviada com sucesso');
+          console.log('✅ Notificação WhatsApp enviada com sucesso');
         }
       } catch (whatsappError) {
-        console.error('Erro ao enviar WhatsApp:', whatsappError);
+        console.error('❌ Erro de rede ao enviar WhatsApp:', whatsappError);
       }
     } else {
-      console.log('Vendedor sem telefone cadastrado, notificação WhatsApp não enviada');
+      console.log('⚠️ Vendedor sem telefone cadastrado, notificação WhatsApp não enviada');
     }
   } catch (err) {
-    console.error('Erro ao notificar vendedor:', err);
+    console.error('❌ Erro geral ao notificar vendedor:', err);
   }
 }
 
