@@ -256,12 +256,41 @@ export function useAssignSalespersonRole() {
   });
 }
 
+// Helper function to send notification to salesperson
+export async function notifySalespersonAboutLead(salespersonId: string, leadId: string, leadName: string | null) {
+  try {
+    const { error } = await (supabase as any)
+      .from('notifications')
+      .insert({
+        user_id: salespersonId,
+        type: 'new_lead',
+        title: 'Novo Lead Atribuído!',
+        message: `Você recebeu um novo lead: ${leadName || 'Cliente'}. Acesse o CRM para mais detalhes.`,
+        link: `/crm`,
+        read: false,
+      });
+    
+    if (error) {
+      console.error('Erro ao criar notificação:', error);
+    }
+  } catch (err) {
+    console.error('Erro ao notificar vendedor:', err);
+  }
+}
+
 export function useManualLeadAssignment() {
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
   return useMutation({
     mutationFn: async (input: { lead_id: string; salesperson_id: string }) => {
+      // Get lead info first
+      const { data: leadData } = await (supabase as any)
+        .from('leads')
+        .select('name')
+        .eq('id', input.lead_id)
+        .single();
+
       // Update the lead's assigned_to
       const { error: leadError } = await (supabase as any)
         .from('leads')
@@ -279,10 +308,14 @@ export function useManualLeadAssignment() {
         });
 
       if (assignError) throw assignError;
+
+      // Send notification to the salesperson
+      await notifySalespersonAboutLead(input.salesperson_id, input.lead_id, leadData?.name);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lead-assignments'] });
       queryClient.invalidateQueries({ queryKey: ['leads'] });
+      queryClient.invalidateQueries({ queryKey: ['notifications'] });
       toast({ title: 'Lead atribuído com sucesso!' });
     },
     onError: (error: Error) => {
