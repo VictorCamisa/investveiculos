@@ -68,24 +68,16 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Video - optimized for mobile with proper aspect ratio */}
-        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
-          <video
-            ref={videoRef}
-            muted
-            playsInline
-            onEnded={handleVideoEnd}
-            className={`min-w-full min-h-full w-auto h-auto object-cover transition-opacity duration-500 ${introPhase === 'logo' ? 'opacity-0' : 'opacity-100'}`}
-            style={{ 
-              position: 'absolute',
-              top: '50%',
-              left: '50%',
-              transform: 'translate(-50%, -50%) scale(1.1)'
-            }}
-          >
-            <source src="/videos/hero-video.mp4" type="video/mp4" />
-          </video>
-        </div>
+        {/* Video - optimized for mobile with proper centering */}
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          onEnded={handleVideoEnd}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${introPhase === 'logo' ? 'opacity-0' : 'opacity-100'}`}
+        >
+          <source src="/videos/hero-video.mp4" type="video/mp4" />
+        </video>
 
         {/* Dark overlay when frozen */}
         <motion.div
