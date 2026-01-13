@@ -81,18 +81,24 @@ export function PublicVehicleCard({ vehicle, index = 0 }: PublicVehicleCardProps
               <Calendar className="h-4 w-4 text-public-primary" />
               <span>{vehicle.year_fabrication}/{vehicle.year_model}</span>
             </div>
-            <div className="flex items-center gap-2">
-              <Gauge className="h-4 w-4 text-public-primary" />
-              <span>{formatKm(vehicle.km)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Fuel className="h-4 w-4 text-public-primary" />
-              <span>{fuelTypeLabels[vehicle.fuel_type] || vehicle.fuel_type}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Settings2 className="h-4 w-4 text-public-primary" />
-              <span>{transmissionLabels[vehicle.transmission] || vehicle.transmission}</span>
-            </div>
+            {vehicle.km != null && (
+              <div className="flex items-center gap-2">
+                <Gauge className="h-4 w-4 text-public-primary" />
+                <span>{formatKm(vehicle.km)}</span>
+              </div>
+            )}
+            {vehicle.fuel_type && (
+              <div className="flex items-center gap-2">
+                <Fuel className="h-4 w-4 text-public-primary" />
+                <span>{fuelTypeLabels[vehicle.fuel_type] || vehicle.fuel_type}</span>
+              </div>
+            )}
+            {vehicle.transmission && (
+              <div className="flex items-center gap-2">
+                <Settings2 className="h-4 w-4 text-public-primary" />
+                <span>{transmissionLabels[vehicle.transmission] || vehicle.transmission}</span>
+              </div>
+            )}
           </div>
 
           {/* Price */}
