@@ -31,60 +31,60 @@ export default function PublicEstoque() {
   });
 
   return (
-    <div className="bg-public-bg min-h-screen pt-24">
-      {/* Header */}
-      <section className="bg-public-surface py-16">
+    <div className="bg-public-bg min-h-screen pt-16">
+      {/* Header - Compact */}
+      <section className="bg-public-surface py-8">
         <div className="container mx-auto px-4">
           <motion.h1
-            className="text-4xl md:text-5xl font-bold text-public-fg font-['Oswald'] text-center"
-            initial={{ opacity: 0, y: 20 }}
+            className="text-3xl md:text-4xl font-bold text-public-fg font-['Oswald'] text-center"
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
           >
             Nosso <span className="text-public-primary">Estoque</span>
           </motion.h1>
           <motion.p
-            className="text-public-fg/60 text-center mt-4 max-w-xl mx-auto"
+            className="text-public-fg/50 text-sm text-center mt-2"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ delay: 0.2 }}
+            transition={{ delay: 0.1 }}
           >
             Encontre o veículo perfeito para você
           </motion.p>
         </div>
       </section>
 
-      {/* Filters & Search */}
-      <section className="sticky top-20 z-40 bg-public-surface/95 backdrop-blur-xl border-b border-public-border shadow-[0_4px_30px_rgba(0,0,0,0.3)] py-4">
+      {/* Filters & Search - Compact */}
+      <section className="sticky top-14 z-40 bg-black/90 backdrop-blur-xl border-b border-public-border py-3">
         <div className="container mx-auto px-4">
-          <div className="flex flex-col md:flex-row gap-4 items-center">
+          <div className="flex flex-col md:flex-row gap-3 items-center">
             <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-public-fg/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-public-fg/40" />
               <Input
                 placeholder="Buscar por marca, modelo..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-10 bg-public-muted border-public-border text-public-fg placeholder:text-public-fg/50 focus:border-public-primary"
+                className="pl-9 h-9 text-sm bg-public-muted border-public-border text-public-fg placeholder:text-public-fg/40 focus:border-public-primary"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <X className="h-4 w-4 text-public-fg/40 hover:text-public-fg" />
+                  <X className="h-3.5 w-3.5 text-public-fg/40 hover:text-public-fg" />
                 </button>
               )}
             </div>
             <div className="flex gap-2 w-full md:w-auto">
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full md:w-48 bg-public-muted border-public-border text-public-fg">
-                  <SelectValue placeholder="Ordenar por" />
+                <SelectTrigger className="w-full md:w-40 h-9 text-sm bg-public-muted border-public-border text-public-fg">
+                  <SelectValue placeholder="Ordenar" />
                 </SelectTrigger>
                 <SelectContent className="bg-public-surface border-public-border">
-                  <SelectItem value="recent" className="text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Mais recentes</SelectItem>
-                  <SelectItem value="price-asc" className="text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Menor preço</SelectItem>
-                  <SelectItem value="price-desc" className="text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Maior preço</SelectItem>
-                  <SelectItem value="year-desc" className="text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Ano mais novo</SelectItem>
-                  <SelectItem value="km-asc" className="text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Menor KM</SelectItem>
+                  <SelectItem value="recent" className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Mais recentes</SelectItem>
+                  <SelectItem value="price-asc" className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Menor preço</SelectItem>
+                  <SelectItem value="price-desc" className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Maior preço</SelectItem>
+                  <SelectItem value="year-desc" className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Ano mais novo</SelectItem>
+                  <SelectItem value="km-asc" className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Menor KM</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon" onClick={() => setShowFilters(!showFilters)} className="border-public-border bg-public-muted text-public-fg hover:bg-public-primary/10 hover:text-public-fg">
+              <Button variant="outline" size="icon" onClick={() => setShowFilters(!showFilters)} className="h-9 w-9 border-public-border bg-public-muted text-public-fg hover:bg-public-primary/10 hover:text-public-fg">
                 <SlidersHorizontal className="h-4 w-4" />
               </Button>
             </div>
