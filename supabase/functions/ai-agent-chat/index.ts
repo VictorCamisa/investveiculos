@@ -2156,20 +2156,18 @@ async function searchVehicles(supabase: any, args: any): Promise<any> {
   console.log(`[searchVehicles] Found ${data.length} vehicles, first: ${data[0]?.brand} ${data[0]?.model} - R$ ${data[0]?.price_sale}`);
 
   return {
-    message: `Encontrei ${data.length} veículo(s) disponível(is). IMPORTANTE: Os IDs abaixo são UUIDs - use-os para get_vehicle_details.`,
     vehicles: data.map((v: any, index: number) => ({
-      numero: index + 1, // Número para referência do usuário (1, 2, 3...)
-      id: v.id, // UUID REAL - USAR ESTE para get_vehicle_details
-      nome: `${v.brand} ${v.model} ${v.year_manufacture || ''}/${v.year_model || ''}`.trim(),
-      preco: `R$ ${(v.price_sale || 0).toLocaleString('pt-BR')}`,
-      preco_valor: v.price_sale || 0, // valor numérico para comparações
-      km: `${(v.mileage || 0).toLocaleString('pt-BR')} km`,
-      combustivel: v.fuel_type,
-      cor: v.color,
-      foto: v.images?.[0] || null
+      numero: index + 1,
+      id: v.id,
+      nome: `${v.brand} ${v.model} ${v.year_model || ''}`.trim(),
+      // NÃO incluir km, cor, combustível, preço na listagem inicial!
     })),
-    // INSTRUÇÃO PARA A IA
-    instrucao_sistema: "CRÍTICO: Quando o cliente pedir 'mais info sobre esse carro' ou similar, use o campo 'id' (UUID) na função get_vehicle_details. O primeiro veículo da lista (numero: 1) é o mais relevante para a busca. NUNCA invente IDs como 'peugeot-208' - use APENAS os UUIDs retornados."
+    // INSTRUÇÃO OBRIGATÓRIA PARA A IA
+    instrucao: `REGRA OBRIGATÓRIA: Ao apresentar esses veículos, diga APENAS marca, modelo e ano de cada um.
+Exemplo correto: "Tenho ${data.length} Land Rover(s) disponível(is): ${data.map((v: any) => `${v.model} ${v.year_model}`).join(', ')}. Qual te interessa?"
+
+❌ NÃO MENCIONE cor, km, preço ou outras especificações agora!
+✅ Quando o cliente escolher um veículo, use get_vehicle_details com o 'id' (UUID) para obter e informar os detalhes completos.`
   };
 }
 
