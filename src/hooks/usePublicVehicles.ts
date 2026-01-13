@@ -34,7 +34,7 @@ export function usePublicVehicles() {
       const { data, error: vehiclesError } = await supabase
         .from('vehicles')
         .select('*')
-        .eq('status', 'Disponível')
+        .eq('status', 'disponivel')
         .order('created_at', { ascending: false });
 
       if (vehiclesError) throw vehiclesError;
@@ -87,7 +87,7 @@ export function usePublicVehicle(id: string) {
         .from('vehicles')
         .select('*')
         .eq('id', id)
-        .eq('status', 'Disponível')
+        .eq('status', 'disponivel')
         .single();
 
       if (vehicleError) throw vehicleError;
@@ -136,7 +136,7 @@ export function useFeaturedVehicles(limit = 6) {
       const { data, error: vehiclesError } = await supabase
         .from('vehicles')
         .select('*')
-        .eq('status', 'Disponível')
+        .eq('status', 'disponivel')
         .order('created_at', { ascending: false })
         .limit(limit);
 
