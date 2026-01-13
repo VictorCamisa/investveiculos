@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
+import { useState, useMemo } from 'react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Search, SlidersHorizontal, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -12,14 +12,33 @@ export default function PublicEstoque() {
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('recent');
   const [showFilters, setShowFilters] = useState(false);
+  const [brandFilter, setBrandFilter] = useState<string>('all');
+  const [yearFilter, setYearFilter] = useState<string>('all');
+  const [fuelFilter, setFuelFilter] = useState<string>('all');
+
+  // Get unique values for filters
+  const filterOptions = useMemo(() => {
+    if (!vehicles) return { brands: [], years: [], fuels: [] };
+    
+    const brands = [...new Set(vehicles.map(v => v.brand))].sort();
+    const years = [...new Set(vehicles.map(v => v.year_model))].sort((a, b) => b - a);
+    const fuels = [...new Set(vehicles.map(v => v.fuel_type).filter(Boolean))].sort();
+    
+    return { brands, years, fuels };
+  }, [vehicles]);
 
   const filteredVehicles = vehicles?.filter(v => {
     const searchLower = search.toLowerCase();
-    return (
+    const matchesSearch = 
       v.brand.toLowerCase().includes(searchLower) ||
       v.model.toLowerCase().includes(searchLower) ||
-      (v.version?.toLowerCase().includes(searchLower))
-    );
+      (v.version?.toLowerCase().includes(searchLower));
+    
+    const matchesBrand = brandFilter === 'all' || v.brand === brandFilter;
+    const matchesYear = yearFilter === 'all' || v.year_model === Number(yearFilter);
+    const matchesFuel = fuelFilter === 'all' || v.fuel_type === fuelFilter;
+    
+    return matchesSearch && matchesBrand && matchesYear && matchesFuel;
   }).sort((a, b) => {
     switch (sortBy) {
       case 'price-asc': return (a.sale_price || 0) - (b.sale_price || 0);
@@ -29,6 +48,14 @@ export default function PublicEstoque() {
       default: return 0;
     }
   });
+
+  const hasActiveFilters = brandFilter !== 'all' || yearFilter !== 'all' || fuelFilter !== 'all';
+
+  const clearFilters = () => {
+    setBrandFilter('all');
+    setYearFilter('all');
+    setFuelFilter('all');
+  };
 
   return (
     <div className="bg-public-bg min-h-screen pt-16">
@@ -54,8 +81,8 @@ export default function PublicEstoque() {
       </section>
 
       {/* Filters & Search - Compact */}
-      <section className="sticky top-14 z-40 bg-black/90 backdrop-blur-xl border-b border-public-border py-3">
-        <div className="container mx-auto px-4">
+      <section className="sticky top-14 z-40 bg-black/90 backdrop-blur-xl border-b border-public-border">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex flex-col md:flex-row gap-3 items-center">
             <div className="relative flex-1 w-full">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-public-fg/40" />
@@ -84,12 +111,90 @@ export default function PublicEstoque() {
                   <SelectItem value="km-asc" className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Menor KM</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon" onClick={() => setShowFilters(!showFilters)} className="h-9 w-9 border-public-border bg-public-muted text-public-fg hover:bg-public-primary/10 hover:text-public-fg">
+              <Button 
+                variant="outline" 
+                size="icon" 
+                onClick={() => setShowFilters(!showFilters)} 
+                className={`h-9 w-9 border-public-border text-public-fg hover:bg-public-primary/10 hover:text-public-fg ${
+                  showFilters || hasActiveFilters ? 'bg-public-primary text-white' : 'bg-public-muted'
+                }`}
+              >
                 <SlidersHorizontal className="h-4 w-4" />
               </Button>
             </div>
           </div>
         </div>
+
+        {/* Filter Panel */}
+        <AnimatePresence>
+          {showFilters && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: 'auto', opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              transition={{ duration: 0.2 }}
+              className="overflow-hidden border-t border-public-border"
+            >
+              <div className="container mx-auto px-4 py-4">
+                <div className="flex flex-wrap gap-3 items-center">
+                  <Select value={brandFilter} onValueChange={setBrandFilter}>
+                    <SelectTrigger className="w-full sm:w-40 h-9 text-sm bg-public-muted border-public-border text-public-fg">
+                      <SelectValue placeholder="Marca" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-public-surface border-public-border max-h-60">
+                      <SelectItem value="all" className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Todas as marcas</SelectItem>
+                      {filterOptions.brands.map(brand => (
+                        <SelectItem key={brand} value={brand} className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">
+                          {brand}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={yearFilter} onValueChange={setYearFilter}>
+                    <SelectTrigger className="w-full sm:w-32 h-9 text-sm bg-public-muted border-public-border text-public-fg">
+                      <SelectValue placeholder="Ano" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-public-surface border-public-border max-h-60">
+                      <SelectItem value="all" className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Todos os anos</SelectItem>
+                      {filterOptions.years.map(year => (
+                        <SelectItem key={year} value={String(year)} className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">
+                          {year}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <Select value={fuelFilter} onValueChange={setFuelFilter}>
+                    <SelectTrigger className="w-full sm:w-36 h-9 text-sm bg-public-muted border-public-border text-public-fg">
+                      <SelectValue placeholder="Combustível" />
+                    </SelectTrigger>
+                    <SelectContent className="bg-public-surface border-public-border">
+                      <SelectItem value="all" className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Todos</SelectItem>
+                      {filterOptions.fuels.map(fuel => (
+                        <SelectItem key={fuel} value={fuel} className="text-sm text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">
+                          {fuel}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  {hasActiveFilters && (
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      onClick={clearFilters}
+                      className="h-9 text-sm text-public-primary hover:text-public-primary hover:bg-public-primary/10"
+                    >
+                      <X className="h-3.5 w-3.5 mr-1" />
+                      Limpar filtros
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
       {/* Vehicle Grid */}
@@ -113,9 +218,13 @@ export default function PublicEstoque() {
           ) : (
             <div className="text-center py-20">
               <p className="text-public-fg/60 text-lg">Nenhum veículo encontrado.</p>
-              {search && (
-                <Button variant="link" onClick={() => setSearch('')} className="text-public-primary mt-2">
-                  Limpar busca
+              {(search || hasActiveFilters) && (
+                <Button 
+                  variant="link" 
+                  onClick={() => { setSearch(''); clearFilters(); }} 
+                  className="text-public-primary mt-2"
+                >
+                  Limpar busca e filtros
                 </Button>
               )}
             </div>
