@@ -1698,20 +1698,32 @@ function prepareTextForTTS(text: string): string {
     '4': 'quatro portas',
     '5': 'cinco portas'
   };
+  
+  // Formato normal: "2 portas" ou "2portas"
   prepared = prepared.replace(/\b(\d+)\s*porta[s]?\b/gi, (match, num) => {
     return numerosFemininos[num] || `${num} portas`;
   });
   
+  // Formato invertido: "portas: 2" ou "porta: 2" ou "Portas 2"
+  prepared = prepared.replace(/\bporta[s]?[:\s]+(\d+)\b/gi, (match, num) => {
+    return numerosFemininos[num] || `${num} portas`;
+  });
+  
   // ============= QUILOMETRAGEM - evitar redundância =============
-  // Primeiro, remover "km" ou "KM" redundantes antes de números ou quilômetros
-  prepared = prepared.replace(/\bkm\s+(\d)/gi, '$1'); // "km 17" → "17"
-  prepared = prepared.replace(/\bkm\s+quilômetros/gi, 'quilômetros'); // "km quilômetros" → "quilômetros"
+  // Remover "km:" ou "KM:" como label (deixar só o número)
+  prepared = prepared.replace(/\bkm[:\s]*(\d)/gi, '$1');
+  
+  // Remover "quilometragem:" como label
+  prepared = prepared.replace(/\bquilometragem[:\s]*/gi, '');
   
   // Garantir acentuação correta para quilometragem
   prepared = prepared.replace(/quilometros/gi, 'quilômetros');
   
   // Converter "X km" para "X quilômetros" (só se não tiver quilômetros depois)
   prepared = prepared.replace(/(\d+(?:[.,]\d+)?)\s*km(?!\s*quilômetros)\b/gi, '$1 quilômetros');
+  
+  // Evitar duplicação "quilômetros quilômetros"
+  prepared = prepared.replace(/quilômetros\s+quilômetros/gi, 'quilômetros');
   
   // Formatar valores monetários para leitura natural
   prepared = prepared.replace(/R\$\s*([\d.]+(?:,\d{2})?)/g, (match, value) => {
