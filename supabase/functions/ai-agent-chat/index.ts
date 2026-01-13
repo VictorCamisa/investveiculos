@@ -1492,6 +1492,191 @@ function prepareTextForTTS(text: string): string {
   // Remover emojis (não podem ser pronunciados)
   prepared = prepared.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '');
   
+  // ============= PRONÚNCIA DE MARCAS ESTRANGEIRAS =============
+  // Marcas com pronúncia fonética correta para português brasileiro
+  const pronunciaMarcas: { [key: string]: string } = {
+    'Porsche': 'Pórsche',
+    'Peugeot': 'Pejô',
+    'Citroën': 'Citroên',
+    'Citroen': 'Citroên',
+    'Renault': 'Renô',
+    'Chevrolet': 'Chevrolé',
+    'Hyundai': 'Rúndai',
+    'Audi': 'Áudi',
+    'BMW': 'Bê éme dáblio',
+    'Mercedes': 'Mersêdes',
+    'Mercedes-Benz': 'Mersêdes Bénz',
+    'Volkswagen': 'Fólquisváguen',
+    'Jaguar': 'Djéguiar',
+    'Land Rover': 'Lând Rôuver',
+    'Range Rover': 'Reinge Rôuver',
+    'Jeep': 'Djípe',
+    'Dodge': 'Dódji',
+    'Chrysler': 'Cráisler',
+    'Lamborghini': 'Lamborghíni',
+    'Ferrari': 'Ferrári',
+    'Maserati': 'Mazeráti',
+    'Bentley': 'Bêntli',
+    'Rolls-Royce': 'Rôuls Róis',
+    'McLaren': 'Mequiláren',
+    'Lexus': 'Léquissus',
+    'Subaru': 'Subáru',
+    'Suzuki': 'Suzúqui',
+    'Mitsubishi': 'Mitsubíshi',
+    'Nissan': 'Níssãn',
+    'Infiniti': 'Infiníti',
+    'Acura': 'Akiúra',
+    'Cadillac': 'Cadilác',
+    'Buick': 'Biúque',
+    'GMC': 'Gê éme cê',
+    'RAM': 'Rãm',
+    'Tesla': 'Tésla',
+    'Volvo': 'Vólvo',
+    'Saab': 'Sáab',
+    'Alfa Romeo': 'Álfa Romêo',
+    'Mini': 'Míni',
+    'Smart': 'Esmárt',
+    'Seat': 'Siát',
+    'Skoda': 'Escôda',
+    'Chery': 'Txéri',
+    'JAC': 'Jác',
+    'BYD': 'Bê i dê',
+    'GWM': 'Gê dáblio éme',
+    'Caoa Chery': 'Caôa Txéri',
+  };
+  
+  // Aplicar pronúncia de marcas (case-insensitive)
+  for (const [marca, pronuncia] of Object.entries(pronunciaMarcas)) {
+    const regex = new RegExp(`\\b${marca}\\b`, 'gi');
+    prepared = prepared.replace(regex, pronuncia);
+  }
+  
+  // ============= MODELOS NUMÉRICOS DE CARROS =============
+  // Modelos famosos que precisam de pronúncia específica
+  const modelosNumericos: { [key: string]: string } = {
+    '911': 'novecentos e onze',
+    '718': 'setecentos e dezoito',
+    '928': 'novecentos e vinte e oito',
+    '944': 'novecentos e quarenta e quatro',
+    '959': 'novecentos e cinquenta e nove',
+    '208': 'duzentos e oito',
+    '308': 'trezentos e oito',
+    '408': 'quatrocentos e oito',
+    '508': 'quinhentos e oito',
+    '2008': 'dois mil e oito',
+    '3008': 'três mil e oito',
+    '5008': 'cinco mil e oito',
+    '206': 'duzentos e seis',
+    '207': 'duzentos e sete',
+    '307': 'trezentos e sete',
+    'C3': 'cê três',
+    'C4': 'cê quatro',
+    'C5': 'cê cinco',
+    'C6': 'cê seis',
+    'A1': 'á um',
+    'A3': 'á três',
+    'A4': 'á quatro',
+    'A5': 'á cinco',
+    'A6': 'á seis',
+    'A7': 'á sete',
+    'A8': 'á oito',
+    'Q3': 'quê três',
+    'Q5': 'quê cinco',
+    'Q7': 'quê sete',
+    'Q8': 'quê oito',
+    'X1': 'xis um',
+    'X2': 'xis dois',
+    'X3': 'xis três',
+    'X4': 'xis quatro',
+    'X5': 'xis cinco',
+    'X6': 'xis seis',
+    'X7': 'xis sete',
+    'M3': 'éme três',
+    'M4': 'éme quatro',
+    'M5': 'éme cinco',
+    'M8': 'éme oito',
+    'Z4': 'zê quatro',
+    'i3': 'i três',
+    'i4': 'i quatro',
+    'i7': 'i sete',
+    'i8': 'i oito',
+    'GLC': 'gê éle cê',
+    'GLE': 'gê éle ê',
+    'GLS': 'gê éle ésse',
+    'CLA': 'cê éle á',
+    'CLS': 'cê éle ésse',
+    'AMG': 'á éme gê',
+    'RS3': 'érre ésse três',
+    'RS4': 'érre ésse quatro',
+    'RS5': 'érre ésse cinco',
+    'RS6': 'érre ésse seis',
+    'RS7': 'érre ésse sete',
+    'S3': 'ésse três',
+    'S4': 'ésse quatro',
+    'S5': 'ésse cinco',
+    'TT': 'tê tê',
+    'R8': 'érre oito',
+    'GT': 'gê tê',
+    'GT3': 'gê tê três',
+    'GT4': 'gê tê quatro',
+    'GTS': 'gê tê ésse',
+    'GTI': 'gê tê í',
+    'TSI': 'tê ésse í',
+    'TDI': 'tê dê í',
+    'FSI': 'éfe ésse í',
+    'TFSI': 'tê éfe ésse í',
+    'T-Cross': 'tê cross',
+    'T-Roc': 'tê roc',
+    'ID.3': 'i dê três',
+    'ID.4': 'i dê quatro',
+    'e-tron': 'i tron',
+    'e-Golf': 'i golf',
+    'HR-V': 'agá érre vê',
+    'CR-V': 'cê érre vê',
+    'WR-V': 'dáblio érre vê',
+    'ZR-V': 'zê érre vê',
+    'BR-V': 'bê érre vê',
+    'RAV4': 'ráv quatro',
+    'CH-R': 'cê agá érre',
+    'CX-3': 'cê xis três',
+    'CX-30': 'cê xis trinta',
+    'CX-5': 'cê xis cinco',
+    'CX-50': 'cê xis cinquenta',
+    'CX-9': 'cê xis nove',
+    'MX-5': 'éme xis cinco',
+    'MX-30': 'éme xis trinta',
+    'RX-7': 'érre xis sete',
+    'RX-8': 'érre xis oito',
+    'BRZ': 'bê érre zê',
+    'WRX': 'dáblio érre xis',
+    'STI': 'ésse tê í',
+    'XV': 'xis vê',
+    'NX': 'éne xis',
+    'RX': 'érre xis',
+    'UX': 'ú xis',
+    'LX': 'éle xis',
+    'ES': 'ê ésse',
+    'IS': 'i ésse',
+    'LS': 'éle ésse',
+    'LC': 'éle cê',
+    'RC': 'érre cê',
+    'CT': 'cê tê',
+    'F-150': 'éfe cento e cinquenta',
+    'F-250': 'éfe duzentos e cinquenta',
+    'F-350': 'éfe trezentos e cinquenta',
+    'S10': 'ésse dez',
+    'D-Max': 'dê max',
+    'L200': 'éle duzentos',
+    'Hilux': 'Ráilux',
+    'SW4': 'ésse dáblio quatro',
+  };
+  
+  // Aplicar pronúncia de modelos (case-sensitive para alguns, insensitive para outros)
+  for (const [modelo, pronuncia] of Object.entries(modelosNumericos)) {
+    const regex = new RegExp(`\\b${modelo}\\b`, 'g');
+    prepared = prepared.replace(regex, pronuncia);
+  }
+  
   // ============= MOTORIZAÇÃO - formatar X.Y como "X ponto Y" =============
   // Ex: "2.0" → "dois ponto zero", "3.6" → "três ponto seis"
   const numerosPorExtenso = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
@@ -1517,9 +1702,16 @@ function prepareTextForTTS(text: string): string {
     return numerosFemininos[num] || `${num} portas`;
   });
   
+  // ============= QUILOMETRAGEM - evitar redundância =============
+  // Primeiro, remover "km" ou "KM" redundantes antes de números ou quilômetros
+  prepared = prepared.replace(/\bkm\s+(\d)/gi, '$1'); // "km 17" → "17"
+  prepared = prepared.replace(/\bkm\s+quilômetros/gi, 'quilômetros'); // "km quilômetros" → "quilômetros"
+  
   // Garantir acentuação correta para quilometragem
   prepared = prepared.replace(/quilometros/gi, 'quilômetros');
-  prepared = prepared.replace(/(\d+(?:[.,]\d+)?)\s*km\b/gi, '$1 quilômetros');
+  
+  // Converter "X km" para "X quilômetros" (só se não tiver quilômetros depois)
+  prepared = prepared.replace(/(\d+(?:[.,]\d+)?)\s*km(?!\s*quilômetros)\b/gi, '$1 quilômetros');
   
   // Formatar valores monetários para leitura natural
   prepared = prepared.replace(/R\$\s*([\d.]+(?:,\d{2})?)/g, (match, value) => {
