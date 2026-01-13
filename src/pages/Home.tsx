@@ -91,19 +91,22 @@ export default function Home() {
         <AnimatePresence>
           {introPhase === 'frozen' && (
             <motion.div
-              className="absolute inset-0 z-10 flex items-center justify-center"
+              className="absolute inset-0 z-10 flex items-end justify-center pb-24 md:pb-32"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 0.5 }}
             >
               <motion.p
-                className="text-xl md:text-3xl lg:text-4xl font-light text-white italic text-center max-w-4xl px-6"
-                style={{ textShadow: "0 4px 30px rgba(0,0,0,0.8)" }}
+                className="text-xl md:text-2xl lg:text-3xl font-light text-white/90 italic text-center max-w-4xl px-6 tracking-wide"
+                style={{ 
+                  textShadow: "0 4px 30px rgba(0,0,0,0.8)",
+                  fontFamily: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+                }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, delay: 0.8 }}
               >
-                "Qualidade que se vê. <span className="text-[#E53935] font-normal">Confiança</span> que você sente"
+                Qualidade que se vê. <span className="text-[#E59935] font-normal not-italic">Confiança</span> que você sente
               </motion.p>
             </motion.div>
           )}
