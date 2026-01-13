@@ -201,6 +201,13 @@ function extractQualificationData(messages: any[]): ExtractedQualification {
     'sorento', 'tucson', 'santa fe', 'ix35', 'clio', 'megane', 'fluence', 'symbol'
   ];
   
+  // Words that should NOT be considered as vehicle interest
+  const invalidVehicleWords = [
+    'cadastrada', 'cadastrado', 'registrado', 'registrada', 'qualificado', 'qualificada',
+    'atendimento', 'negociacao', 'contato', 'whatsapp', 'mensagem', 'conversa',
+    'interesse', 'interessado', 'interessada', 'cliente', 'lead', 'vendedor'
+  ];
+
   // Find vehicle interest from user or assistant context
   for (const model of vehicleModels) {
     const modelPattern = new RegExp(`(\\w+)?\\s*${model}\\s*(\\d{4})?`, 'i');
@@ -208,11 +215,19 @@ function extractQualificationData(messages: any[]): ExtractedQualification {
     const userMatch = userText.match(modelPattern);
     
     if (userMatch) {
-      qualification.vehicle_interest = userMatch[0].trim();
-      break;
+      const extracted = userMatch[0].trim().toLowerCase();
+      // Skip if it's an invalid word
+      if (!invalidVehicleWords.some(invalid => extracted.includes(invalid))) {
+        qualification.vehicle_interest = userMatch[0].trim();
+        break;
+      }
     } else if (assistantMatch) {
-      qualification.vehicle_interest = assistantMatch[0].trim();
-      break;
+      const extracted = assistantMatch[0].trim().toLowerCase();
+      // Skip if it's an invalid word
+      if (!invalidVehicleWords.some(invalid => extracted.includes(invalid))) {
+        qualification.vehicle_interest = assistantMatch[0].trim();
+        break;
+      }
     }
   }
   
@@ -1411,16 +1426,21 @@ ${qualificationData.down_payment ? '💵 *Entrada:* R$ ' + qualificationData.dow
       let handoverMessage = '';
       
       if (qualificationResult.salespersonName) {
+        // Validate if vehicleInterest is a real vehicle (not a random word)
+        const invalidVehicleWords = ['cadastrada', 'cadastrado', 'registrado', 'qualificado', 'atendimento', 'negociacao', 'contato'];
+        const isValidVehicle = qualificationResult.vehicleInterest && 
+          qualificationResult.vehicleInterest.length > 2 &&
+          !invalidVehicleWords.some(invalid => 
+            qualificationResult.vehicleInterest?.toLowerCase().includes(invalid)
+          );
+
         // Build personalized context
         let context = '';
-        if (qualificationResult.vehicleInterest && qualificationResult.hasTradeIn && qualificationResult.tradeInVehicle) {
-          context = `, que vai ajudar você com a avaliação do seu ${qualificationResult.tradeInVehicle} e encontrar as melhores condições`;
-          if (qualificationResult.vehicleInterest) {
-            context += ` para o ${qualificationResult.vehicleInterest}`;
-          }
+        if (isValidVehicle && qualificationResult.hasTradeIn && qualificationResult.tradeInVehicle) {
+          context = `, que vai ajudar você com a avaliação do seu ${qualificationResult.tradeInVehicle} e encontrar as melhores condições para o ${qualificationResult.vehicleInterest}`;
         } else if (qualificationResult.hasTradeIn && qualificationResult.tradeInVehicle) {
           context = `, que vai fazer a avaliação do seu ${qualificationResult.tradeInVehicle} e te apresentar as melhores opções`;
-        } else if (qualificationResult.vehicleInterest) {
+        } else if (isValidVehicle) {
           context = `, que vai te ajudar a fechar negócio no ${qualificationResult.vehicleInterest}`;
         } else {
           context = `, que vai te ajudar a encontrar o veículo ideal`;
@@ -1432,7 +1452,8 @@ ${qualificationData.down_payment ? '💵 *Entrada:* R$ ' + qualificationData.dow
       }
       
       if (handoverMessage) {
-        assistantContent += handoverMessage;
+        // REPLACE (not concatenate) to avoid duplicate farewell messages
+        assistantContent = handoverMessage.trim();
         
         // Update the saved message with handover
         await supabase
