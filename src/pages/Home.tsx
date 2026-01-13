@@ -10,7 +10,7 @@ import logoImg from '@/assets/logo-invest-veiculos.png';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [introPhase, setIntroPhase] = useState<'logo' | 'video' | 'frozen'>('logo');
+  const [introPhase, setIntroPhase] = useState<'logo' | 'video' | 'fading' | 'final'>('logo');
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -27,11 +27,11 @@ export default function Home() {
   }, []);
 
   const handleVideoEnd = () => {
-    // Congela no último frame
-    if (videoRef.current) {
-      videoRef.current.pause();
-      setIntroPhase('frozen');
-    }
+    // Quando o vídeo termina, escurece e volta a logo
+    setIntroPhase('fading');
+    setTimeout(() => {
+      setIntroPhase('final');
+    }, 1500); // Tempo do fade to black
   };
 
   const openGoogleMaps = () => {
@@ -43,10 +43,10 @@ export default function Home() {
 
   return (
     <div className="bg-public-bg text-public-fg">
-      {/* Hero Section - Logo Intro → Video → Freeze */}
+      {/* Hero Section - Logo Intro → Video → Fade to Black → Logo + Phrase */}
       <section className="relative h-[100dvh] overflow-hidden bg-black">
         
-        {/* Logo Intro Animation */}
+        {/* Logo Intro Animation (início) */}
         <AnimatePresence>
           {introPhase === 'logo' && (
             <motion.div
@@ -68,34 +68,49 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Video - object-contain on mobile to avoid cropping, object-cover on desktop */}
+        {/* Video */}
         <video
           ref={videoRef}
           muted
           playsInline
           onEnded={handleVideoEnd}
-          className={`absolute inset-0 w-full h-full object-contain md:object-cover bg-black transition-opacity duration-500 ${introPhase === 'logo' ? 'opacity-0' : 'opacity-100'}`}
+          className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 ${
+            introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
+          }`}
         >
           <source src="/videos/hero-video.mp4" type="video/mp4" />
         </video>
 
-        {/* Dark overlay when frozen */}
+        {/* Fade to black overlay */}
         <motion.div
-          className="absolute inset-0 bg-black/50 pointer-events-none"
+          className="absolute inset-0 bg-black pointer-events-none z-10"
           initial={{ opacity: 0 }}
-          animate={{ opacity: introPhase === 'frozen' ? 1 : 0 }}
+          animate={{ 
+            opacity: introPhase === 'fading' || introPhase === 'final' ? 1 : 0 
+          }}
           transition={{ duration: 1.5 }}
         />
 
-        {/* Phrase appears after video freezes */}
+        {/* Final State: Logo + Phrase */}
         <AnimatePresence>
-          {introPhase === 'frozen' && (
+          {introPhase === 'final' && (
             <motion.div
-              className="absolute inset-0 z-10 flex items-end justify-center pb-16 sm:pb-20 md:pb-28 lg:pb-32 px-4"
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black px-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              transition={{ duration: 1, delay: 0.5 }}
+              transition={{ duration: 1 }}
             >
+              {/* Logo */}
+              <motion.img
+                src={logoImg}
+                alt="Invest Veículos"
+                className="h-16 sm:h-24 md:h-32 lg:h-40 w-auto object-contain mb-8 sm:mb-12"
+                initial={{ opacity: 0, y: -20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+              />
+              
+              {/* Phrase */}
               <motion.p
                 className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-light text-white/90 italic text-center max-w-4xl tracking-wide leading-relaxed"
                 style={{ 
@@ -104,7 +119,7 @@ export default function Home() {
                 }}
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1, delay: 0.8 }}
+                transition={{ duration: 1, delay: 0.6 }}
               >
                 Qualidade que se vê. <span className="text-public-primary font-normal not-italic">Confiança</span> que você sente
               </motion.p>
