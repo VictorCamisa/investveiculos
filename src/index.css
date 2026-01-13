@@ -88,6 +88,8 @@
     --public-surface: 25 12% 15%;
     --public-muted: 25 10% 18%;
     --public-border: 25 8% 22%;
+    --public-highlight: 0 0% 8%;
+    --public-highlight-foreground: 0 0% 100%;
   }
 
   .dark {
@@ -166,6 +168,8 @@
     --public-surface: 25 12% 15%;
     --public-muted: 25 10% 18%;
     --public-border: 25 8% 22%;
+    --public-highlight: 0 0% 8%;
+    --public-highlight-foreground: 0 0% 100%;
   }
 }
 

@@ -75,7 +75,7 @@ export default {
           2: "hsl(var(--surface-2))",
           3: "hsl(var(--surface-3))",
         },
-        // Public website colors - Matheus Veículos
+        // Public website colors - InvestVeículos
         "public-primary": {
           DEFAULT: "hsl(var(--public-primary))",
           dark: "hsl(var(--public-primary-dark))",
@@ -87,6 +87,10 @@ export default {
         "public-surface": "hsl(var(--public-surface))",
         "public-muted": "hsl(var(--public-muted))",
         "public-border": "hsl(var(--public-border))",
+        "public-highlight": {
+          DEFAULT: "hsl(var(--public-highlight))",
+          foreground: "hsl(var(--public-highlight-foreground))",
+        },
       },
       borderRadius: {
         lg: "var(--radius)",

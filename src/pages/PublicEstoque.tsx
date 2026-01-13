@@ -25,7 +25,7 @@ export default function PublicEstoque() {
       case 'price-asc': return (a.sale_price || 0) - (b.sale_price || 0);
       case 'price-desc': return (b.sale_price || 0) - (a.sale_price || 0);
       case 'year-desc': return b.year_model - a.year_model;
-      case 'km-asc': return a.km - b.km;
+      case 'km-asc': return (a.km ?? Infinity) - (b.km ?? Infinity);
       default: return 0;
     }
   });
