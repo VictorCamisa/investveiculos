@@ -64,10 +64,11 @@ async function downloadAndUploadImage(
 
 async function processBatch(supabase: any, limit: number, vehicleId?: string) {
   // Build query for images that haven't been migrated yet (external URLs)
+  // Check both url and image_url columns
   let query = supabase
     .from('vehicle_images')
-    .select('id, vehicle_id, url')
-    .not('url', 'ilike', '%supabase%')
+    .select('id, vehicle_id, url, image_url')
+    .not('image_url', 'ilike', '%supabase%')
     .limit(limit)
   
   if (vehicleId) {
@@ -87,20 +88,27 @@ async function processBatch(supabase: any, limit: number, vehicleId?: string) {
   let failCount = 0
   
   for (const image of images || []) {
+    // Use image_url or url as the source
+    const sourceUrl = image.image_url || image.url
+    if (!sourceUrl || sourceUrl.includes('supabase')) {
+      console.log(`Skipping image ${image.id} - already migrated or no URL`)
+      continue
+    }
+    
     console.log(`Processing image ${image.id} for vehicle ${image.vehicle_id}`)
     
     const newUrl = await downloadAndUploadImage(
       supabase,
-      image.url,
+      sourceUrl,
       image.vehicle_id,
       image.id
     )
     
     if (newUrl) {
-      // Update the image URL in the database
+      // Update BOTH url and image_url columns to ensure sync doesn't overwrite
       const { error: updateError } = await supabase
         .from('vehicle_images')
-        .update({ url: newUrl })
+        .update({ url: newUrl, image_url: newUrl })
         .eq('id', image.id)
       
       if (updateError) {
