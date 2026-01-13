@@ -149,25 +149,11 @@ export default function Home() {
               <motion.img
                 src={logoImg}
                 alt="Invest Veículos"
-                className="relative z-10 h-16 sm:h-24 md:h-32 lg:h-40 w-auto object-contain mb-8 sm:mb-12"
+                className="relative z-10 h-16 sm:h-24 md:h-32 lg:h-40 w-auto object-contain"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.3 }}
               />
-              
-              {/* Phrase */}
-              <motion.p
-                className="relative z-10 text-lg sm:text-xl md:text-2xl lg:text-3xl font-light text-white/90 italic text-center max-w-4xl tracking-wide leading-relaxed"
-                style={{ 
-                  textShadow: "0 4px 30px rgba(0,0,0,0.8)",
-                  fontFamily: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
-                }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1, delay: 0.6 }}
-              >
-                Qualidade que se vê. <span className="text-public-primary font-normal not-italic">Confiança</span> que você sente
-              </motion.p>
             </motion.div>
           )}
         </AnimatePresence>
