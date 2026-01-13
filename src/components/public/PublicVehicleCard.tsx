@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { Fuel, Gauge, Calendar, Settings2, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Fuel, Gauge, Calendar, Settings2, ChevronLeft, ChevronRight, Car } from 'lucide-react';
 import { PublicVehicle } from '@/hooks/usePublicVehicles';
 import { fuelTypeLabels, transmissionLabels } from '@/types/inventory';
 
@@ -12,9 +12,10 @@ interface PublicVehicleCardProps {
 
 export function PublicVehicleCard({ vehicle, index = 0 }: PublicVehicleCardProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [imageError, setImageError] = useState<Record<number, boolean>>({});
   
   // Sort images to show cover first
-  const sortedImages = [...vehicle.images].sort((a, b) => {
+  const sortedImages = [...(vehicle.images || [])].sort((a, b) => {
     if (a.is_cover) return -1;
     if (b.is_cover) return 1;
     return 0;
@@ -22,6 +23,7 @@ export function PublicVehicleCard({ vehicle, index = 0 }: PublicVehicleCardProps
   
   const currentImage = sortedImages[currentImageIndex];
   const hasMultipleImages = sortedImages.length > 1;
+  const currentImageFailed = imageError[currentImageIndex];
   
   const formatPrice = (price: number | null) => {
     if (!price) return 'Consulte';
@@ -65,15 +67,19 @@ export function PublicVehicleCard({ vehicle, index = 0 }: PublicVehicleCardProps
       >
         {/* Image with navigation */}
         <div className="relative aspect-[4/3] overflow-hidden bg-public-muted">
-          {currentImage ? (
+          {currentImage && !currentImageFailed ? (
             <img
               src={currentImage.image_url}
               alt={`${vehicle.brand} ${vehicle.model}`}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+              loading="lazy"
+              crossOrigin="anonymous"
+              onError={() => setImageError(prev => ({ ...prev, [currentImageIndex]: true }))}
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center text-public-fg/30">
-              <Settings2 className="h-12 w-12 sm:h-16 sm:w-16" />
+            <div className="w-full h-full flex flex-col items-center justify-center text-public-fg/40 bg-gradient-to-br from-public-muted to-public-highlight gap-2">
+              <Car className="h-12 w-12 sm:h-16 sm:w-16" />
+              <span className="text-xs sm:text-sm">{vehicle.brand} {vehicle.model}</span>
             </div>
           )}
           
