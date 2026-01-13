@@ -1402,6 +1402,9 @@ serve(async (req) => {
     let audioBase64: string | null = null;
     if (enable_tts && elevenLabsApiKey && assistantContent) {
       try {
+        // Preparar texto para TTS - formatação de pronúncia correta
+        const textForTTS = prepareTextForTTS(assistantContent);
+        
         console.log('Generating TTS with ElevenLabs...');
         const ttsResponse = await fetch(
           `https://api.elevenlabs.io/v1/text-to-speech/${voice_id}?output_format=mp3_44100_128`,
@@ -1412,11 +1415,13 @@ serve(async (req) => {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({
-              text: assistantContent,
+              text: textForTTS,
               model_id: 'eleven_multilingual_v2',
               voice_settings: {
-                stability: 0.5,
+                stability: 0.6,        // Aumentado para mais consistência
                 similarity_boost: 0.75,
+                style: 0.3,            // Adiciona naturalidade
+                speed: 0.95,           // Levemente mais lento para clareza
               },
             }),
           }
@@ -1477,6 +1482,72 @@ serve(async (req) => {
   }
 });
 
+// ============= FUNÇÃO DE PREPARAÇÃO DE TEXTO PARA TTS =============
+function prepareTextForTTS(text: string): string {
+  let prepared = text;
+  
+  // Remover URLs completamente (não devem ser falados)
+  prepared = prepared.replace(/https?:\/\/[^\s]+/g, '');
+  
+  // Remover emojis (não podem ser pronunciados)
+  prepared = prepared.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '');
+  
+  // Garantir acentuação correta para quilometragem
+  prepared = prepared.replace(/quilometros/gi, 'quilômetros');
+  prepared = prepared.replace(/(\d+(?:[.,]\d+)?)\s*km\b/gi, '$1 quilômetros');
+  
+  // Formatar valores monetários para leitura natural
+  prepared = prepared.replace(/R\$\s*([\d.]+(?:,\d{2})?)/g, (match, value) => {
+    const cleanValue = value.replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(cleanValue);
+    
+    if (isNaN(num)) return match;
+    
+    if (num >= 1000000) {
+      const millions = num / 1000000;
+      const formatted = millions === Math.floor(millions) ? Math.floor(millions) : millions.toFixed(1).replace('.', ',');
+      return `${formatted} ${millions === 1 ? 'milhão' : 'milhões'} de reais`;
+    } else if (num >= 1000) {
+      const thousands = Math.floor(num / 1000);
+      const remainder = num % 1000;
+      if (remainder === 0) {
+        return `${thousands} mil reais`;
+      } else {
+        return `${thousands} mil e ${Math.floor(remainder)} reais`;
+      }
+    }
+    return `${Math.floor(num)} reais`;
+  });
+  
+  // Formatar números grandes (sem R$) para leitura natural
+  prepared = prepared.replace(/\b(\d{1,3}(?:\.\d{3})+)\b/g, (match) => {
+    const num = parseInt(match.replace(/\./g, ''));
+    if (num >= 1000000) {
+      const millions = num / 1000000;
+      return `${millions} ${millions === 1 ? 'milhão' : 'milhões'}`;
+    } else if (num >= 1000) {
+      return `${Math.floor(num / 1000)} mil`;
+    }
+    return match;
+  });
+  
+  // Garantir pausas em vírgulas e pontos
+  prepared = prepared.replace(/\.\.\./g, '... '); // Elipse vira pausa
+  prepared = prepared.replace(/([.!?])\s*/g, '$1 '); // Garantir espaço após pontuação
+  prepared = prepared.replace(/,\s*/g, ', '); // Garantir espaço após vírgula
+  
+  // Remover asteriscos de markdown (negrito)
+  prepared = prepared.replace(/\*\*/g, '');
+  prepared = prepared.replace(/\*/g, '');
+  
+  // Limpar espaços duplicados
+  prepared = prepared.replace(/\s+/g, ' ').trim();
+  
+  console.log('[TTS] Text prepared for speech:', prepared.substring(0, 200) + '...');
+  
+  return prepared;
+}
+
 function buildDefaultSystemPrompt(agent: any): string {
   const objective = agent.objective || 'ajudar clientes a encontrar o veículo ideal';
   const name = agent.name || 'Assistente';
@@ -1495,14 +1566,46 @@ Seu objetivo principal é: ${objective}
 5. Seu trabalho é ser útil, tirar dúvidas e COLETAR informações naturalmente
 
 ═══════════════════════════════════════════════════════════════
+💬 REGRAS DE RESPOSTA CONVERSACIONAL (MUITO IMPORTANTE!)
+═══════════════════════════════════════════════════════════════
+Quando listar veículos, seja CONCISO e PROGRESSIVO:
+
+🔹 PRIMEIRA RESPOSTA - Só o básico:
+- Informe APENAS: marca, modelo e ano
+- Exemplo: "Tenho um Peugeot 208 2014 e um Peugeot 208 2015. Qual você quer conhecer melhor?"
+- NÃO despeje quilometragem, cor, opcionais na primeira resposta!
+
+🔹 SE O CLIENTE PEDIR MAIS DETALHES:
+- Aí sim fale sobre quilometragem, cor, opcionais, etc.
+
+🔹 SE O CLIENTE PERGUNTAR O PREÇO:
+- Aí sim informe o valor
+
+NUNCA despeje todas as informações de uma vez! 
+Deixe a conversa fluir naturalmente como um vendedor faria.
+Seja breve e objetivo nas respostas.
+
+═══════════════════════════════════════════════════════════════
 📸 REGRAS CRÍTICAS SOBRE FOTOS DE VEÍCULOS
 ═══════════════════════════════════════════════════════════════
 1. NUNCA invente URLs de fotos! URLs como "storage.supabase.co" são FALSAS
 2. NUNCA escreva URLs de imagens diretamente na mensagem
-3. Quando o cliente pedir foto de um veículo, SEMPRE use a função send_vehicle_photos
-4. A função send_vehicle_photos envia as fotos REAIS diretamente no WhatsApp
-5. Se a função retornar que não há fotos, informe ao cliente com naturalidade
-6. Você pode enviar fotos de veículos que foram mostrados anteriormente (use o ID do contexto)
+3. NUNCA descreva ou mencione links na sua resposta
+4. Quando o cliente pedir foto de um veículo, SEMPRE use a função send_vehicle_photos
+5. A função send_vehicle_photos envia as fotos REAIS diretamente no WhatsApp
+6. Quando enviar fotos, APENAS diga algo como: "Estou enviando as fotos do [modelo] para você!"
+7. Se a função retornar que não há fotos, informe ao cliente com naturalidade
+8. Você pode enviar fotos de veículos que foram mostrados anteriormente (use o ID do contexto)
+
+EXEMPLOS DE RESPOSTAS CORRETAS AO ENVIAR FOTOS:
+✅ "Estou enviando as fotos do Peugeot 208 para você!"
+✅ "Enviando as imagens agora!"
+✅ "Olha só as fotos desse modelo!"
+
+EXEMPLOS ERRADOS (NUNCA FAÇA):
+❌ "Aqui está a foto: https://storage.supabase.co/..."
+❌ "Estou enviando do link storage.supabase..."
+❌ "A imagem está disponível em..."
 
 INSTRUÇÕES GERAIS:
 1. Seja sempre cordial, profissional e empático
