@@ -62,6 +62,95 @@ async function downloadAndUploadImage(
   }
 }
 
+async function processBatch(supabase: any, limit: number, vehicleId?: string) {
+  // Build query for images that haven't been migrated yet (external URLs)
+  let query = supabase
+    .from('vehicle_images')
+    .select('id, vehicle_id, url')
+    .not('url', 'ilike', '%supabase%')
+    .limit(limit)
+  
+  if (vehicleId) {
+    query = query.eq('vehicle_id', vehicleId)
+  }
+  
+  const { data: images, error: fetchError } = await query
+  
+  if (fetchError) {
+    console.error('Error fetching images:', fetchError)
+    return { success: 0, failed: 0, total: 0 }
+  }
+  
+  console.log(`Processing batch of ${images?.length || 0} images`)
+  
+  let successCount = 0
+  let failCount = 0
+  
+  for (const image of images || []) {
+    console.log(`Processing image ${image.id} for vehicle ${image.vehicle_id}`)
+    
+    const newUrl = await downloadAndUploadImage(
+      supabase,
+      image.url,
+      image.vehicle_id,
+      image.id
+    )
+    
+    if (newUrl) {
+      // Update the image URL in the database
+      const { error: updateError } = await supabase
+        .from('vehicle_images')
+        .update({ url: newUrl })
+        .eq('id', image.id)
+      
+      if (updateError) {
+        console.error(`Error updating image ${image.id}:`, updateError)
+        failCount++
+      } else {
+        successCount++
+      }
+    } else {
+      failCount++
+    }
+    
+    // Small delay to avoid rate limiting
+    await new Promise(resolve => setTimeout(resolve, 200))
+  }
+  
+  console.log(`Batch complete: ${successCount} success, ${failCount} failed`)
+  return { success: successCount, failed: failCount, total: images?.length || 0 }
+}
+
+async function migrateAllImages(supabase: any, batchSize: number) {
+  let totalSuccess = 0
+  let totalFailed = 0
+  let hasMore = true
+  let batchNumber = 0
+  
+  while (hasMore) {
+    batchNumber++
+    console.log(`\n=== Starting batch ${batchNumber} ===`)
+    
+    const result = await processBatch(supabase, batchSize)
+    totalSuccess += result.success
+    totalFailed += result.failed
+    
+    // If we processed fewer images than the batch size, we're done
+    hasMore = result.total === batchSize
+    
+    console.log(`Running total: ${totalSuccess} success, ${totalFailed} failed`)
+    
+    // Small delay between batches
+    if (hasMore) {
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+  }
+  
+  console.log(`\n=== Migration complete ===`)
+  console.log(`Total migrated: ${totalSuccess}`)
+  console.log(`Total failed: ${totalFailed}`)
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
@@ -73,77 +162,48 @@ Deno.serve(async (req) => {
     
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
     
-    const { vehicleId, limit = 50 } = await req.json().catch(() => ({}))
+    const { vehicleId, limit = 50, migrateAll = false } = await req.json().catch(() => ({}))
     
-    // Build query for images that haven't been migrated yet (external URLs)
-    let query = supabase
+    // Check how many images are pending
+    const { count: pendingCount } = await supabase
       .from('vehicle_images')
-      .select('id, vehicle_id, url')
+      .select('id', { count: 'exact', head: true })
       .not('url', 'ilike', '%supabase%')
-      .limit(limit)
     
-    if (vehicleId) {
-      query = query.eq('vehicle_id', vehicleId)
-    }
+    const { count: migratedCount } = await supabase
+      .from('vehicle_images')
+      .select('id', { count: 'exact', head: true })
+      .ilike('url', '%supabase%')
     
-    const { data: images, error: fetchError } = await query
-    
-    if (fetchError) {
-      console.error('Error fetching images:', fetchError)
+    if (migrateAll) {
+      // Use EdgeRuntime.waitUntil for background processing
+      // @ts-ignore - EdgeRuntime is available in Supabase edge functions
+      EdgeRuntime.waitUntil(migrateAllImages(supabase, 30))
+      
       return new Response(
-        JSON.stringify({ error: fetchError.message }),
-        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        JSON.stringify({
+          success: true,
+          message: `Migração iniciada em background para ${pendingCount} imagens`,
+          pending: pendingCount,
+          migrated: migratedCount,
+          status: 'processing'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
     
-    console.log(`Found ${images?.length || 0} images to migrate`)
-    
-    const results: any[] = []
-    let successCount = 0
-    let failCount = 0
-    
-    for (const image of images || []) {
-      console.log(`Processing image ${image.id} for vehicle ${image.vehicle_id}`)
-      
-      const newUrl = await downloadAndUploadImage(
-        supabase,
-        image.url,
-        image.vehicle_id,
-        image.id
-      )
-      
-      if (newUrl) {
-        // Update the image URL in the database
-        const { error: updateError } = await supabase
-          .from('vehicle_images')
-          .update({ url: newUrl })
-          .eq('id', image.id)
-        
-        if (updateError) {
-          console.error(`Error updating image ${image.id}:`, updateError)
-          failCount++
-          results.push({ id: image.id, status: 'error', message: updateError.message })
-        } else {
-          successCount++
-          results.push({ id: image.id, status: 'success', newUrl })
-        }
-      } else {
-        failCount++
-        results.push({ id: image.id, status: 'error', message: 'Failed to download/upload' })
-      }
-      
-      // Small delay to avoid rate limiting
-      await new Promise(resolve => setTimeout(resolve, 300))
-    }
+    // Single batch mode
+    const result = await processBatch(supabase, limit, vehicleId)
     
     return new Response(
       JSON.stringify({
         success: true,
-        total: images?.length || 0,
-        migrated: successCount,
-        failed: failCount,
-        results,
-        message: `Migradas ${successCount} de ${images?.length || 0} imagens`
+        total: result.total,
+        migrated: result.success,
+        failed: result.failed,
+        pending: (pendingCount || 0) - result.success,
+        alreadyMigrated: migratedCount,
+        message: `Migradas ${result.success} de ${result.total} imagens`
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
