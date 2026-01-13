@@ -355,19 +355,51 @@ serve(async (req) => {
           const photos = await photosResponse.json();
           console.log(`Found ${photos.length} photos for vehicle ${vehicle.Codigo}`);
 
-          // Delete existing photos for this vehicle first
-          await supabase
+          // Get existing photos for this vehicle to preserve migrated ones
+          const { data: existingPhotos } = await supabase
             .from('vehicle_images')
-            .delete()
+            .select('id, image_url')
             .eq('vehicle_id', vehicleId);
 
-          // Prepare all photos for batch insert
+          // Identify photos already migrated to Supabase Storage (URLs containing supabase)
+          const migratedPhotos = (existingPhotos || []).filter(
+            p => p.image_url && p.image_url.includes('supabase')
+          );
+          const migratedPhotoIds = new Set(migratedPhotos.map(p => p.id));
+
+          console.log(`  Vehicle has ${existingPhotos?.length || 0} existing photos, ${migratedPhotos.length} already migrated to Supabase`);
+
+          // Only delete non-migrated photos (external URLs)
+          if (existingPhotos && existingPhotos.length > 0) {
+            const photosToDelete = existingPhotos.filter(p => !migratedPhotoIds.has(p.id));
+            if (photosToDelete.length > 0) {
+              const idsToDelete = photosToDelete.map(p => p.id);
+              await supabase
+                .from('vehicle_images')
+                .delete()
+                .in('id', idsToDelete);
+              console.log(`  Deleted ${photosToDelete.length} non-migrated photos`);
+            }
+          }
+
+          // Prepare new photos for insert (only those not already migrated)
+          const migratedUrls = new Set(migratedPhotos.map(p => p.image_url));
           const photoInserts = photos.map((photo: Record<string, unknown>, i: number) => {
             const photoUrl = photo.URL || photo.Url || photo.url || photo.UrlFoto || photo.urlFoto || 
                            photo.Foto || photo.foto || photo.Link || photo.link || 
                            photo.Caminho || photo.caminho || photo.Path || photo.path;
             
             if (!photoUrl) return null;
+            
+            // Skip if we already have a migrated version of this photo
+            // We check by comparing the filename pattern
+            const photoUrlStr = String(photoUrl);
+            const photoFilename = photoUrlStr.split('/').pop()?.split('?')[0] || '';
+            const hasMigrated = Array.from(migratedUrls).some(url => url.includes(photoFilename));
+            if (hasMigrated) {
+              console.log(`  Skipping photo ${photoFilename} - already migrated`);
+              return null;
+            }
             
             const isPrincipal = photo.Principal === true || photo.principal === true || i === 0;
             const order = (photo.Posicao ?? photo.Ordem ?? photo.ordem ?? photo.Order ?? photo.order ?? i) as number;
@@ -383,7 +415,7 @@ serve(async (req) => {
             };
           }).filter((p: unknown) => p !== null);
 
-          // Batch insert all photos at once
+          // Batch insert only new photos
           if (photoInserts.length > 0) {
             const { error: photosInsertError } = await supabase
               .from('vehicle_images')
@@ -392,8 +424,10 @@ serve(async (req) => {
             if (photosInsertError) {
               console.error('Error batch inserting photos:', photosInsertError);
             } else {
-              console.log(`  Saved ${photoInserts.length} photos for vehicle ${vehicle.Codigo}`);
+              console.log(`  Saved ${photoInserts.length} new photos for vehicle ${vehicle.Codigo}`);
             }
+          } else {
+            console.log(`  No new photos to insert for vehicle ${vehicle.Codigo}`);
           }
 
           // Also update the images array on the vehicle
