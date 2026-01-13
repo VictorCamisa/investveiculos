@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, MapPin, Phone, ChevronRight, ChevronDown, Car, Users, Star, Award } from 'lucide-react';
 import { useFeaturedVehicles } from '@/hooks/usePublicVehicles';
 import { PublicVehicleCard } from '@/components/public/PublicVehicleCard';
@@ -9,6 +10,7 @@ import logoImg from '@/assets/logo-invest-veiculos.png';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
+  const [videoEnded, setVideoEnded] = useState(false);
 
   const openGoogleMaps = () => {
     window.open(
@@ -19,17 +21,39 @@ export default function Home() {
 
   return (
     <div className="bg-black text-white">
-      {/* Hero Section - Video Only */}
-      <section className="relative h-screen overflow-hidden">
+      {/* Hero Section - Video then Logo */}
+      <section className="relative h-screen overflow-hidden bg-black">
+        {/* Video - plays once */}
         <video
           autoPlay
           muted
-          loop
           playsInline
-          className="absolute inset-0 w-full h-full object-cover"
+          onEnded={() => setVideoEnded(true)}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${videoEnded ? 'opacity-0' : 'opacity-100'}`}
         >
           <source src="/videos/hero-video.mp4" type="video/mp4" />
         </video>
+
+        {/* Logo - appears when video ends */}
+        <AnimatePresence>
+          {videoEnded && (
+            <motion.div
+              className="absolute inset-0 flex items-center justify-center bg-black"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1 }}
+            >
+              <motion.img
+                src={logoImg}
+                alt="Invest Veículos"
+                className="h-32 md:h-40 lg:h-52 w-auto object-contain"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 1, delay: 0.3 }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
       {/* Featured Vehicles Section */}
