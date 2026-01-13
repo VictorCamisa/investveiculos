@@ -11,8 +11,9 @@ import heroBgNight from '@/assets/hero-bg-night.jpg';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [introPhase, setIntroPhase] = useState<'logo' | 'video' | 'fading' | 'final' | 'frozen'>('logo');
+  const [introPhase, setIntroPhase] = useState<'logo' | 'video' | 'fading' | 'final'>('logo');
   const videoRef = useRef<HTMLVideoElement>(null);
+  const mobileVideoRef = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -29,31 +30,23 @@ export default function Home() {
       setIntroPhase('video');
       // Inicia o vídeo após a transição
       setTimeout(() => {
-        videoRef.current?.play();
+        if (isMobile) {
+          mobileVideoRef.current?.play();
+        } else {
+          videoRef.current?.play();
+        }
       }, 500);
     }, 3000); // Logo fica 3 segundos
 
     return () => clearTimeout(logoTimer);
-  }, []);
+  }, [isMobile]);
 
   const handleVideoEnd = () => {
-    if (isMobile) {
-      // Mobile: congela, mostra frase, depois escurece até logo
-      setIntroPhase('frozen');
-      // Após 2s mostrando a frase, começa a escurecer
-      setTimeout(() => {
-        setIntroPhase('fading');
-        setTimeout(() => {
-          setIntroPhase('final');
-        }, 2000); // Fade mais lento no mobile
-      }, 2000);
-    } else {
-      // Desktop: escurece e volta a logo
-      setIntroPhase('fading');
-      setTimeout(() => {
-        setIntroPhase('final');
-      }, 1500);
-    }
+    // Mesmo fluxo para mobile e desktop: escurece e volta a logo
+    setIntroPhase('fading');
+    setTimeout(() => {
+      setIntroPhase('final');
+    }, 1500);
   };
 
   const openGoogleMaps = () => {
@@ -90,9 +83,16 @@ export default function Home() {
           )}
         </AnimatePresence>
 
+        {/* Dark overlay on video to make it darker */}
+        <div 
+          className={`absolute inset-0 bg-black/30 pointer-events-none z-[5] transition-opacity duration-500 ${
+            introPhase === 'video' ? 'opacity-100' : 'opacity-0'
+          }`}
+        />
+
         {/* Video - Desktop */}
         <video
-          ref={!isMobile ? videoRef : undefined}
+          ref={videoRef}
           muted
           playsInline
           onEnded={handleVideoEnd}
@@ -105,7 +105,7 @@ export default function Home() {
 
         {/* Video - Mobile */}
         <video
-          ref={isMobile ? videoRef : undefined}
+          ref={mobileVideoRef}
           muted
           playsInline
           onEnded={handleVideoEnd}
@@ -116,33 +116,6 @@ export default function Home() {
           <source src="/videos/hero-video-mobile.mp4" type="video/mp4" />
         </video>
 
-        {/* Frase overlay - aparece quando vídeo congela (mobile) */}
-        <AnimatePresence>
-          {introPhase === 'frozen' && (
-            <motion.div
-              className="absolute inset-0 z-15 flex items-center justify-center px-6 md:hidden"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <div className="absolute inset-0 bg-black/40" />
-              <motion.p
-                className="relative z-10 text-lg sm:text-xl font-light text-white/90 italic text-center max-w-md tracking-wide leading-relaxed"
-                style={{ 
-                  textShadow: "0 4px 30px rgba(0,0,0,0.8)",
-                  fontFamily: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
-                }}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.8, delay: 0.3 }}
-              >
-                Qualidade que se vê. <span className="text-public-primary font-normal not-italic">Confiança</span> que você sente
-              </motion.p>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Fade to black overlay */}
         <motion.div
           className="absolute inset-0 bg-black pointer-events-none z-10"
@@ -150,7 +123,7 @@ export default function Home() {
           animate={{ 
             opacity: introPhase === 'fading' || introPhase === 'final' ? 1 : 0 
           }}
-          transition={{ duration: 2 }}
+          transition={{ duration: 1.5 }}
         />
 
         {/* Final State: Background Image + Logo + Phrase */}
