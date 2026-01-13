@@ -1492,6 +1492,31 @@ function prepareTextForTTS(text: string): string {
   // Remover emojis (não podem ser pronunciados)
   prepared = prepared.replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]|[\u{1F600}-\u{1F64F}]|[\u{1F680}-\u{1F6FF}]/gu, '');
   
+  // ============= MOTORIZAÇÃO - formatar X.Y como "X ponto Y" =============
+  // Ex: "2.0" → "dois ponto zero", "3.6" → "três ponto seis"
+  const numerosPorExtenso = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+  prepared = prepared.replace(/\b(\d)[.,](\d)\b/g, (match, inteiro, decimal) => {
+    const inteiroNum = parseInt(inteiro);
+    const decimalNum = parseInt(decimal);
+    if (inteiroNum >= 0 && inteiroNum <= 9 && decimalNum >= 0 && decimalNum <= 9) {
+      return `${numerosPorExtenso[inteiroNum]} ponto ${numerosPorExtenso[decimalNum]}`;
+    }
+    return match;
+  });
+  
+  // ============= PORTAS - concordância feminina =============
+  // Ex: "2 portas" → "duas portas", "4 portas" → "quatro portas"
+  const numerosFemininos: { [key: string]: string } = {
+    '1': 'uma porta',
+    '2': 'duas portas',
+    '3': 'três portas',
+    '4': 'quatro portas',
+    '5': 'cinco portas'
+  };
+  prepared = prepared.replace(/\b(\d+)\s*porta[s]?\b/gi, (match, num) => {
+    return numerosFemininos[num] || `${num} portas`;
+  });
+  
   // Garantir acentuação correta para quilometragem
   prepared = prepared.replace(/quilometros/gi, 'quilômetros');
   prepared = prepared.replace(/(\d+(?:[.,]\d+)?)\s*km\b/gi, '$1 quilômetros');
