@@ -68,24 +68,46 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Video - starts after logo, freezes on last frame */}
+        {/* Video - cropped to hide watermark, freezes on last frame */}
         <video
           ref={videoRef}
           muted
           playsInline
           onEnded={handleVideoEnd}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${introPhase === 'logo' ? 'opacity-0' : 'opacity-100'}`}
+          className={`absolute inset-0 w-full h-full object-cover scale-110 transition-opacity duration-500 ${introPhase === 'logo' ? 'opacity-0' : 'opacity-100'}`}
         >
           <source src="/videos/hero-video.mp4" type="video/mp4" />
         </video>
 
-        {/* Dark overlay when frozen - highlights the text in the video */}
+        {/* Dark overlay when frozen */}
         <motion.div
           className="absolute inset-0 bg-black/50 pointer-events-none"
           initial={{ opacity: 0 }}
           animate={{ opacity: introPhase === 'frozen' ? 1 : 0 }}
           transition={{ duration: 1.5 }}
         />
+
+        {/* Phrase appears after video freezes */}
+        <AnimatePresence>
+          {introPhase === 'frozen' && (
+            <motion.div
+              className="absolute inset-0 z-10 flex items-center justify-center"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 1, delay: 0.5 }}
+            >
+              <motion.p
+                className="text-xl md:text-3xl lg:text-4xl font-light text-white italic text-center max-w-4xl px-6"
+                style={{ textShadow: "0 4px 30px rgba(0,0,0,0.8)" }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 1, delay: 0.8 }}
+              >
+                "Qualidade que se vê. <span className="text-[#E53935] font-normal">Confiança</span> que você sente"
+              </motion.p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </section>
 
       {/* Featured Vehicles Section */}
