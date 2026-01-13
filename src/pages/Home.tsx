@@ -7,6 +7,7 @@ import { PublicVehicleCard } from '@/components/public/PublicVehicleCard';
 import { LocationMap } from '@/components/ui/expand-map';
 import { StatsCard } from '@/components/ui/stats-card';
 import logoImg from '@/assets/logo-invest-veiculos.png';
+import heroBgNight from '@/assets/hero-bg-night.jpg';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
@@ -91,20 +92,30 @@ export default function Home() {
           transition={{ duration: 1.5 }}
         />
 
-        {/* Final State: Logo + Phrase */}
+        {/* Final State: Background Image + Logo + Phrase */}
         <AnimatePresence>
           {introPhase === 'final' && (
             <motion.div
-              className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black px-6"
+              className="absolute inset-0 z-20 flex flex-col items-center justify-center px-6"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1 }}
             >
+              {/* Dark background image */}
+              <div 
+                className="absolute inset-0 bg-cover bg-center"
+                style={{ 
+                  backgroundImage: `url(${heroBgNight})`,
+                }}
+              />
+              {/* Extra dark overlay to ensure logo/text stand out */}
+              <div className="absolute inset-0 bg-black/60" />
+              
               {/* Logo */}
               <motion.img
                 src={logoImg}
                 alt="Invest Veículos"
-                className="h-16 sm:h-24 md:h-32 lg:h-40 w-auto object-contain mb-8 sm:mb-12"
+                className="relative z-10 h-16 sm:h-24 md:h-32 lg:h-40 w-auto object-contain mb-8 sm:mb-12"
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8, delay: 0.3 }}
@@ -112,7 +123,7 @@ export default function Home() {
               
               {/* Phrase */}
               <motion.p
-                className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-light text-white/90 italic text-center max-w-4xl tracking-wide leading-relaxed"
+                className="relative z-10 text-lg sm:text-xl md:text-2xl lg:text-3xl font-light text-white/90 italic text-center max-w-4xl tracking-wide leading-relaxed"
                 style={{ 
                   textShadow: "0 4px 30px rgba(0,0,0,0.8)",
                   fontFamily: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
