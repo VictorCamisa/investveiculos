@@ -33,7 +33,7 @@ export default function PublicEstoque() {
   return (
     <div className="bg-public-bg min-h-screen pt-16">
       {/* Header - Compact */}
-      <section className="bg-public-surface py-8">
+      <section className="bg-black py-8">
         <div className="container mx-auto px-4">
           <motion.h1
             className="text-3xl md:text-4xl font-bold text-public-fg font-['Oswald'] text-center"
