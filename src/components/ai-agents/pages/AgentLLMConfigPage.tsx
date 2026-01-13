@@ -64,7 +64,7 @@ export function AgentLLMConfigPage() {
   
   // Estado local para configurações de voz
   const [enableTTS, setEnableTTS] = useState(false);
-  const [selectedVoice, setSelectedVoice] = useState('JBFqnCBsd6RMkjVDRZzb');
+  const [selectedVoice, setSelectedVoice] = useState('sB6li6v6ltCgOxFxqdo5');
   
   // Estado para API Keys
   const [apiKeySource, setApiKeySource] = useState<ApiKeySource>('lovable_gateway');
@@ -101,7 +101,7 @@ export function AgentLLMConfigPage() {
       
       // Load voice settings from agent
       setEnableTTS(agent.enable_voice || false);
-      setSelectedVoice(agent.voice_id || 'JBFqnCBsd6RMkjVDRZzb');
+      setSelectedVoice(agent.voice_id || 'sB6li6v6ltCgOxFxqdo5');
       
       // Se tiver api_key_encrypted, é porque usa chave própria
       if (agent.api_key_encrypted) {
@@ -381,7 +381,7 @@ export function AgentLLMConfigPage() {
                 value={selectedVoice.startsWith('custom:') ? 'custom' : 'preset'} 
                 onValueChange={(v) => {
                   if (v === 'preset') {
-                    setSelectedVoice('JBFqnCBsd6RMkjVDRZzb');
+                    setSelectedVoice('sB6li6v6ltCgOxFxqdo5');
                   } else {
                     setSelectedVoice('custom:');
                   }
