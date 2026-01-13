@@ -46,20 +46,26 @@ export function PublicFooter() {
               <li className="flex items-start gap-2 sm:gap-3">
                 <Phone className="h-4 w-4 sm:h-5 sm:w-5 text-public-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-public-fg/60 text-xs sm:text-sm">(12) 3621-3025</p>
-                  <p className="text-public-fg/60 text-xs sm:text-sm">(12) 99765-5893</p>
+                  <a href="tel:+551236213025" className="text-public-fg/60 text-xs sm:text-sm hover:text-public-primary transition-colors block">(12) 3621-3025</a>
+                  <a href="https://wa.me/5512997655893" target="_blank" rel="noopener noreferrer" className="text-public-fg/60 text-xs sm:text-sm hover:text-public-primary transition-colors block">(12) 99765-5893</a>
                 </div>
               </li>
               <li className="flex items-start gap-2 sm:gap-3">
                 <Mail className="h-4 w-4 sm:h-5 sm:w-5 text-public-primary flex-shrink-0 mt-0.5" />
-                <p className="text-public-fg/60 text-xs sm:text-sm break-all">contato@investveiculos.com.br</p>
+                <a href="mailto:investveiculostbt@gmail.com" className="text-public-fg/60 text-xs sm:text-sm break-all hover:text-public-primary transition-colors">investveiculostbt@gmail.com</a>
               </li>
               <li className="flex items-start gap-2 sm:gap-3">
                 <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-public-primary flex-shrink-0 mt-0.5" />
-                <p className="text-public-fg/60 text-xs sm:text-sm">
+                <a 
+                  href="https://www.google.com/maps/search/?api=1&query=Av.+Maj.+Joaquim+Monteiro+Patto,+25+-+Chácara+do+Visconde,+Taubaté+-+SP,+12050-620"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-public-fg/60 text-xs sm:text-sm hover:text-public-primary transition-colors"
+                >
                   Av. Maj. Joaquim Monteiro Patto, 25<br />
-                  Chácara do Visconde - Taubaté/SP
-                </p>
+                  Chácara do Visconde - Taubaté/SP<br />
+                  CEP: 12050-620
+                </a>
               </li>
             </ul>
           </div>
@@ -69,7 +75,7 @@ export function PublicFooter() {
             <h4 className="text-sm sm:text-base md:text-lg font-semibold mb-3 sm:mb-4 md:mb-6">Redes Sociais</h4>
             <div className="flex gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
               <a 
-                href="#" 
+                href="https://www.instagram.com/investveiculostbt/" 
                 className="w-8 h-8 sm:w-10 sm:h-10 bg-public-muted rounded-full flex items-center justify-center hover:bg-public-primary transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -77,7 +83,7 @@ export function PublicFooter() {
                 <Instagram className="h-4 w-4 sm:h-5 sm:w-5" />
               </a>
               <a 
-                href="#" 
+                href="https://www.facebook.com/investveiculostbt" 
                 className="w-8 h-8 sm:w-10 sm:h-10 bg-public-muted rounded-full flex items-center justify-center hover:bg-public-primary transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
@@ -85,7 +91,7 @@ export function PublicFooter() {
                 <Facebook className="h-4 w-4 sm:h-5 sm:w-5" />
               </a>
               <a 
-                href="#" 
+                href="https://wa.me/5512997655893" 
                 className="w-8 h-8 sm:w-10 sm:h-10 bg-public-muted rounded-full flex items-center justify-center hover:bg-public-primary transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
