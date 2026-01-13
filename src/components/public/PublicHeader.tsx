@@ -35,10 +35,10 @@ export function PublicHeader() {
 
   return (
     <header 
-      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b border-white/10 transition-all duration-300"
+      className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b border-public-border transition-all duration-300"
       style={{
         height: `${headerHeight}px`,
-        backgroundColor: `rgba(24, 24, 27, ${bgOpacity})`,
+        backgroundColor: `hsl(25 15% 12% / ${bgOpacity})`,
         boxShadow: `0 4px 30px rgba(0,0,0,${0.3 - scrollProgress * 0.1})`
       }}
     >

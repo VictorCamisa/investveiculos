@@ -33,17 +33,17 @@ export default function PublicEstoque() {
   return (
     <div className="bg-public-bg min-h-screen pt-24">
       {/* Header */}
-      <section className="bg-[#111] py-16">
+      <section className="bg-public-surface py-16">
         <div className="container mx-auto px-4">
           <motion.h1
-            className="text-4xl md:text-5xl font-bold text-white font-['Oswald'] text-center"
+            className="text-4xl md:text-5xl font-bold text-public-fg font-['Oswald'] text-center"
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
             Nosso <span className="text-public-primary">Estoque</span>
           </motion.h1>
           <motion.p
-            className="text-gray-400 text-center mt-4 max-w-xl mx-auto"
+            className="text-public-fg/60 text-center mt-4 max-w-xl mx-auto"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.2 }}
@@ -54,37 +54,37 @@ export default function PublicEstoque() {
       </section>
 
       {/* Filters & Search */}
-      <section className="sticky top-20 z-40 bg-zinc-900/95 backdrop-blur-xl border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.3)] py-4">
+      <section className="sticky top-20 z-40 bg-public-surface/95 backdrop-blur-xl border-b border-public-border shadow-[0_4px_30px_rgba(0,0,0,0.3)] py-4">
         <div className="container mx-auto px-4">
           <div className="flex flex-col md:flex-row gap-4 items-center">
             <div className="relative flex-1 w-full">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-public-fg/40" />
               <Input
                 placeholder="Buscar por marca, modelo..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
-                className="pl-10 bg-zinc-800/80 border-white/10 text-white placeholder:text-white/50 focus:border-public-primary"
+                className="pl-10 bg-public-muted border-public-border text-public-fg placeholder:text-public-fg/50 focus:border-public-primary"
               />
               {search && (
                 <button onClick={() => setSearch('')} className="absolute right-3 top-1/2 -translate-y-1/2">
-                  <X className="h-4 w-4 text-white/40 hover:text-white" />
+                  <X className="h-4 w-4 text-public-fg/40 hover:text-public-fg" />
                 </button>
               )}
             </div>
             <div className="flex gap-2 w-full md:w-auto">
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-full md:w-48 bg-zinc-800/80 border-white/10 text-white">
+                <SelectTrigger className="w-full md:w-48 bg-public-muted border-public-border text-public-fg">
                   <SelectValue placeholder="Ordenar por" />
                 </SelectTrigger>
-                <SelectContent className="bg-zinc-800 border-white/10">
-                  <SelectItem value="recent" className="text-white hover:bg-zinc-700 focus:bg-zinc-700 focus:text-white">Mais recentes</SelectItem>
-                  <SelectItem value="price-asc" className="text-white hover:bg-zinc-700 focus:bg-zinc-700 focus:text-white">Menor preço</SelectItem>
-                  <SelectItem value="price-desc" className="text-white hover:bg-zinc-700 focus:bg-zinc-700 focus:text-white">Maior preço</SelectItem>
-                  <SelectItem value="year-desc" className="text-white hover:bg-zinc-700 focus:bg-zinc-700 focus:text-white">Ano mais novo</SelectItem>
-                  <SelectItem value="km-asc" className="text-white hover:bg-zinc-700 focus:bg-zinc-700 focus:text-white">Menor KM</SelectItem>
+                <SelectContent className="bg-public-surface border-public-border">
+                  <SelectItem value="recent" className="text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Mais recentes</SelectItem>
+                  <SelectItem value="price-asc" className="text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Menor preço</SelectItem>
+                  <SelectItem value="price-desc" className="text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Maior preço</SelectItem>
+                  <SelectItem value="year-desc" className="text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Ano mais novo</SelectItem>
+                  <SelectItem value="km-asc" className="text-public-fg hover:bg-public-muted focus:bg-public-muted focus:text-public-fg">Menor KM</SelectItem>
                 </SelectContent>
               </Select>
-              <Button variant="outline" size="icon" onClick={() => setShowFilters(!showFilters)} className="border-white/10 bg-zinc-800/80 text-white hover:bg-zinc-700 hover:text-white">
+              <Button variant="outline" size="icon" onClick={() => setShowFilters(!showFilters)} className="border-public-border bg-public-muted text-public-fg hover:bg-public-primary/10 hover:text-public-fg">
                 <SlidersHorizontal className="h-4 w-4" />
               </Button>
             </div>
