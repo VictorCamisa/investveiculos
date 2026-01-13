@@ -100,7 +100,7 @@ export default function Home() {
             introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
-          <source src="/videos/hero-video.mp4?v=2" type="video/mp4" />
+          <source src="/videos/hero-video.mp4?v=3" type="video/mp4" />
         </video>
 
         {/* Video - Mobile */}
@@ -113,7 +113,7 @@ export default function Home() {
             introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
-          <source src="/videos/hero-video-mobile.mp4?v=2" type="video/mp4" />
+          <source src="/videos/hero-video-mobile.mp4?v=3" type="video/mp4" />
         </video>
 
         {/* Fade to black overlay */}
