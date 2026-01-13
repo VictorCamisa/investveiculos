@@ -1,4 +1,4 @@
-// App v2.4 - Fix dynamic import with error boundary
+// App v2.5 - Add public routes
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -13,6 +13,14 @@ import { Loader2 } from "lucide-react";
 import AppLayout from "@/components/layout/AppLayout";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Auth from "./pages/Auth";
+
+// Lazy load public pages
+const Home = lazy(() => import("./pages/Home"));
+const PublicEstoque = lazy(() => import("./pages/PublicEstoque"));
+const PublicVehicleDetails = lazy(() => import("./pages/PublicVehicleDetails"));
+const Sobre = lazy(() => import("./pages/Sobre"));
+const Contato = lazy(() => import("./pages/Contato"));
+const PublicLayout = lazy(() => import("@/components/public/PublicLayout").then(m => ({ default: m.PublicLayout })));
 
 // Lazy load internal pages
 const Dashboard = lazy(() => import("./pages/Dashboard"));
@@ -164,8 +172,14 @@ const App = () => (
             <LazyErrorBoundary>
             <Suspense fallback={<PageLoader />}>
               <Routes>
-                {/* Redirect root to auth */}
-                <Route path="/" element={<Navigate to="/auth" replace />} />
+                {/* Public Routes */}
+                <Route element={<Suspense fallback={<PageLoader />}><PublicLayout /></Suspense>}>
+                  <Route path="/" element={<Home />} />
+                  <Route path="/veiculos" element={<PublicEstoque />} />
+                  <Route path="/veiculos/:id" element={<PublicVehicleDetails />} />
+                  <Route path="/sobre" element={<Sobre />} />
+                  <Route path="/contato" element={<Contato />} />
+                </Route>
 
                 {/* Auth */}
                 <Route path="/auth" element={<Auth />} />
