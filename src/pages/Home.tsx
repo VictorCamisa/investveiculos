@@ -78,6 +78,14 @@ export default function Home() {
         >
           <source src="/videos/hero-video.mp4" type="video/mp4" />
         </video>
+
+        {/* Dark overlay when frozen - highlights the text in the video */}
+        <motion.div
+          className="absolute inset-0 bg-black/50 pointer-events-none"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: introPhase === 'frozen' ? 1 : 0 }}
+          transition={{ duration: 1.5 }}
+        />
       </section>
 
       {/* Featured Vehicles Section */}
