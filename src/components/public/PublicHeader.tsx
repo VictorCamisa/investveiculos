@@ -38,8 +38,8 @@ export function PublicHeader() {
       className="fixed top-0 left-0 right-0 z-50 backdrop-blur-xl border-b border-public-border transition-all duration-300"
       style={{
         height: `${headerHeight}px`,
-        backgroundColor: `hsl(25 15% 12% / ${bgOpacity})`,
-        boxShadow: `0 4px 30px rgba(0,0,0,${0.3 - scrollProgress * 0.1})`
+        backgroundColor: `hsl(0 0% 5% / ${bgOpacity})`,
+        boxShadow: `0 4px 30px rgba(0,0,0,${0.4 - scrollProgress * 0.1})`
       }}
     >
       <div className="container mx-auto px-4">
