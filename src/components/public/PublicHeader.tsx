@@ -29,9 +29,9 @@ export function PublicHeader() {
   }, [location.pathname]);
 
   // Dynamic styles based on scroll
-  const headerHeight = 80 - (scrollProgress * 16); // 80px to 64px
-  const bgOpacity = 0.95 - (scrollProgress * 0.25); // 95% to 70%
-  const logoScale = 1 - (scrollProgress * 0.15); // 100% to 85%
+  const headerHeight = 64 - (scrollProgress * 8); // 64px to 56px
+  const bgOpacity = 0.98 - (scrollProgress * 0.08); // 98% to 90%
+  const logoScale = 1 - (scrollProgress * 0.1); // 100% to 90%
 
   return (
     <header 
@@ -51,8 +51,8 @@ export function PublicHeader() {
           <Link to="/" className="relative z-10 transition-transform duration-300" style={{ transform: `scale(${logoScale})` }}>
             <img 
               src={logoImg} 
-              alt="Matheus Veículos" 
-              className="h-12 w-auto"
+              alt="Invest Veículos" 
+              className="h-9 w-auto"
             />
           </Link>
 
