@@ -234,6 +234,7 @@ export function NegotiationPipeline({
                         negotiation={negotiation}
                         onClick={() => onNegotiationClick?.(negotiation)}
                         showSalesperson={showSalesperson}
+                        showDeleteButton={true}
                       />
                     </div>
                   ))}
