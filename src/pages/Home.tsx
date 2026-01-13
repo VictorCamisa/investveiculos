@@ -44,13 +44,13 @@ export default function Home() {
   return (
     <div className="bg-public-bg text-public-fg">
       {/* Hero Section - Logo Intro → Video → Freeze */}
-      <section className="relative h-screen overflow-hidden bg-public-bg">
+      <section className="relative h-[100dvh] overflow-hidden bg-black">
         
         {/* Logo Intro Animation */}
         <AnimatePresence>
           {introPhase === 'logo' && (
             <motion.div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-public-bg"
+              className="absolute inset-0 z-20 flex items-center justify-center bg-black"
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.8 }}
@@ -58,7 +58,7 @@ export default function Home() {
               <motion.img
                 src={logoImg}
                 alt="Invest Veículos"
-                className="h-28 md:h-40 lg:h-48 w-auto object-contain"
+                className="h-20 sm:h-28 md:h-40 lg:h-48 w-auto object-contain px-8"
                 initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 1.1 }}
@@ -68,16 +68,24 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Video - cropped to hide watermark, freezes on last frame */}
-        <video
-          ref={videoRef}
-          muted
-          playsInline
-          onEnded={handleVideoEnd}
-          className={`absolute inset-0 w-full h-full object-cover scale-110 transition-opacity duration-500 ${introPhase === 'logo' ? 'opacity-0' : 'opacity-100'}`}
-        >
-          <source src="/videos/hero-video.mp4" type="video/mp4" />
-        </video>
+        {/* Video - optimized for mobile with proper aspect ratio */}
+        <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+          <video
+            ref={videoRef}
+            muted
+            playsInline
+            onEnded={handleVideoEnd}
+            className={`min-w-full min-h-full w-auto h-auto object-cover transition-opacity duration-500 ${introPhase === 'logo' ? 'opacity-0' : 'opacity-100'}`}
+            style={{ 
+              position: 'absolute',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%) scale(1.1)'
+            }}
+          >
+            <source src="/videos/hero-video.mp4" type="video/mp4" />
+          </video>
+        </div>
 
         {/* Dark overlay when frozen */}
         <motion.div
@@ -91,13 +99,13 @@ export default function Home() {
         <AnimatePresence>
           {introPhase === 'frozen' && (
             <motion.div
-              className="absolute inset-0 z-10 flex items-end justify-center pb-24 md:pb-32"
+              className="absolute inset-0 z-10 flex items-end justify-center pb-16 sm:pb-20 md:pb-28 lg:pb-32 px-4"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ duration: 1, delay: 0.5 }}
             >
               <motion.p
-                className="text-xl md:text-2xl lg:text-3xl font-light text-white/90 italic text-center max-w-4xl px-6 tracking-wide"
+                className="text-lg sm:text-xl md:text-2xl lg:text-3xl font-light text-white/90 italic text-center max-w-4xl tracking-wide leading-relaxed"
                 style={{ 
                   textShadow: "0 4px 30px rgba(0,0,0,0.8)",
                   fontFamily: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
@@ -114,46 +122,46 @@ export default function Home() {
       </section>
 
       {/* Featured Vehicles Section */}
-      <section className="py-24 bg-public-bg">
-        <div className="container mx-auto px-6">
+      <section className="py-12 sm:py-16 md:py-24 bg-public-bg">
+        <div className="container mx-auto px-4 sm:px-6">
           <motion.div
-            className="flex flex-col md:flex-row md:items-end md:justify-between mb-16 gap-6"
+            className="flex flex-col md:flex-row md:items-end md:justify-between mb-8 sm:mb-12 md:mb-16 gap-4 sm:gap-6"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
             <div>
-              <span className="text-public-primary text-sm font-medium uppercase tracking-widest mb-4 block">
+              <span className="text-public-primary text-xs sm:text-sm font-medium uppercase tracking-widest mb-2 sm:mb-4 block">
                 Destaques
               </span>
-              <h2 className="text-4xl md:text-5xl font-display font-bold text-public-fg leading-tight">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-public-fg leading-tight">
                 Nosso <span className="text-public-fg/50">Estoque</span>
               </h2>
             </div>
             <Link to="/veiculos">
               <motion.button
-                className="group flex items-center gap-2 text-public-fg/60 hover:text-public-fg transition-colors"
+                className="group flex items-center gap-2 text-sm text-public-fg/60 hover:text-public-fg transition-colors"
                 whileHover={{ x: 5 }}
               >
                 Ver todos os veículos
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
               </motion.button>
             </Link>
           </motion.div>
 
           {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8">
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="bg-public-surface rounded-2xl h-[420px] animate-pulse"
+                  className="bg-public-surface rounded-2xl h-[350px] sm:h-[400px] animate-pulse"
                 />
               ))}
             </div>
           ) : (
             <motion.div
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
+              className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 md:gap-8"
               initial="hidden"
               whileInView="visible"
               viewport={{ once: true }}
@@ -180,11 +188,11 @@ export default function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="relative py-20 md:py-28 bg-public-surface">
+      <section className="relative py-12 sm:py-16 md:py-24 bg-public-surface">
         <div className="absolute inset-0 bg-gradient-to-b from-public-bg via-transparent to-public-bg" />
-        <div className="container mx-auto px-6 relative z-10">
+        <div className="container mx-auto px-4 sm:px-6 relative z-10">
           <motion.div
-            className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"
+            className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 md:gap-6"
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
@@ -199,10 +207,10 @@ export default function Home() {
       </section>
 
       {/* Location Section */}
-      <section className="py-24 bg-public-bg">
-        <div className="container mx-auto px-6">
+      <section className="py-12 sm:py-16 md:py-24 bg-public-bg">
+        <div className="container mx-auto px-4 sm:px-6">
           <motion.div
-            className="grid lg:grid-cols-2 gap-12 items-center"
+            className="grid lg:grid-cols-2 gap-8 md:gap-12 items-center"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -210,34 +218,34 @@ export default function Home() {
           >
             {/* Info */}
             <div>
-              <span className="text-public-primary text-sm font-medium uppercase tracking-widest mb-4 block">
+              <span className="text-public-primary text-xs sm:text-sm font-medium uppercase tracking-widest mb-2 sm:mb-4 block">
                 Onde Estamos
               </span>
-              <h2 className="text-4xl md:text-5xl font-display font-bold text-public-fg mb-8">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-public-fg mb-6 sm:mb-8">
                 Visite nossa <span className="text-public-fg/50">Loja</span>
               </h2>
 
-              <div className="space-y-6 mb-8">
-                <div className="flex gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-public-primary/10 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-5 h-5 text-public-primary" />
+              <div className="space-y-4 sm:space-y-6 mb-6 sm:mb-8">
+                <div className="flex gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-public-primary/10 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-4 h-4 sm:w-5 sm:h-5 text-public-primary" />
                   </div>
                   <div>
-                    <h3 className="text-public-fg font-semibold mb-1">Endereço</h3>
-                    <p className="text-public-fg/60 leading-relaxed">
+                    <h3 className="text-public-fg font-semibold text-sm sm:text-base mb-1">Endereço</h3>
+                    <p className="text-public-fg/60 text-sm sm:text-base leading-relaxed">
                       Av. Maj. Joaquim Monteiro Patto, 25<br />
                       Chácara do Visconde - Taubaté/SP
                     </p>
                   </div>
                 </div>
 
-                <div className="flex gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-public-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-5 h-5 text-public-primary" />
+                <div className="flex gap-3 sm:gap-4">
+                  <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-public-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-public-primary" />
                   </div>
                   <div>
-                    <h3 className="text-public-fg font-semibold mb-1">Horário</h3>
-                    <p className="text-public-fg/60 leading-relaxed">
+                    <h3 className="text-public-fg font-semibold text-sm sm:text-base mb-1">Horário</h3>
+                    <p className="text-public-fg/60 text-sm sm:text-base leading-relaxed">
                       Segunda a Sexta: 08:00 às 18:00<br />
                       Sábado: 08:00 às 12:30
                     </p>
@@ -247,7 +255,7 @@ export default function Home() {
 
               <motion.button
                 onClick={openGoogleMaps}
-                className="group flex items-center gap-2 px-6 py-3 bg-public-muted border border-public-border rounded-full text-public-fg hover:bg-public-primary/10 hover:border-public-primary/30 transition-all"
+                className="group flex items-center gap-2 px-5 sm:px-6 py-2.5 sm:py-3 bg-public-muted border border-public-border rounded-full text-sm sm:text-base text-public-fg hover:bg-public-primary/10 hover:border-public-primary/30 transition-all"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -266,7 +274,7 @@ export default function Home() {
               <LocationMap
                 location="Invest Veículos - Taubaté"
                 coordinates="Av. Maj. Joaquim Monteiro Patto, 25"
-                className="w-full aspect-square rounded-2xl"
+                className="w-full aspect-[4/3] sm:aspect-square rounded-2xl"
               />
             </motion.div>
           </motion.div>
