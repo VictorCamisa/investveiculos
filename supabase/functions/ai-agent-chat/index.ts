@@ -1278,6 +1278,53 @@ serve(async (req) => {
                   link: '/crm',
                 });
                 
+                // Send WhatsApp to the assigned salesperson
+                const { data: salespersonProfile } = await supabase
+                  .from('profiles')
+                  .select('phone, full_name')
+                  .eq('id', salesperson.id)
+                  .single();
+                
+                if (salespersonProfile?.phone) {
+                  const paymentMethodLabel = qualificationData.payment_method === 'financiamento' ? 'Financiamento' 
+                    : qualificationData.payment_method === 'a_vista' ? 'À Vista' 
+                    : qualificationData.payment_method === 'consorcio' ? 'Consórcio'
+                    : qualificationData.payment_method || 'Não informado';
+                  
+                  const whatsappMessage = `🎯 *Novo Lead Qualificado!*
+
+Olá ${salespersonProfile.full_name?.split(' ')[0] || 'Vendedor'}!
+
+Você recebeu um novo lead qualificado pela IA:
+
+👤 *Nome:* ${leadInfo?.name || 'Cliente'}
+📱 *Telefone:* ${leadInfo?.phone || 'não informado'}
+🚗 *Interesse:* ${qualificationData.vehicle_interest || leadInfo?.vehicle_interest || 'veículo'}
+⭐ *Score:* ${qualificationScore} pontos
+${qualificationData.has_trade_in ? '🔄 *Possui carro para troca:* ' + (qualificationData.trade_in_vehicle || 'Sim') : ''}
+💰 *Pagamento:* ${paymentMethodLabel}
+${qualificationData.down_payment ? '💵 *Entrada:* R$ ' + qualificationData.down_payment.toLocaleString('pt-BR') : ''}
+
+📲 Acesse o CRM para continuar o atendimento!`;
+
+                  try {
+                    await sendWhatsAppMessage(
+                      { 
+                        phone: salespersonProfile.phone, 
+                        message: whatsappMessage,
+                        instance_name: 'default' 
+                      },
+                      supabaseUrl,
+                      serviceRoleKey
+                    );
+                    console.log(`[Auto-Qualify] WhatsApp sent to salesperson: ${salesperson.name} (${salespersonProfile.phone})`);
+                  } catch (whatsappError) {
+                    console.error(`[Auto-Qualify] Failed to send WhatsApp to salesperson:`, whatsappError);
+                  }
+                } else {
+                  console.log(`[Auto-Qualify] Salesperson ${salesperson.name} has no phone number registered`);
+                }
+                
                 // Also notify managers
                 const { data: managers } = await supabase
                   .from('user_roles')
