@@ -92,7 +92,7 @@ export default function Sobre() {
             transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
           >
             <motion.span 
-              className="text-[#E53935] text-sm font-medium uppercase tracking-widest mb-4 block"
+              className="text-[#E59935] text-sm font-medium uppercase tracking-widest mb-4 block"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.2 }}
@@ -105,7 +105,7 @@ export default function Sobre() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
             >
-              Sobre a <span className="text-[#E53935]">Matheus Veículos</span>
+              Sobre a <span className="text-[#E59935]">Matheus Veículos</span>
             </motion.h1>
             <motion.p 
               className="text-xl text-white/60"
@@ -123,7 +123,7 @@ export default function Sobre() {
       <section className="py-24 bg-zinc-950 relative">
         <div className="absolute inset-0">
           <motion.div 
-            className="absolute top-0 right-0 w-96 h-96 bg-[#E53935]/10 rounded-full blur-[150px]"
+            className="absolute top-0 right-0 w-96 h-96 bg-[#E59935]/10 rounded-full blur-[150px]"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -165,7 +165,7 @@ export default function Sobre() {
                 viewport={{ once: true }}
                 transition={{ delay: 0.4, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
-                <div className="text-4xl font-bold text-[#E53935] mb-1">20</div>
+                <div className="text-4xl font-bold text-[#E59935] mb-1">20</div>
                 <div className="text-white/50 text-sm">Anos de<br />Experiência</div>
               </motion.div>
 
@@ -176,7 +176,7 @@ export default function Sobre() {
                 viewport={{ once: true }}
                 transition={{ delay: 0.5, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
               >
-                <div className="text-4xl font-bold text-[#E53935] mb-1">100%</div>
+                <div className="text-4xl font-bold text-[#E59935] mb-1">100%</div>
                 <div className="text-white/50 text-sm">Laudo<br />Aprovado</div>
               </motion.div>
             </motion.div>
@@ -188,7 +188,7 @@ export default function Sobre() {
               whileInView="visible"
               viewport={{ once: true, margin: "-100px" }}
             >
-              <span className="text-[#E53935] text-sm font-medium uppercase tracking-widest mb-4 block">
+              <span className="text-[#E59935] text-sm font-medium uppercase tracking-widest mb-4 block">
                 Nossa História
               </span>
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 leading-tight font-['Oswald']">
@@ -215,7 +215,7 @@ export default function Sobre() {
       {/* Atendimento Transparente */}
       <section className="py-24 bg-black relative overflow-hidden">
         <div className="absolute inset-0">
-          <div className="absolute inset-0 bg-gradient-to-br from-[#E53935]/5 via-transparent to-transparent" />
+          <div className="absolute inset-0 bg-gradient-to-br from-[#E59935]/5 via-transparent to-transparent" />
         </div>
 
         <div className="container mx-auto px-6 relative z-10">
@@ -226,7 +226,7 @@ export default function Sobre() {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
           >
-            <span className="text-[#E53935] text-sm font-medium uppercase tracking-widest mb-4 block">
+            <span className="text-[#E59935] text-sm font-medium uppercase tracking-widest mb-4 block">
               Nosso Compromisso
             </span>
             <h2 className="text-4xl md:text-5xl font-bold text-white font-['Oswald']">
@@ -267,11 +267,11 @@ export default function Sobre() {
                 <motion.div
                   key={i}
                   variants={staggerItem}
-                  className="group p-6 bg-zinc-900/50 backdrop-blur-xl border border-white/5 rounded-2xl hover:border-[#E53935]/30 transition-all duration-300"
+                  className="group p-6 bg-zinc-900/50 backdrop-blur-xl border border-white/5 rounded-2xl hover:border-[#E59935]/30 transition-all duration-300"
                   whileHover={{ y: -5 }}
                 >
-                  <div className="w-12 h-12 rounded-xl bg-[#E53935]/10 border border-[#E53935]/20 flex items-center justify-center mb-4 group-hover:bg-[#E53935] group-hover:border-[#E53935] transition-all">
-                    <item.icon className="w-6 h-6 text-[#E53935] group-hover:text-white transition-colors" />
+                  <div className="w-12 h-12 rounded-xl bg-[#E59935]/10 border border-[#E59935]/20 flex items-center justify-center mb-4 group-hover:bg-[#E59935] group-hover:border-[#E59935] transition-all">
+                    <item.icon className="w-6 h-6 text-[#E59935] group-hover:text-white transition-colors" />
                   </div>
                   <h3 className="text-white font-semibold mb-2">{item.title}</h3>
                   <p className="text-white/50 text-sm">{item.desc}</p>
@@ -292,7 +292,7 @@ export default function Sobre() {
               whileInView="visible"
               viewport={{ once: true, margin: "-100px" }}
             >
-              <span className="text-[#E53935] text-sm font-medium uppercase tracking-widest mb-4 block">
+              <span className="text-[#E59935] text-sm font-medium uppercase tracking-widest mb-4 block">
                 Qualidade Garantida
               </span>
               <h2 className="text-4xl md:text-5xl font-bold text-white mb-6 font-['Oswald']">
@@ -327,8 +327,8 @@ export default function Sobre() {
                     className="flex items-center gap-3"
                     variants={staggerItem}
                   >
-                    <div className="w-8 h-8 rounded-full bg-[#E53935]/20 flex items-center justify-center">
-                      <CheckCircle className="w-5 h-5 text-[#E53935]" />
+                    <div className="w-8 h-8 rounded-full bg-[#E59935]/20 flex items-center justify-center">
+                      <CheckCircle className="w-5 h-5 text-[#E59935]" />
                     </div>
                     <span className="text-white font-medium">{item}</span>
                   </motion.div>
@@ -346,7 +346,7 @@ export default function Sobre() {
               {/* Quote card */}
               <div className="relative bg-zinc-900/50 backdrop-blur-xl border border-white/10 rounded-3xl p-10 overflow-hidden">
                 <motion.div 
-                  className="absolute top-0 right-0 w-40 h-40 bg-[#E53935]/20 rounded-full blur-3xl"
+                  className="absolute top-0 right-0 w-40 h-40 bg-[#E59935]/20 rounded-full blur-3xl"
                   initial={{ opacity: 0 }}
                   whileInView={{ opacity: 1 }}
                   viewport={{ once: true }}
@@ -361,13 +361,13 @@ export default function Sobre() {
 
                 <div className="flex items-center gap-2">
                   <motion.div 
-                    className="w-10 h-0.5 bg-[#E53935]"
+                    className="w-10 h-0.5 bg-[#E59935]"
                     initial={{ width: 0 }}
                     whileInView={{ width: 40 }}
                     viewport={{ once: true }}
                     transition={{ delay: 0.5, duration: 0.6 }}
                   />
-                  <span className="text-[#E53935] font-medium">Equipe Matheus Veículos</span>
+                  <span className="text-[#E59935] font-medium">Equipe Matheus Veículos</span>
                 </div>
               </div>
             </motion.div>
@@ -379,7 +379,7 @@ export default function Sobre() {
       <section className="py-24 bg-black relative">
         <div className="absolute inset-0">
           <motion.div 
-            className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-[#E53935]/10 rounded-full blur-[150px]"
+            className="absolute top-1/2 left-1/4 -translate-y-1/2 w-[500px] h-[500px] bg-[#E59935]/10 rounded-full blur-[150px]"
             initial={{ opacity: 0 }}
             whileInView={{ opacity: 1 }}
             viewport={{ once: true }}
@@ -395,7 +395,7 @@ export default function Sobre() {
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
           >
-            <span className="text-[#E53935] text-sm font-medium uppercase tracking-widest mb-4 block">
+            <span className="text-[#E59935] text-sm font-medium uppercase tracking-widest mb-4 block">
               Venha nos visitar
             </span>
             <h2 className="text-4xl md:text-5xl font-bold text-white font-['Oswald']">
@@ -424,8 +424,8 @@ export default function Sobre() {
                 viewport={{ once: true, margin: "-50px" }}
               >
                 <motion.div variants={staggerItem} className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[#E53935]/10 border border-[#E53935]/20 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-6 h-6 text-[#E53935]" />
+                  <div className="w-14 h-14 rounded-2xl bg-[#E59935]/10 border border-[#E59935]/20 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-6 h-6 text-[#E59935]" />
                   </div>
                   <div>
                     <h4 className="text-white font-semibold text-lg mb-1">Endereço</h4>
@@ -438,8 +438,8 @@ export default function Sobre() {
                 </motion.div>
                 
                 <motion.div variants={staggerItem} className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[#E53935]/10 border border-[#E53935]/20 flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-6 h-6 text-[#E53935]" />
+                  <div className="w-14 h-14 rounded-2xl bg-[#E59935]/10 border border-[#E59935]/20 flex items-center justify-center flex-shrink-0">
+                    <Clock className="w-6 h-6 text-[#E59935]" />
                   </div>
                   <div>
                     <h4 className="text-white font-semibold text-lg mb-1">Horário de Funcionamento</h4>
@@ -461,8 +461,8 @@ export default function Sobre() {
                 </motion.div>
                 
                 <motion.div variants={staggerItem} className="flex items-start gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-[#E53935]/10 border border-[#E53935]/20 flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-6 h-6 text-[#E53935]" />
+                  <div className="w-14 h-14 rounded-2xl bg-[#E59935]/10 border border-[#E59935]/20 flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-6 h-6 text-[#E59935]" />
                   </div>
                   <div>
                     <h4 className="text-white font-semibold text-lg mb-1">Telefone</h4>
@@ -473,7 +473,7 @@ export default function Sobre() {
 
               <motion.button 
                 onClick={openGoogleMaps}
-                className="flex items-center gap-3 px-8 py-4 bg-[#E53935] text-white font-semibold rounded-full hover:shadow-[0_0_30px_rgba(229,57,53,0.4)] transition-all"
+                className="flex items-center gap-3 px-8 py-4 bg-[#E59935] text-white font-semibold rounded-full hover:shadow-[0_0_30px_rgba(229,153,53,0.4)] transition-all"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
@@ -500,7 +500,7 @@ export default function Sobre() {
       <section className="py-24 bg-zinc-950 relative overflow-hidden">
         {/* Red accent glow */}
         <motion.div 
-          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#E53935]/10 rounded-full blur-[150px]"
+          className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[400px] bg-[#E59935]/10 rounded-full blur-[150px]"
           initial={{ opacity: 0, scale: 0.5 }}
           whileInView={{ opacity: 1, scale: 1 }}
           viewport={{ once: true }}
@@ -527,7 +527,7 @@ export default function Sobre() {
             
             <h2 className="text-3xl md:text-5xl font-bold text-white mb-6 leading-tight font-['Oswald']">
               Matheus Veículos.<br />
-              <span className="text-[#E53935]">Tradição, segurança e confiança</span><br />
+              <span className="text-[#E59935]">Tradição, segurança e confiança</span><br />
               <span className="text-white/50">na hora de comprar seu próximo carro seminovo.</span>
             </h2>
             
@@ -541,7 +541,7 @@ export default function Sobre() {
               <motion.div variants={staggerItem}>
                 <Link to="/veiculos">
                   <motion.button 
-                    className="px-10 py-5 bg-[#E53935] text-white font-bold rounded-full hover:shadow-[0_0_40px_rgba(229,57,53,0.4)] transition-all flex items-center gap-2"
+                    className="px-10 py-5 bg-[#E59935] text-white font-bold rounded-full hover:shadow-[0_0_40px_rgba(229,153,53,0.4)] transition-all flex items-center gap-2"
                     whileHover={{ scale: 1.02 }}
                     whileTap={{ scale: 0.98 }}
                   >

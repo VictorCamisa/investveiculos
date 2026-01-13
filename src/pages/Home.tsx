@@ -124,7 +124,7 @@ export default function Home() {
             transition={{ duration: 0.5 }}
           >
             <div>
-              <span className="text-[#E53935] text-sm font-medium uppercase tracking-widest mb-4 block">
+              <span className="text-[#E59935] text-sm font-medium uppercase tracking-widest mb-4 block">
                 Destaques
               </span>
               <h2 className="text-4xl md:text-5xl font-display font-bold text-white leading-tight">
@@ -210,7 +210,7 @@ export default function Home() {
           >
             {/* Info */}
             <div>
-              <span className="text-[#E53935] text-sm font-medium uppercase tracking-widest mb-4 block">
+              <span className="text-[#E59935] text-sm font-medium uppercase tracking-widest mb-4 block">
                 Onde Estamos
               </span>
               <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-8">
@@ -219,8 +219,8 @@ export default function Home() {
 
               <div className="space-y-6 mb-8">
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#E53935]/10 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-5 h-5 text-[#E53935]" />
+                  <div className="w-12 h-12 rounded-xl bg-[#E59935]/10 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-5 h-5 text-[#E59935]" />
                   </div>
                   <div>
                     <h3 className="text-white font-semibold mb-1">Endereço</h3>
@@ -232,8 +232,8 @@ export default function Home() {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#E53935]/10 flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-5 h-5 text-[#E53935]" />
+                  <div className="w-12 h-12 rounded-xl bg-[#E59935]/10 flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-5 h-5 text-[#E59935]" />
                   </div>
                   <div>
                     <h3 className="text-white font-semibold mb-1">Horário</h3>

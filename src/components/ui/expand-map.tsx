@@ -152,17 +152,16 @@ export function LocationMap({
               >
                 <div className="relative">
                   <motion.div
-                    className="absolute inset-0 bg-[#E53935] rounded-full"
+                    className="absolute inset-0 bg-[#E59935] rounded-full"
                     animate={{ scale: [1, 2, 1], opacity: [0.5, 0, 0.5] }}
                     transition={{ duration: 2, repeat: Infinity }}
                   />
-                  <div className="w-4 h-4 bg-[#E53935] rounded-full border-2 border-white shadow-lg" />
+                  <div className="w-4 h-4 bg-[#E59935] rounded-full border-2 border-white shadow-lg" />
                 </div>
               </motion.div>
 
-              {/* Open in Google Maps button */}
               <motion.button
-                className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-[#E53935] text-white text-sm font-medium rounded-full hover:bg-[#C62828] transition-colors"
+                className="absolute bottom-4 right-4 flex items-center gap-2 px-4 py-2 bg-[#E59935] text-white text-sm font-medium rounded-full hover:bg-[#CC8830] transition-colors"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.4 }}
@@ -196,11 +195,11 @@ export function LocationMap({
           {/* Top section */}
           <div className="flex items-start justify-between">
             <motion.div
-              className="w-12 h-12 rounded-2xl bg-[#E53935]/20 backdrop-blur-sm flex items-center justify-center border border-[#E53935]/30"
+              className="w-12 h-12 rounded-2xl bg-[#E59935]/20 backdrop-blur-sm flex items-center justify-center border border-[#E59935]/30"
               animate={{ scale: isHovered ? 1.1 : 1 }}
               transition={{ duration: 0.2 }}
             >
-              <MapPin className="w-6 h-6 text-[#E53935]" />
+              <MapPin className="w-6 h-6 text-[#E59935]" />
             </motion.div>
 
             {/* Status indicator */}
@@ -240,7 +239,7 @@ export function LocationMap({
 
             {/* Animated underline */}
             <motion.div
-              className="h-0.5 bg-gradient-to-r from-[#E53935] to-orange-500 rounded-full"
+              className="h-0.5 bg-gradient-to-r from-[#E59935] to-orange-500 rounded-full"
               animate={{ width: isHovered ? "100%" : "30%" }}
               transition={{ duration: 0.3 }}
             />
