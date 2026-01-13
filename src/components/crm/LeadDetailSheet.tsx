@@ -7,15 +7,26 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { Card, CardContent } from '@/components/ui/card';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { 
   Phone, Mail, Calendar, User, Car, MessageSquare, 
   Plus, Clock, CheckCircle2, AlertCircle, ClipboardList,
-  Wallet, CreditCard, Timer, Repeat
+  Wallet, CreditCard, Timer, Repeat, Trash2
 } from 'lucide-react';
 import type { Lead } from '@/types/crm';
 import { leadStatusLabels, leadStatusColors, leadSourceLabels } from '@/types/crm';
 import { useLeadInteractions, useCreateInteraction, useCompleteFollowUp } from '@/hooks/useLeadInteractions';
-import { useNegotiations } from '@/hooks/useNegotiations';
+import { useNegotiations, useDeleteNegotiation } from '@/hooks/useNegotiations';
+import { useDeleteLead } from '@/hooks/useLeads';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { useState } from 'react';
@@ -39,13 +50,40 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
   const { data: allNegotiations = [] } = useNegotiations();
   const createInteraction = useCreateInteraction();
   const completeFollowUp = useCompleteFollowUp();
+  const deleteLead = useDeleteLead();
+  const deleteNegotiation = useDeleteNegotiation();
 
   const [interactionType, setInteractionType] = useState('ligacao');
   const [interactionDescription, setInteractionDescription] = useState('');
   const [followUpDate, setFollowUpDate] = useState('');
   const [whatsappModalOpen, setWhatsappModalOpen] = useState(false);
+  const [deleteLeadDialogOpen, setDeleteLeadDialogOpen] = useState(false);
+  const [deleteNegotiationDialogOpen, setDeleteNegotiationDialogOpen] = useState(false);
+  const [negotiationToDelete, setNegotiationToDelete] = useState<string | null>(null);
 
   const leadNegotiations = allNegotiations.filter(n => n.lead_id === lead?.id);
+
+  const handleDeleteLead = () => {
+    if (lead) {
+      deleteLead.mutate(lead.id, {
+        onSuccess: () => {
+          setDeleteLeadDialogOpen(false);
+          onOpenChange(false);
+        }
+      });
+    }
+  };
+
+  const handleDeleteNegotiation = () => {
+    if (negotiationToDelete) {
+      deleteNegotiation.mutate(negotiationToDelete, {
+        onSuccess: () => {
+          setDeleteNegotiationDialogOpen(false);
+          setNegotiationToDelete(null);
+        }
+      });
+    }
+  };
 
   // Fetch qualification data for this lead - query directly with subquery to avoid race condition
   const { data: qualifications = [] } = useQuery({
@@ -141,6 +179,14 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
                 <Badge variant="outline">{leadSourceLabels[lead.source]}</Badge>
               </div>
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-muted-foreground hover:text-destructive"
+              onClick={() => setDeleteLeadDialogOpen(true)}
+            >
+              <Trash2 className="h-5 w-5" />
+            </Button>
           </div>
         </SheetHeader>
 
@@ -540,11 +586,24 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
                           <Badge className={negotiationStatusColors[negotiation.status]}>
                             {negotiationStatusLabels[negotiation.status]}
                           </Badge>
-                          {negotiation.estimated_value && (
-                            <span className="font-semibold text-sm">
-                              {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(negotiation.estimated_value)}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-2">
+                            {negotiation.estimated_value && (
+                              <span className="font-semibold text-sm">
+                                {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(negotiation.estimated_value)}
+                              </span>
+                            )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 text-muted-foreground hover:text-destructive"
+                              onClick={() => {
+                                setNegotiationToDelete(negotiation.id);
+                                setDeleteNegotiationDialogOpen(true);
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         </div>
                         {negotiation.vehicle && (
                           <div className="flex items-center gap-1 text-xs text-muted-foreground">
@@ -570,6 +629,50 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
           </TabsContent>
 
         </Tabs>
+
+        {/* Delete Lead Dialog */}
+        <AlertDialog open={deleteLeadDialogOpen} onOpenChange={setDeleteLeadDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Lead</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir o lead "{lead.name}"? 
+                Esta ação não pode ser desfeita e todas as interações e negociações associadas serão afetadas.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteLead}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Delete Negotiation Dialog */}
+        <AlertDialog open={deleteNegotiationDialogOpen} onOpenChange={setDeleteNegotiationDialogOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Excluir Negociação</AlertDialogTitle>
+              <AlertDialogDescription>
+                Tem certeza que deseja excluir esta negociação? 
+                Esta ação não pode ser desfeita.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancelar</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDeleteNegotiation}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                Excluir
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SheetContent>
     </Sheet>
   );
