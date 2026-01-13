@@ -18,8 +18,6 @@ import Auth from "./pages/Auth";
 const Home = lazy(() => import("./pages/Home"));
 const PublicEstoque = lazy(() => import("./pages/PublicEstoque"));
 const PublicVehicleDetails = lazy(() => import("./pages/PublicVehicleDetails"));
-const Sobre = lazy(() => import("./pages/Sobre"));
-const Contato = lazy(() => import("./pages/Contato"));
 const PublicLayout = lazy(() => import("@/components/public/PublicLayout").then(m => ({ default: m.PublicLayout })));
 
 // Lazy load internal pages
@@ -177,8 +175,6 @@ const App = () => (
                   <Route path="/" element={<Home />} />
                   <Route path="/veiculos" element={<PublicEstoque />} />
                   <Route path="/veiculos/:id" element={<PublicVehicleDetails />} />
-                  <Route path="/sobre" element={<Sobre />} />
-                  <Route path="/contato" element={<Contato />} />
                 </Route>
 
                 {/* Auth */}

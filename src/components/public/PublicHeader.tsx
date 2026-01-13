@@ -7,8 +7,6 @@ import logoImg from '@/assets/logo-invest-veiculos.png';
 const navLinks = [
   { href: '/', label: 'Início' },
   { href: '/veiculos', label: 'Veículos' },
-  { href: '/sobre', label: 'Sobre' },
-  { href: '/contato', label: 'Contato' },
 ];
 
 export function PublicHeader() {
