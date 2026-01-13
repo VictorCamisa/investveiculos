@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, MapPin, Phone, ChevronRight, ChevronDown, Car, Users, Star, Award } from 'lucide-react';
@@ -10,7 +10,29 @@ import logoImg from '@/assets/logo-invest-veiculos.png';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [videoEnded, setVideoEnded] = useState(false);
+  const [introPhase, setIntroPhase] = useState<'logo' | 'video' | 'frozen'>('logo');
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    // Logo aparece e sai, depois inicia o vídeo
+    const logoTimer = setTimeout(() => {
+      setIntroPhase('video');
+      // Inicia o vídeo após a transição
+      setTimeout(() => {
+        videoRef.current?.play();
+      }, 500);
+    }, 3000); // Logo fica 3 segundos
+
+    return () => clearTimeout(logoTimer);
+  }, []);
+
+  const handleVideoEnd = () => {
+    // Congela no último frame
+    if (videoRef.current) {
+      videoRef.current.pause();
+      setIntroPhase('frozen');
+    }
+  };
 
   const openGoogleMaps = () => {
     window.open(
@@ -21,39 +43,41 @@ export default function Home() {
 
   return (
     <div className="bg-black text-white">
-      {/* Hero Section - Video then Logo */}
+      {/* Hero Section - Logo Intro → Video → Freeze */}
       <section className="relative h-screen overflow-hidden bg-black">
-        {/* Video - plays once */}
-        <video
-          autoPlay
-          muted
-          playsInline
-          onEnded={() => setVideoEnded(true)}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-1000 ${videoEnded ? 'opacity-0' : 'opacity-100'}`}
-        >
-          <source src="/videos/hero-video.mp4" type="video/mp4" />
-        </video>
-
-        {/* Logo - appears when video ends */}
+        
+        {/* Logo Intro Animation */}
         <AnimatePresence>
-          {videoEnded && (
+          {introPhase === 'logo' && (
             <motion.div
-              className="absolute inset-0 flex items-center justify-center bg-black"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 1 }}
+              className="absolute inset-0 z-20 flex items-center justify-center bg-black"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8 }}
             >
               <motion.img
                 src={logoImg}
                 alt="Invest Veículos"
-                className="h-32 md:h-40 lg:h-52 w-auto object-contain"
-                initial={{ opacity: 0, scale: 0.9 }}
+                className="h-28 md:h-40 lg:h-48 w-auto object-contain"
+                initial={{ opacity: 0, scale: 0.8 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 1, delay: 0.3 }}
+                exit={{ opacity: 0, scale: 1.1 }}
+                transition={{ duration: 1 }}
               />
             </motion.div>
           )}
         </AnimatePresence>
+
+        {/* Video - starts after logo, freezes on last frame */}
+        <video
+          ref={videoRef}
+          muted
+          playsInline
+          onEnded={handleVideoEnd}
+          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${introPhase === 'logo' ? 'opacity-0' : 'opacity-100'}`}
+        >
+          <source src="/videos/hero-video.mp4" type="video/mp4" />
+        </video>
       </section>
 
       {/* Featured Vehicles Section */}
