@@ -1,6 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { ArrowRight, MapPin, Phone, ChevronRight, ChevronDown, Car, Users, Star, Award } from 'lucide-react';
 import { useFeaturedVehicles } from '@/hooks/usePublicVehicles';
 import { PublicVehicleCard } from '@/components/public/PublicVehicleCard';
@@ -10,27 +9,6 @@ import logoImg from '@/assets/logo-invest-veiculos.png';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [showText, setShowText] = useState(false);
-  const [showLogo, setShowLogo] = useState(false);
-  const [videoEnded, setVideoEnded] = useState(false);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    // Timing sincronizado com o vídeo:
-    // - Texto aparece quando o carro passa (~2.5s)
-    // - Logo aparece logo depois (~4s)
-    const textTimer = setTimeout(() => setShowText(true), 2500);
-    const logoTimer = setTimeout(() => setShowLogo(true), 4000);
-    
-    return () => {
-      clearTimeout(textTimer);
-      clearTimeout(logoTimer);
-    };
-  }, []);
-
-  const handleVideoEnd = () => {
-    setVideoEnded(true);
-  };
 
   const openGoogleMaps = () => {
     window.open(
@@ -41,132 +19,84 @@ export default function Home() {
 
   return (
     <div className="bg-black text-white">
-      {/* Hero Section with Video */}
+      {/* Hero Section - Video Only */}
       <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
         {/* Video Background */}
-        <div className="absolute inset-0">
-          <video
-            ref={videoRef}
-            autoPlay
-            muted
-            playsInline
-            onEnded={handleVideoEnd}
-            className="absolute inset-0 w-full h-full object-cover"
-            poster="/videos/hero-video.mp4#t=0.1"
-          >
-            <source src="/videos/hero-video.mp4" type="video/mp4" />
-          </video>
-          
-          {/* Overlay gradient - mais leve para ver o vídeo, mais forte quando texto aparece */}
-          <motion.div 
-            className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/20 to-black/60 z-10"
-            animate={{ 
-              background: showText 
-                ? "linear-gradient(to bottom, rgba(0,0,0,0.6), rgba(0,0,0,0.4), rgba(0,0,0,0.8))"
-                : "linear-gradient(to bottom, rgba(0,0,0,0.4), rgba(0,0,0,0.2), rgba(0,0,0,0.6))"
-            }}
-            transition={{ duration: 1 }}
-          />
-        </div>
+        <video
+          autoPlay
+          muted
+          loop
+          playsInline
+          className="absolute inset-0 w-full h-full object-cover"
+        >
+          <source src="/videos/hero-video.mp4" type="video/mp4" />
+        </video>
+        
+        {/* Overlay suave */}
+        <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-transparent to-black/70 z-10" />
 
-        {/* Content Container */}
+        {/* Content */}
         <div className="relative z-20 container mx-auto px-6 flex flex-col items-center justify-center text-center">
-          {/* Animated Quote - aparece quando o carro passa */}
-          <AnimatePresence>
-            {showText && (
-              <motion.div
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 1.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="mb-10"
-              >
-                <motion.p 
-                  className="text-xl md:text-3xl lg:text-4xl font-light text-white italic leading-relaxed max-w-4xl drop-shadow-2xl"
-                  style={{ textShadow: "0 4px 30px rgba(0,0,0,0.8)" }}
-                  initial={{ letterSpacing: "0.15em" }}
-                  animate={{ letterSpacing: "0.03em" }}
-                  transition={{ duration: 2, delay: 0.3 }}
-                >
-                  "Qualidade que se vê.{" "}
-                  <span className="text-[#E53935] font-normal">Confiança</span> que você sente"
-                </motion.p>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* Logo */}
+          <motion.img
+            src={logoImg}
+            alt="Invest Veículos"
+            className="h-20 md:h-28 lg:h-36 w-auto object-contain mb-6 drop-shadow-2xl"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          />
 
-          {/* Logo and CTAs - aparecem depois do texto */}
-          <AnimatePresence>
-            {showLogo && (
-              <motion.div
-                initial={{ opacity: 0, scale: 0.85, y: 30 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-                transition={{ duration: 1.2, ease: [0.25, 0.46, 0.45, 0.94] }}
-                className="flex flex-col items-center gap-8"
-              >
-                {/* Logo com efeito de brilho */}
-                <motion.div className="relative">
-                  <motion.div
-                    className="absolute inset-0 bg-white/20 blur-3xl rounded-full"
-                    initial={{ opacity: 0, scale: 0.5 }}
-                    animate={{ opacity: [0, 0.5, 0.3], scale: [0.5, 1.2, 1] }}
-                    transition={{ duration: 2, delay: 0.2 }}
-                  />
-                  <motion.img
-                    src={logoImg}
-                    alt="Invest Veículos"
-                    className="relative h-20 md:h-28 lg:h-36 w-auto object-contain drop-shadow-2xl"
-                    initial={{ filter: "brightness(0.5)" }}
-                    animate={{ filter: "brightness(1)" }}
-                    transition={{ duration: 1.5, delay: 0.3 }}
-                  />
-                </motion.div>
+          {/* Tagline */}
+          <motion.p 
+            className="text-lg md:text-2xl text-white/80 italic mb-8 max-w-2xl"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            "Qualidade que se vê. <span className="text-[#E53935]">Confiança</span> que você sente"
+          </motion.p>
 
-                {/* CTA Buttons */}
-                <motion.div
-                  className="flex flex-col sm:flex-row gap-4"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.8, delay: 0.8 }}
-                >
-                  <Link to="/veiculos">
-                    <motion.button
-                      className="group relative px-8 py-4 bg-[#E53935] text-white font-semibold rounded-full overflow-hidden transition-all hover:shadow-[0_0_40px_rgba(229,57,53,0.5)]"
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      <span className="relative z-10 flex items-center gap-2">
-                        Explorar Estoque
-                        <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                      </span>
-                    </motion.button>
-                  </Link>
-                  <Link to="/contato">
-                    <motion.button
-                      className="px-8 py-4 border border-white/30 text-white font-medium rounded-full backdrop-blur-md bg-white/5 hover:bg-white/15 hover:border-white/50 transition-all"
-                      whileHover={{ scale: 1.03 }}
-                      whileTap={{ scale: 0.98 }}
-                    >
-                      Falar com Consultor
-                    </motion.button>
-                  </Link>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
+          {/* CTA Buttons */}
+          <motion.div
+            className="flex flex-col sm:flex-row gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.4 }}
+          >
+            <Link to="/veiculos">
+              <motion.button
+                className="group px-8 py-4 bg-[#E53935] text-white font-semibold rounded-full hover:shadow-[0_0_40px_rgba(229,57,53,0.5)] transition-all"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                <span className="flex items-center gap-2">
+                  Explorar Estoque
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </span>
+              </motion.button>
+            </Link>
+            <Link to="/contato">
+              <motion.button
+                className="px-8 py-4 border border-white/30 text-white font-medium rounded-full backdrop-blur-md bg-white/5 hover:bg-white/15 transition-all"
+                whileHover={{ scale: 1.03 }}
+                whileTap={{ scale: 0.98 }}
+              >
+                Falar com Consultor
+              </motion.button>
+            </Link>
+          </motion.div>
         </div>
 
-        {/* Scroll Indicator - aparece depois de tudo */}
+        {/* Scroll Indicator */}
         <motion.div
           className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center gap-2"
           initial={{ opacity: 0 }}
-          animate={{ opacity: showLogo ? 1 : 0 }}
-          transition={{ delay: 2, duration: 1 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: 1 }}
         >
           <span className="text-white/50 text-xs uppercase tracking-widest">Scroll</span>
-          <motion.div
-            animate={{ y: [0, 8, 0] }}
-            transition={{ duration: 1.5, repeat: Infinity }}
-          >
+          <motion.div animate={{ y: [0, 8, 0] }} transition={{ duration: 1.5, repeat: Infinity }}>
             <ChevronDown className="w-5 h-5 text-white/50" />
           </motion.div>
         </motion.div>
