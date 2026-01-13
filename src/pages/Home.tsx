@@ -11,8 +11,17 @@ import heroBgNight from '@/assets/hero-bg-night.jpg';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [introPhase, setIntroPhase] = useState<'logo' | 'video' | 'fading' | 'final'>('logo');
+  const [introPhase, setIntroPhase] = useState<'logo' | 'video' | 'fading' | 'final' | 'frozen'>('logo');
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Detecta se é mobile
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // Logo aparece e sai, depois inicia o vídeo
@@ -28,11 +37,16 @@ export default function Home() {
   }, []);
 
   const handleVideoEnd = () => {
-    // Quando o vídeo termina, escurece e volta a logo
-    setIntroPhase('fading');
-    setTimeout(() => {
-      setIntroPhase('final');
-    }, 1500); // Tempo do fade to black
+    if (isMobile) {
+      // Mobile: apenas congela no último frame
+      setIntroPhase('frozen');
+    } else {
+      // Desktop: escurece e volta a logo
+      setIntroPhase('fading');
+      setTimeout(() => {
+        setIntroPhase('final');
+      }, 1500);
+    }
   };
 
   const openGoogleMaps = () => {
@@ -69,17 +83,30 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Video */}
+        {/* Video - Desktop */}
         <video
-          ref={videoRef}
+          ref={!isMobile ? videoRef : undefined}
           muted
           playsInline
           onEnded={handleVideoEnd}
-          className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 ${
+          className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 hidden md:block ${
             introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
           <source src="/videos/hero-video.mp4" type="video/mp4" />
+        </video>
+
+        {/* Video - Mobile */}
+        <video
+          ref={isMobile ? videoRef : undefined}
+          muted
+          playsInline
+          onEnded={handleVideoEnd}
+          className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 md:hidden ${
+            introPhase === 'logo' ? 'opacity-0' : 'opacity-100'
+          }`}
+        >
+          <source src="/videos/hero-video-mobile.mp4" type="video/mp4" />
         </video>
 
         {/* Fade to black overlay */}
