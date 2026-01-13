@@ -6,7 +6,7 @@ export function PublicFooter() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-[#111] text-white">
+    <footer className="bg-public-surface text-public-fg">
       {/* Main footer content */}
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
@@ -17,7 +17,7 @@ export function PublicFooter() {
               alt="Matheus Veículos" 
               className="h-14 w-auto mb-6"
             />
-            <p className="text-gray-400 text-sm leading-relaxed">
+            <p className="text-public-fg/60 text-sm leading-relaxed">
               Sua loja de veículos seminovos em excelente estado. Qualidade e confiança há mais de 10 anos no mercado.
             </p>
           </div>
@@ -27,23 +27,13 @@ export function PublicFooter() {
             <h4 className="text-lg font-semibold mb-6">Navegação</h4>
             <ul className="space-y-3">
               <li>
-                <Link to="/" className="text-gray-400 hover:text-public-primary transition-colors">
+                <Link to="/" className="text-public-fg/60 hover:text-public-primary transition-colors">
                   Início
                 </Link>
               </li>
               <li>
-                <Link to="/estoque" className="text-gray-400 hover:text-public-primary transition-colors">
-                  Estoque
-                </Link>
-              </li>
-              <li>
-                <Link to="/sobre" className="text-gray-400 hover:text-public-primary transition-colors">
-                  Sobre Nós
-                </Link>
-              </li>
-              <li>
-                <Link to="/contato" className="text-gray-400 hover:text-public-primary transition-colors">
-                  Contato
+                <Link to="/veiculos" className="text-public-fg/60 hover:text-public-primary transition-colors">
+                  Veículos
                 </Link>
               </li>
             </ul>
@@ -56,17 +46,17 @@ export function PublicFooter() {
               <li className="flex items-start gap-3">
                 <Phone className="h-5 w-5 text-public-primary flex-shrink-0 mt-0.5" />
                 <div>
-                  <p className="text-gray-400 text-sm">(11) 4654-1785</p>
-                  <p className="text-gray-400 text-sm">(11) 97306-8654</p>
+                  <p className="text-public-fg/60 text-sm">(11) 4654-1785</p>
+                  <p className="text-public-fg/60 text-sm">(11) 97306-8654</p>
                 </div>
               </li>
               <li className="flex items-start gap-3">
                 <Mail className="h-5 w-5 text-public-primary flex-shrink-0 mt-0.5" />
-                <p className="text-gray-400 text-sm">contato@matheusveiculos.com.br</p>
+                <p className="text-public-fg/60 text-sm">contato@matheusveiculos.com.br</p>
               </li>
               <li className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-public-primary flex-shrink-0 mt-0.5" />
-                <p className="text-gray-400 text-sm">
+                <p className="text-public-fg/60 text-sm">
                   Rua Benedito de Oliveira Cavalheiro, 125<br />
                   Arujá - SP, 07402-060
                 </p>
@@ -80,7 +70,7 @@ export function PublicFooter() {
             <div className="flex gap-4 mb-8">
               <a 
                 href="#" 
-                className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-public-primary transition-colors"
+                className="w-10 h-10 bg-public-muted rounded-full flex items-center justify-center hover:bg-public-primary transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -88,7 +78,7 @@ export function PublicFooter() {
               </a>
               <a 
                 href="#" 
-                className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-public-primary transition-colors"
+                className="w-10 h-10 bg-public-muted rounded-full flex items-center justify-center hover:bg-public-primary transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -96,7 +86,7 @@ export function PublicFooter() {
               </a>
               <a 
                 href="#" 
-                className="w-10 h-10 bg-white/10 rounded-full flex items-center justify-center hover:bg-public-primary transition-colors"
+                className="w-10 h-10 bg-public-muted rounded-full flex items-center justify-center hover:bg-public-primary transition-colors"
                 target="_blank"
                 rel="noopener noreferrer"
               >
@@ -106,7 +96,7 @@ export function PublicFooter() {
 
             <Link 
               to="/auth" 
-              className="text-gray-500 text-sm hover:text-gray-400 transition-colors"
+              className="text-public-fg/40 text-sm hover:text-public-fg/60 transition-colors"
             >
               Acesso Funcionário →
             </Link>
@@ -115,12 +105,12 @@ export function PublicFooter() {
       </div>
 
       {/* Copyright */}
-      <div className="border-t border-white/10">
+      <div className="border-t border-public-border">
         <div className="container mx-auto px-4 py-6 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="text-gray-500 text-sm">
-            © {currentYear} Matheus Veículos. Todos os direitos reservados.
+          <p className="text-public-fg/40 text-sm">
+            © {currentYear} Invest Veículos. Todos os direitos reservados.
           </p>
-          <p className="text-gray-600 text-xs">
+          <p className="text-public-fg/30 text-xs">
             Desenvolvido com ❤️
           </p>
         </div>

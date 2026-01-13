@@ -42,15 +42,15 @@ export default function Home() {
   };
 
   return (
-    <div className="bg-black text-white">
+    <div className="bg-public-bg text-public-fg">
       {/* Hero Section - Logo Intro → Video → Freeze */}
-      <section className="relative h-screen overflow-hidden bg-black">
+      <section className="relative h-screen overflow-hidden bg-public-bg">
         
         {/* Logo Intro Animation */}
         <AnimatePresence>
           {introPhase === 'logo' && (
             <motion.div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black"
+              className="absolute inset-0 z-20 flex items-center justify-center bg-public-bg"
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.8 }}
@@ -106,7 +106,7 @@ export default function Home() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 1, delay: 0.8 }}
               >
-                Qualidade que se vê. <span className="text-[#E59935] font-normal not-italic">Confiança</span> que você sente
+                Qualidade que se vê. <span className="text-public-primary font-normal not-italic">Confiança</span> que você sente
               </motion.p>
             </motion.div>
           )}
@@ -114,7 +114,7 @@ export default function Home() {
       </section>
 
       {/* Featured Vehicles Section */}
-      <section className="py-24 bg-zinc-950">
+      <section className="py-24 bg-public-bg">
         <div className="container mx-auto px-6">
           <motion.div
             className="flex flex-col md:flex-row md:items-end md:justify-between mb-16 gap-6"
@@ -124,16 +124,16 @@ export default function Home() {
             transition={{ duration: 0.5 }}
           >
             <div>
-              <span className="text-[#E59935] text-sm font-medium uppercase tracking-widest mb-4 block">
+              <span className="text-public-primary text-sm font-medium uppercase tracking-widest mb-4 block">
                 Destaques
               </span>
-              <h2 className="text-4xl md:text-5xl font-display font-bold text-white leading-tight">
-                Nosso <span className="text-white/50">Estoque</span>
+              <h2 className="text-4xl md:text-5xl font-display font-bold text-public-fg leading-tight">
+                Nosso <span className="text-public-fg/50">Estoque</span>
               </h2>
             </div>
             <Link to="/veiculos">
               <motion.button
-                className="group flex items-center gap-2 text-white/60 hover:text-white transition-colors"
+                className="group flex items-center gap-2 text-public-fg/60 hover:text-public-fg transition-colors"
                 whileHover={{ x: 5 }}
               >
                 Ver todos os veículos
@@ -147,7 +147,7 @@ export default function Home() {
               {[1, 2, 3].map((i) => (
                 <div
                   key={i}
-                  className="bg-zinc-900 rounded-2xl h-[420px] animate-pulse"
+                  className="bg-public-surface rounded-2xl h-[420px] animate-pulse"
                 />
               ))}
             </div>
@@ -180,8 +180,8 @@ export default function Home() {
       </section>
 
       {/* Stats Section */}
-      <section className="relative py-20 md:py-28 bg-black">
-        <div className="absolute inset-0 bg-gradient-to-b from-zinc-950 via-transparent to-zinc-950" />
+      <section className="relative py-20 md:py-28 bg-public-surface">
+        <div className="absolute inset-0 bg-gradient-to-b from-public-bg via-transparent to-public-bg" />
         <div className="container mx-auto px-6 relative z-10">
           <motion.div
             className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6"
@@ -199,7 +199,7 @@ export default function Home() {
       </section>
 
       {/* Location Section */}
-      <section className="py-24 bg-zinc-950">
+      <section className="py-24 bg-public-bg">
         <div className="container mx-auto px-6">
           <motion.div
             className="grid lg:grid-cols-2 gap-12 items-center"
@@ -210,21 +210,21 @@ export default function Home() {
           >
             {/* Info */}
             <div>
-              <span className="text-[#E59935] text-sm font-medium uppercase tracking-widest mb-4 block">
+              <span className="text-public-primary text-sm font-medium uppercase tracking-widest mb-4 block">
                 Onde Estamos
               </span>
-              <h2 className="text-4xl md:text-5xl font-display font-bold text-white mb-8">
-                Visite nossa <span className="text-white/50">Loja</span>
+              <h2 className="text-4xl md:text-5xl font-display font-bold text-public-fg mb-8">
+                Visite nossa <span className="text-public-fg/50">Loja</span>
               </h2>
 
               <div className="space-y-6 mb-8">
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#E59935]/10 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-5 h-5 text-[#E59935]" />
+                  <div className="w-12 h-12 rounded-xl bg-public-primary/10 flex items-center justify-center flex-shrink-0">
+                    <MapPin className="w-5 h-5 text-public-primary" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold mb-1">Endereço</h3>
-                    <p className="text-white/60 leading-relaxed">
+                    <h3 className="text-public-fg font-semibold mb-1">Endereço</h3>
+                    <p className="text-public-fg/60 leading-relaxed">
                       Av. Maj. Joaquim Monteiro Patto, 25<br />
                       Chácara do Visconde - Taubaté/SP
                     </p>
@@ -232,12 +232,12 @@ export default function Home() {
                 </div>
 
                 <div className="flex gap-4">
-                  <div className="w-12 h-12 rounded-xl bg-[#E59935]/10 flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-5 h-5 text-[#E59935]" />
+                  <div className="w-12 h-12 rounded-xl bg-public-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Phone className="w-5 h-5 text-public-primary" />
                   </div>
                   <div>
-                    <h3 className="text-white font-semibold mb-1">Horário</h3>
-                    <p className="text-white/60 leading-relaxed">
+                    <h3 className="text-public-fg font-semibold mb-1">Horário</h3>
+                    <p className="text-public-fg/60 leading-relaxed">
                       Segunda a Sexta: 08:00 às 18:00<br />
                       Sábado: 08:00 às 12:30
                     </p>
@@ -247,7 +247,7 @@ export default function Home() {
 
               <motion.button
                 onClick={openGoogleMaps}
-                className="group flex items-center gap-2 px-6 py-3 bg-white/5 border border-white/10 rounded-full text-white hover:bg-white/10 hover:border-white/20 transition-all"
+                className="group flex items-center gap-2 px-6 py-3 bg-public-muted border border-public-border rounded-full text-public-fg hover:bg-public-primary/10 hover:border-public-primary/30 transition-all"
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
               >
