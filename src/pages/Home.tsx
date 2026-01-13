@@ -31,7 +31,12 @@ export default function Home() {
       // Inicia o vídeo após a transição
       setTimeout(() => {
         if (isMobile) {
-          mobileVideoRef.current?.play();
+          if (mobileVideoRef.current) {
+            // Ajusta velocidade para durar 5 segundos
+            const videoDuration = mobileVideoRef.current.duration || 10;
+            mobileVideoRef.current.playbackRate = videoDuration / 5;
+            mobileVideoRef.current.play();
+          }
         } else {
           videoRef.current?.play();
         }
@@ -83,11 +88,11 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Dark overlay on video to make it darker */}
+        {/* Dark overlay on video to make it darker - more opacity for mobile */}
         <div 
-          className={`absolute inset-0 bg-black/30 pointer-events-none z-[5] transition-opacity duration-500 ${
+          className={`absolute inset-0 pointer-events-none z-[5] transition-opacity duration-500 ${
             introPhase === 'video' ? 'opacity-100' : 'opacity-0'
-          }`}
+          } bg-black/50 md:bg-black/30`}
         />
 
         {/* Video - Desktop */}
@@ -103,7 +108,7 @@ export default function Home() {
           <source src="/videos/hero-video.mp4?v=5" type="video/mp4" />
         </video>
 
-        {/* Video - Mobile */}
+        {/* Video - Mobile - playbackRate adjusted via useEffect for 5s duration */}
         <video
           ref={mobileVideoRef}
           muted
@@ -113,7 +118,7 @@ export default function Home() {
             introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
-          <source src="/videos/hero-video-mobile.mp4?v=5" type="video/mp4" />
+          <source src="/videos/hero-video-mobile.mp4?v=6" type="video/mp4" />
         </video>
 
         {/* Fade to black overlay */}
