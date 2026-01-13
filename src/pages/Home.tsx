@@ -38,8 +38,15 @@ export default function Home() {
 
   const handleVideoEnd = () => {
     if (isMobile) {
-      // Mobile: apenas congela no último frame
+      // Mobile: congela, mostra frase, depois escurece até logo
       setIntroPhase('frozen');
+      // Após 2s mostrando a frase, começa a escurecer
+      setTimeout(() => {
+        setIntroPhase('fading');
+        setTimeout(() => {
+          setIntroPhase('final');
+        }, 2000); // Fade mais lento no mobile
+      }, 2000);
     } else {
       // Desktop: escurece e volta a logo
       setIntroPhase('fading');
@@ -103,11 +110,38 @@ export default function Home() {
           playsInline
           onEnded={handleVideoEnd}
           className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 md:hidden ${
-            introPhase === 'logo' ? 'opacity-0' : 'opacity-100'
+            introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
           <source src="/videos/hero-video-mobile.mp4" type="video/mp4" />
         </video>
+
+        {/* Frase overlay - aparece quando vídeo congela (mobile) */}
+        <AnimatePresence>
+          {introPhase === 'frozen' && (
+            <motion.div
+              className="absolute inset-0 z-15 flex items-center justify-center px-6 md:hidden"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8 }}
+            >
+              <div className="absolute inset-0 bg-black/40" />
+              <motion.p
+                className="relative z-10 text-lg sm:text-xl font-light text-white/90 italic text-center max-w-md tracking-wide leading-relaxed"
+                style={{ 
+                  textShadow: "0 4px 30px rgba(0,0,0,0.8)",
+                  fontFamily: "'Segoe UI', 'Helvetica Neue', Arial, sans-serif"
+                }}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.8, delay: 0.3 }}
+              >
+                Qualidade que se vê. <span className="text-public-primary font-normal not-italic">Confiança</span> que você sente
+              </motion.p>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Fade to black overlay */}
         <motion.div
@@ -116,7 +150,7 @@ export default function Home() {
           animate={{ 
             opacity: introPhase === 'fading' || introPhase === 'final' ? 1 : 0 
           }}
-          transition={{ duration: 1.5 }}
+          transition={{ duration: 2 }}
         />
 
         {/* Final State: Background Image + Logo + Phrase */}
