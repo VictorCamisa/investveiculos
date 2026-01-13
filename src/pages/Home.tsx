@@ -68,13 +68,13 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Video - optimized for mobile with proper centering */}
+        {/* Video - object-contain on mobile to avoid cropping, object-cover on desktop */}
         <video
           ref={videoRef}
           muted
           playsInline
           onEnded={handleVideoEnd}
-          className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ${introPhase === 'logo' ? 'opacity-0' : 'opacity-100'}`}
+          className={`absolute inset-0 w-full h-full object-contain md:object-cover bg-black transition-opacity duration-500 ${introPhase === 'logo' ? 'opacity-0' : 'opacity-100'}`}
         >
           <source src="/videos/hero-video.mp4" type="video/mp4" />
         </video>
