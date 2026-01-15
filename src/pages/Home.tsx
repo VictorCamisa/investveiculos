@@ -7,7 +7,8 @@ import { PublicVehicleCard } from '@/components/public/PublicVehicleCard';
 import { LocationMap } from '@/components/ui/expand-map';
 import { StatsCard } from '@/components/ui/stats-card';
 import logoImg from '@/assets/logo-invest-veiculos.png';
-import lojaPremium from '@/assets/loja-premium.jpg';
+import lojaNoite from '@/assets/loja-noite.jpg';
+import lojaDia from '@/assets/loja-dia.jpg';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
@@ -242,8 +243,8 @@ export default function Home() {
                 transition={{ duration: 0.3 }}
               >
                 <img 
-                  src={lojaPremium} 
-                  alt="Invest Veículos - Loja Premium" 
+                  src={lojaNoite} 
+                  alt="Invest Veículos - Loja Noite" 
                   className="w-full h-full object-cover"
                 />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
@@ -476,8 +477,8 @@ export default function Home() {
           >
             <div className="relative overflow-hidden rounded-2xl aspect-video">
               <img 
-                src={lojaPremium} 
-                alt="Invest Veículos - Showroom Premium" 
+                src={lojaDia} 
+                alt="Invest Veículos - Fachada" 
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
