@@ -11,9 +11,11 @@ import heroBgNight from '@/assets/hero-bg-night.jpg';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [introPhase, setIntroPhase] = useState<'video' | 'fading' | 'final'>('video');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const mobileVideoRef = useRef<HTMLVideoElement>(null);
+  const [introPhase, setIntroPhase] = useState<'video1' | 'video2' | 'fading' | 'final'>('video1');
+  const video1Ref = useRef<HTMLVideoElement>(null);
+  const video2Ref = useRef<HTMLVideoElement>(null);
+  const mobileVideo1Ref = useRef<HTMLVideoElement>(null);
+  const mobileVideo2Ref = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -25,17 +27,14 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Inicia o vídeo diretamente
+    // Inicia o primeiro vídeo diretamente
     const startVideo = () => {
       if (isMobile) {
-        if (mobileVideoRef.current) {
-          // Ajusta velocidade para durar 5 segundos
-          const videoDuration = mobileVideoRef.current.duration || 10;
-          mobileVideoRef.current.playbackRate = videoDuration / 5;
-          mobileVideoRef.current.play();
+        if (mobileVideo1Ref.current) {
+          mobileVideo1Ref.current.play();
         }
       } else {
-        videoRef.current?.play();
+        video1Ref.current?.play();
       }
     };
     
@@ -44,8 +43,20 @@ export default function Home() {
     return () => clearTimeout(timer);
   }, [isMobile]);
 
-  const handleVideoEnd = () => {
-    // Mesmo fluxo para mobile e desktop: escurece e volta a logo
+  const handleVideo1End = () => {
+    // Primeiro vídeo terminou, inicia o segundo
+    setIntroPhase('video2');
+    setTimeout(() => {
+      if (isMobile) {
+        mobileVideo2Ref.current?.play();
+      } else {
+        video2Ref.current?.play();
+      }
+    }, 100);
+  };
+
+  const handleVideo2End = () => {
+    // Segundo vídeo terminou, escurece e mostra logo
     setIntroPhase('fading');
     setTimeout(() => {
       setIntroPhase('final');
@@ -67,34 +78,60 @@ export default function Home() {
         {/* Dark overlay on video to make it darker - more opacity for mobile */}
         <div 
           className={`absolute inset-0 pointer-events-none z-[5] transition-opacity duration-500 ${
-            introPhase === 'video' ? 'opacity-100' : 'opacity-0'
+            introPhase === 'video1' || introPhase === 'video2' ? 'opacity-100' : 'opacity-0'
           } bg-black/50 md:bg-black/30`}
         />
 
-        {/* Video - Desktop */}
+        {/* Video 1 - Intro - Desktop */}
         <video
-          ref={videoRef}
+          ref={video1Ref}
           muted
           playsInline
-          onEnded={handleVideoEnd}
+          onEnded={handleVideo1End}
           className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 hidden md:block ${
-            introPhase === 'final' ? 'opacity-0' : 'opacity-100'
+            introPhase === 'video1' ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          <source src="/videos/hero-video.mp4?v=6" type="video/mp4" />
+          <source src="/videos/hero-video.mp4?v=7" type="video/mp4" />
         </video>
 
-        {/* Video - Mobile - playbackRate adjusted via useEffect for 5s duration */}
+        {/* Video 2 - Carro - Desktop */}
         <video
-          ref={mobileVideoRef}
+          ref={video2Ref}
           muted
           playsInline
-          onEnded={handleVideoEnd}
-          className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 md:hidden ${
-            introPhase === 'final' ? 'opacity-0' : 'opacity-100'
+          onEnded={handleVideo2End}
+          className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 hidden md:block ${
+            introPhase === 'video2' ? 'opacity-100' : 'opacity-0'
           }`}
         >
-          <source src="/videos/hero-video-mobile.mp4?v=6" type="video/mp4" />
+          <source src="/videos/hero-video-car.mp4?v=1" type="video/mp4" />
+        </video>
+
+        {/* Video 1 - Intro - Mobile */}
+        <video
+          ref={mobileVideo1Ref}
+          muted
+          playsInline
+          onEnded={handleVideo1End}
+          className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 md:hidden ${
+            introPhase === 'video1' ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <source src="/videos/hero-video.mp4?v=7" type="video/mp4" />
+        </video>
+
+        {/* Video 2 - Carro - Mobile */}
+        <video
+          ref={mobileVideo2Ref}
+          muted
+          playsInline
+          onEnded={handleVideo2End}
+          className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 md:hidden ${
+            introPhase === 'video2' ? 'opacity-100' : 'opacity-0'
+          }`}
+        >
+          <source src="/videos/hero-video-mobile.mp4?v=7" type="video/mp4" />
         </video>
 
         {/* Fade to black overlay */}
