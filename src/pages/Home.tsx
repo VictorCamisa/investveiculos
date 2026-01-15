@@ -81,7 +81,7 @@ export default function Home() {
             introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
-          <source src="/videos/hero-video.mp4?v=5" type="video/mp4" />
+          <source src="/videos/hero-video.mp4?v=6" type="video/mp4" />
         </video>
 
         {/* Video - Mobile - playbackRate adjusted via useEffect for 5s duration */}
