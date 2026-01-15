@@ -12,7 +12,7 @@ import introGif from '@/assets/intro-animation.gif';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [introPhase, setIntroPhase] = useState<'logo' | 'video' | 'fading' | 'final'>('logo');
+  const [introPhase, setIntroPhase] = useState<'logo' | 'transition' | 'video' | 'fading' | 'final'>('logo');
   const videoRef = useRef<HTMLVideoElement>(null);
   const mobileVideoRef = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -26,23 +26,28 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Logo aparece e sai, depois inicia o vídeo
+    // GIF aparece por 3 segundos, depois transição suave para o vídeo
     const logoTimer = setTimeout(() => {
-      setIntroPhase('video');
-      // Inicia o vídeo após a transição
+      // Primeiro entra na fase de transição (tela preta)
+      setIntroPhase('transition');
+      
+      // Após 1.5s de tela preta, inicia o vídeo
       setTimeout(() => {
-        if (isMobile) {
-          if (mobileVideoRef.current) {
-            // Ajusta velocidade para durar 5 segundos
-            const videoDuration = mobileVideoRef.current.duration || 10;
-            mobileVideoRef.current.playbackRate = videoDuration / 5;
-            mobileVideoRef.current.play();
+        setIntroPhase('video');
+        // Pequeno delay antes de dar play no vídeo
+        setTimeout(() => {
+          if (isMobile) {
+            if (mobileVideoRef.current) {
+              const videoDuration = mobileVideoRef.current.duration || 10;
+              mobileVideoRef.current.playbackRate = videoDuration / 5;
+              mobileVideoRef.current.play();
+            }
+          } else {
+            videoRef.current?.play();
           }
-        } else {
-          videoRef.current?.play();
-        }
-      }, 500);
-    }, 3000); // Logo fica 3 segundos
+        }, 300);
+      }, 1500);
+    }, 3000); // GIF fica 3 segundos
 
     return () => clearTimeout(logoTimer);
   }, [isMobile]);
@@ -67,14 +72,14 @@ export default function Home() {
       {/* Hero Section - Logo Intro → Video → Fade to Black → Logo + Phrase */}
       <section className="relative h-[100dvh] overflow-hidden bg-black">
         
-        {/* Logo Intro Animation (início) */}
+        {/* GIF Intro Animation (início) */}
         <AnimatePresence>
           {introPhase === 'logo' && (
             <motion.div
               className="absolute inset-0 z-20 flex items-center justify-center bg-black"
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: 1 }}
             >
               <motion.img
                 src={introGif}
@@ -86,6 +91,18 @@ export default function Home() {
                 transition={{ duration: 0.8 }}
               />
             </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Transition phase - tela preta suave antes do vídeo */}
+        <AnimatePresence>
+          {introPhase === 'transition' && (
+            <motion.div
+              className="absolute inset-0 z-20 bg-black"
+              initial={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.8 }}
+            />
           )}
         </AnimatePresence>
 
