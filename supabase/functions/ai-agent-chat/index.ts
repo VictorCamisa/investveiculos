@@ -812,14 +812,29 @@ function getLLMConfig(agent: any, lovableApiKey: string): { endpoint: string; he
     console.log(`No API key found for provider ${agent.llm_provider}, falling back to Lovable Gateway`);
   }
   
-  // Default: use Lovable AI Gateway
+  // Default: use OpenAI API directly
+  const openaiApiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
   return {
-    endpoint: 'https://ai.gateway.lovable.dev/v1/chat/completions',
+    endpoint: 'https://api.openai.com/v1/chat/completions',
     headers: {
-      'Authorization': `Bearer ${lovableApiKey}`,
+      'Authorization': `Bearer ${openaiApiKey}`,
       'Content-Type': 'application/json',
     },
-    transformModel: (model: string) => model
+    // Transform model name from gateway format to OpenAI format
+    transformModel: (model: string) => {
+      const modelName = model.replace('openai/', '').replace('google/', '');
+      // Map gateway models to OpenAI models
+      const openaiModels: Record<string, string> = {
+        'gpt-5': 'gpt-4o',
+        'gpt-5-mini': 'gpt-4o-mini',
+        'gpt-5-nano': 'gpt-4o-mini',
+        'gemini-2.5-flash': 'gpt-4o-mini',
+        'gemini-2.5-pro': 'gpt-4o',
+        'gemini-3-flash-preview': 'gpt-4o-mini',
+        'gemini-3-pro-preview': 'gpt-4o',
+      };
+      return openaiModels[modelName] || 'gpt-4o-mini';
+    }
   };
 }
 

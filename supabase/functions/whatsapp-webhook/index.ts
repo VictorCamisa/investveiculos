@@ -342,28 +342,19 @@ async function handleAIAgentResponse(
         }
       }
       
-      if (openaiApiKey) {
-        const transcription = await transcribeAudioFromBase64(audioBase64, openaiApiKey);
+      // Always use OpenAI API key from environment
+      const envOpenaiKey = openaiApiKey || Deno.env.get('OPENAI_API_KEY');
+      if (envOpenaiKey) {
+        const transcription = await transcribeAudioFromBase64(audioBase64, envOpenaiKey);
         if (transcription) {
           actualMessageContent = transcription;
-          console.log('Audio transcribed successfully:', actualMessageContent.substring(0, 50));
+          console.log('Audio transcribed successfully via OpenAI:', actualMessageContent.substring(0, 50));
         } else {
           actualMessageContent = '[Áudio não transcrito]';
         }
       } else {
-        console.log('No OpenAI API key found, trying Lovable gateway...');
-        const lovableApiKey = Deno.env.get('LOVABLE_API_KEY');
-        if (lovableApiKey) {
-          const transcription = await transcribeAudioFromBase64(audioBase64, null, lovableApiKey);
-          if (transcription) {
-            actualMessageContent = transcription;
-            console.log('Audio transcribed via Lovable:', actualMessageContent.substring(0, 50));
-          } else {
-            actualMessageContent = '[Áudio não transcrito]';
-          }
-        } else {
-          actualMessageContent = '[Áudio - sem chave de transcrição]';
-        }
+        console.error('No OpenAI API key found for audio transcription');
+        actualMessageContent = '[Áudio - sem chave de transcrição]';
       }
     }
 
@@ -645,15 +636,10 @@ async function getAudioBase64FromEvolution(
 // Transcribe audio using OpenAI Whisper
 async function transcribeAudioFromBase64(
   audioBase64: string,
-  openaiApiKey: string | null = null,
-  lovableApiKey: string | null = null
+  openaiApiKey: string
 ): Promise<string | null> {
-  // Determine which API to use
-  const useOpenAI = !!openaiApiKey;
-  const useLovable = !useOpenAI && !!lovableApiKey;
-  
-  if (!useOpenAI && !useLovable) {
-    console.error('No API key provided for audio transcription');
+  if (!openaiApiKey) {
+    console.error('No OpenAI API key provided for audio transcription');
     return null;
   }
   
@@ -673,18 +659,12 @@ async function transcribeAudioFromBase64(
     formData.append('model', 'whisper-1');
     formData.append('language', 'pt');
     
-    // Choose endpoint and auth based on available key
-    const endpoint = useOpenAI 
-      ? 'https://api.openai.com/v1/audio/transcriptions'
-      : 'https://ai.gateway.lovable.dev/v1/audio/transcriptions';
-    const authKey = useOpenAI ? openaiApiKey : lovableApiKey;
+    console.log('Sending audio to Whisper for transcription via OpenAI...');
     
-    console.log(`Sending audio to Whisper for transcription via ${useOpenAI ? 'OpenAI' : 'Lovable'}...`);
-    
-    const response = await fetch(endpoint, {
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${authKey}`,
+        'Authorization': `Bearer ${openaiApiKey}`,
       },
       body: formData,
     });
