@@ -7,10 +7,7 @@ import { PublicVehicleCard } from '@/components/public/PublicVehicleCard';
 import { LocationMap } from '@/components/ui/expand-map';
 import { StatsCard } from '@/components/ui/stats-card';
 import logoImg from '@/assets/logo-invest-veiculos.png';
-import lojaFachada from '@/assets/loja-fachada-principal.jpg';
-import lojaFachada1 from '@/assets/loja-fachada-1.jpg';
-import lojaFachada2 from '@/assets/loja-fachada-2.jpg';
-import lojaInterior from '@/assets/loja-interior.jpg';
+import lojaPremium from '@/assets/loja-premium.jpg';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
@@ -54,7 +51,7 @@ export default function Home() {
 
   const openGoogleMaps = () => {
     window.open(
-      "https://www.google.com/maps/search/?api=1&query=Av.+Maj.+Joaquim+Monteiro+Patto,+25+-+Chácara+do+Visconde,+Taubaté+-+SP,+12050-620",
+      "https://www.google.com/maps/search/?api=1&query=Av.+Dom+Pedro+I,+7231+-+Loja+03+-+Estoril,+Taubaté+-+SP,+12091-000",
       "_blank"
     );
   };
@@ -231,7 +228,7 @@ export default function Home() {
       <section className="py-16 sm:py-20 md:py-28 bg-public-bg overflow-hidden">
         <div className="container mx-auto px-4 sm:px-6">
           <div className="grid lg:grid-cols-2 gap-10 md:gap-16 items-center">
-            {/* Image Gallery */}
+            {/* Image */}
             <motion.div
               className="relative"
               initial={{ opacity: 0, x: -30 }}
@@ -239,46 +236,18 @@ export default function Home() {
               viewport={{ once: true }}
               transition={{ duration: 0.7 }}
             >
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                <motion.div
-                  className="relative aspect-[3/4] rounded-2xl overflow-hidden"
-                  whileHover={{ scale: 1.02 }}
-                  transition={{ duration: 0.3 }}
-                >
-                  <img 
-                    src={lojaFachada} 
-                    alt="Fachada Invest Veículos" 
-                    className="w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                </motion.div>
-                <div className="space-y-3 sm:space-y-4">
-                  <motion.div
-                    className="relative aspect-square rounded-2xl overflow-hidden"
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <img 
-                      src={lojaInterior} 
-                      alt="Interior da Loja" 
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  </motion.div>
-                  <motion.div
-                    className="relative aspect-square rounded-2xl overflow-hidden"
-                    whileHover={{ scale: 1.02 }}
-                    transition={{ duration: 0.3 }}
-                  >
-                    <img 
-                      src={lojaFachada1} 
-                      alt="Estoque de Veículos" 
-                      className="w-full h-full object-cover"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
-                  </motion.div>
-                </div>
-              </div>
+              <motion.div
+                className="relative aspect-square rounded-2xl overflow-hidden"
+                whileHover={{ scale: 1.02 }}
+                transition={{ duration: 0.3 }}
+              >
+                <img 
+                  src={lojaPremium} 
+                  alt="Invest Veículos - Loja Premium" 
+                  className="w-full h-full object-cover"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent" />
+              </motion.div>
               {/* Floating Badge */}
               <motion.div 
                 className="absolute -bottom-4 -right-4 sm:bottom-6 sm:right-6 bg-public-primary text-public-primary-foreground px-4 sm:px-6 py-3 sm:py-4 rounded-2xl shadow-2xl"
@@ -493,30 +462,27 @@ export default function Home() {
               Nossa Estrutura
             </span>
             <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-public-fg leading-tight">
-              Conheça nossa <span className="text-public-fg/50">Loja</span>
+              Conheça nossa <span className="text-public-primary">Loja</span>
             </h2>
           </motion.div>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-            {[lojaFachada, lojaInterior, lojaFachada1, lojaFachada2].map((img, index) => (
-              <motion.div
-                key={index}
-                className={`relative overflow-hidden rounded-2xl ${index === 0 ? 'col-span-2 row-span-2 aspect-square' : 'aspect-square'}`}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ scale: 1.02 }}
-              >
-                <img 
-                  src={img} 
-                  alt={`Invest Veículos ${index + 1}`} 
-                  className="w-full h-full object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent opacity-0 hover:opacity-100 transition-opacity" />
-              </motion.div>
-            ))}
-          </div>
+          <motion.div
+            className="max-w-4xl mx-auto"
+            initial={{ opacity: 0, scale: 0.9 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            whileHover={{ scale: 1.01 }}
+          >
+            <div className="relative overflow-hidden rounded-2xl aspect-video">
+              <img 
+                src={lojaPremium} 
+                alt="Invest Veículos - Showroom Premium" 
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/50 via-transparent to-transparent" />
+            </div>
+          </motion.div>
         </div>
       </section>
 
@@ -551,7 +517,7 @@ export default function Home() {
                 </motion.button>
               </Link>
               <motion.a
-                href="https://wa.me/5512991234567"
+                href="https://wa.me/5512978984051"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="w-full sm:w-auto px-6 sm:px-8 py-3 sm:py-4 bg-public-surface border border-public-border text-public-fg rounded-full font-semibold text-sm sm:text-base hover:bg-public-muted hover:border-public-primary/30 transition-all flex items-center justify-center gap-2"
@@ -593,21 +559,21 @@ export default function Home() {
                   <div>
                     <h3 className="text-public-fg font-semibold text-sm sm:text-base mb-1">Endereço</h3>
                     <p className="text-public-fg/60 text-sm sm:text-base leading-relaxed">
-                      Av. Maj. Joaquim Monteiro Patto, 25<br />
-                      Chácara do Visconde - Taubaté/SP
+                      Av. Dom Pedro I, 7231 - Loja 03<br />
+                      Estoril - Taubaté/SP<br />
+                      CEP: 12091-000
                     </p>
                   </div>
                 </div>
 
                 <div className="flex gap-3 sm:gap-4">
                   <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl bg-public-primary/10 flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-public-primary" />
+                    <Phone className="w-4 h-4 sm:w-5 sm:h-5 text-public-primary" />
                   </div>
                   <div>
-                    <h3 className="text-public-fg font-semibold text-sm sm:text-base mb-1">Horário</h3>
+                    <h3 className="text-public-fg font-semibold text-sm sm:text-base mb-1">Telefone</h3>
                     <p className="text-public-fg/60 text-sm sm:text-base leading-relaxed">
-                      Segunda a Sexta: 08:00 às 18:00<br />
-                      Sábado: 08:00 às 12:30
+                      (12) 97898-4051
                     </p>
                   </div>
                 </div>
@@ -633,7 +599,7 @@ export default function Home() {
             >
               <LocationMap
                 location="Invest Veículos - Taubaté"
-                coordinates="Av. Maj. Joaquim Monteiro Patto, 25"
+                coordinates="Av. Dom Pedro I, 7231 - Loja 03, Estoril, Taubaté - SP"
                 className="w-full aspect-[4/3] sm:aspect-square rounded-2xl"
               />
             </motion.div>
