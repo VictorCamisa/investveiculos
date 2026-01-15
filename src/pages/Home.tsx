@@ -13,8 +13,11 @@ import introGif from '@/assets/intro-animation.gif';
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
   const [introPhase, setIntroPhase] = useState<'logo' | 'transition' | 'video' | 'fading' | 'final'>('logo');
+  const [gifFrozen, setGifFrozen] = useState(false);
+  const [frozenGifUrl, setFrozenGifUrl] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const mobileVideoRef = useRef<HTMLVideoElement>(null);
+  const gifRef = useRef<HTMLImageElement>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -53,12 +56,36 @@ export default function Home() {
   }, [isMobile]);
 
   const handleVideoEnd = () => {
-    // Quando o vídeo termina, faz fade para tela preta e mostra o GIF novamente
+    // Quando o vídeo termina, faz fade para tela preta e mostra o GIF congelado
+    setGifFrozen(true);
     setIntroPhase('fading');
     setTimeout(() => {
       setIntroPhase('final');
     }, 500);
   };
+
+  // Capturar o último frame do GIF como imagem estática
+  useEffect(() => {
+    if (introPhase === 'logo' && !frozenGifUrl) {
+      // Criar uma versão congelada do GIF após 2.8 segundos (próximo do fim)
+      const timer = setTimeout(() => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          canvas.width = img.naturalWidth;
+          canvas.height = img.naturalHeight;
+          const ctx = canvas.getContext('2d');
+          if (ctx) {
+            ctx.drawImage(img, 0, 0);
+            setFrozenGifUrl(canvas.toDataURL('image/png'));
+          }
+        };
+        img.src = introGif;
+      }, 2800);
+      return () => clearTimeout(timer);
+    }
+  }, [introPhase, frozenGifUrl]);
 
   const openGoogleMaps = () => {
     window.open(
@@ -72,23 +99,43 @@ export default function Home() {
       {/* Hero Section - Logo Intro → Video → Fade to Black → Logo + Phrase */}
       <section className="relative h-[100dvh] overflow-hidden bg-black">
         
-        {/* GIF Animation (início e final) */}
+        {/* GIF Animation (início) */}
         <AnimatePresence>
-          {(introPhase === 'logo' || introPhase === 'final') && (
+          {introPhase === 'logo' && (
             <motion.div
               className="absolute inset-0 z-20 flex items-center justify-center bg-black"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
+              initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5 }}
             >
               <motion.img
+                ref={gifRef}
                 src={introGif}
                 alt="Invest Veículos"
-                className="h-32 sm:h-40 md:h-56 lg:h-64 w-auto object-contain"
+                className="h-32 sm:h-40 md:h-56 lg:h-64 w-auto object-contain mix-blend-lighten"
+                initial={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.4 }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Frozen GIF/Logo (final - imagem estática) */}
+        <AnimatePresence>
+          {introPhase === 'final' && (
+            <motion.div
+              className="absolute inset-0 z-20 flex items-center justify-center bg-black"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <motion.img
+                src={frozenGifUrl || logoImg}
+                alt="Invest Veículos"
+                className="h-32 sm:h-40 md:h-56 lg:h-64 w-auto object-contain mix-blend-lighten"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
                 transition={{ duration: 0.4 }}
               />
             </motion.div>
