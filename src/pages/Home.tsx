@@ -53,8 +53,11 @@ export default function Home() {
   }, [isMobile]);
 
   const handleVideoEnd = () => {
-    // Quando o vídeo termina, apenas mantém mostrando o último frame
-    // Não faz mais transição para tela final
+    // Quando o vídeo termina, faz fade para tela preta e mostra o GIF novamente
+    setIntroPhase('fading');
+    setTimeout(() => {
+      setIntroPhase('final');
+    }, 500);
   };
 
   const openGoogleMaps = () => {
@@ -69,12 +72,13 @@ export default function Home() {
       {/* Hero Section - Logo Intro → Video → Fade to Black → Logo + Phrase */}
       <section className="relative h-[100dvh] overflow-hidden bg-black">
         
-        {/* GIF Intro Animation (início) */}
+        {/* GIF Animation (início e final) */}
         <AnimatePresence>
-          {introPhase === 'logo' && (
+          {(introPhase === 'logo' || introPhase === 'final') && (
             <motion.div
               className="absolute inset-0 z-20 flex items-center justify-center bg-black"
-              initial={{ opacity: 1 }}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
               transition={{ duration: 0.5 }}
             >
@@ -82,7 +86,7 @@ export default function Home() {
                 src={introGif}
                 alt="Invest Veículos"
                 className="h-32 sm:h-40 md:h-56 lg:h-64 w-auto object-contain"
-                initial={{ opacity: 1 }}
+                initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
                 transition={{ duration: 0.4 }}
@@ -102,6 +106,16 @@ export default function Home() {
             />
           )}
         </AnimatePresence>
+
+        {/* Fade to black overlay when video ends */}
+        <motion.div
+          className="absolute inset-0 bg-black pointer-events-none z-15"
+          initial={{ opacity: 0 }}
+          animate={{ 
+            opacity: introPhase === 'fading' || introPhase === 'final' ? 1 : 0 
+          }}
+          transition={{ duration: 0.5 }}
+        />
 
         {/* Dark overlay on video to make it darker */}
         <div 
