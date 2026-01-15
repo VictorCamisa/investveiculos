@@ -120,7 +120,7 @@ export default function Home() {
           playsInline
           onEnded={handleVideoEnd}
           className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 hidden md:block ${
-            introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
+            introPhase === 'logo' || introPhase === 'transition' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
           <source src="/videos/hero-video-new.mp4" type="video/mp4" />
