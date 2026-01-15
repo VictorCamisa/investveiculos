@@ -12,7 +12,7 @@ import introGif from '@/assets/intro-animation.gif';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [introPhase, setIntroPhase] = useState<'logo' | 'transition' | 'video'>('logo');
+  const [introPhase, setIntroPhase] = useState<'logo' | 'transition' | 'video' | 'fading' | 'final'>('logo');
   const videoRef = useRef<HTMLVideoElement>(null);
   const mobileVideoRef = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -53,8 +53,11 @@ export default function Home() {
   }, [isMobile]);
 
   const handleVideoEnd = () => {
-    // Quando o vídeo termina, apenas mantém mostrando o último frame
-    // Não faz mais transição para tela final
+    // Quando o vídeo termina, faz fade para preto e depois mostra a logo
+    setIntroPhase('fading');
+    setTimeout(() => {
+      setIntroPhase('final');
+    }, 1000); // Após 1 segundo de escurecimento, mostra a logo
   };
 
   const openGoogleMaps = () => {
@@ -116,7 +119,7 @@ export default function Home() {
           playsInline
           onEnded={handleVideoEnd}
           className={`absolute inset-0 w-full bg-black transition-opacity duration-500 hidden md:block ${
-            introPhase === 'logo' || introPhase === 'transition' ? 'opacity-0' : 'opacity-100'
+            introPhase === 'logo' || introPhase === 'transition' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
           style={{ 
             height: '115%', 
@@ -135,7 +138,7 @@ export default function Home() {
           playsInline
           onEnded={handleVideoEnd}
           className={`absolute inset-0 w-full bg-black transition-opacity duration-500 md:hidden ${
-            introPhase === 'logo' || introPhase === 'transition' ? 'opacity-0' : 'opacity-100'
+            introPhase === 'logo' || introPhase === 'transition' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
           style={{ 
             height: '115%', 
@@ -147,6 +150,36 @@ export default function Home() {
           <source src="/videos/hero-video-new.mp4" type="video/mp4" />
         </video>
 
+        {/* Fade to black overlay quando o vídeo termina */}
+        <motion.div
+          className="absolute inset-0 bg-black pointer-events-none z-[15]"
+          initial={{ opacity: 0 }}
+          animate={{ 
+            opacity: introPhase === 'fading' || introPhase === 'final' ? 1 : 0 
+          }}
+          transition={{ duration: 1 }}
+        />
+
+        {/* Logo final após fade to black */}
+        <AnimatePresence>
+          {introPhase === 'final' && (
+            <motion.div
+              className="absolute inset-0 z-20 flex items-center justify-center bg-black"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.5 }}
+            >
+              <motion.img
+                src={logoImg}
+                alt="Invest Veículos"
+                className="h-24 sm:h-32 md:h-40 lg:h-48 w-auto object-contain"
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ duration: 0.6, delay: 0.2 }}
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
 
       </section>
 
