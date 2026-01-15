@@ -47,7 +47,7 @@ export default function Home() {
           }
         }, 200);
       }, 700);
-    }, 3000); // GIF fica 3 segundos
+    }, 4000); // GIF fica 4 segundos
 
     return () => clearTimeout(logoTimer);
   }, [isMobile]);
