@@ -106,11 +106,11 @@ export default function Home() {
           )}
         </AnimatePresence>
 
-        {/* Dark overlay on video to make it darker - more opacity for mobile */}
+        {/* Dark overlay on video to make it darker */}
         <div 
           className={`absolute inset-0 pointer-events-none z-[5] transition-opacity duration-500 ${
             introPhase === 'video' ? 'opacity-100' : 'opacity-0'
-          } bg-black/50 md:bg-black/30`}
+          } bg-black/60`}
         />
 
         {/* Video - Desktop */}
@@ -123,21 +123,22 @@ export default function Home() {
             introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
-          <source src="/videos/hero-video.mp4?v=5" type="video/mp4" />
+          <source src="/videos/hero-video-new.mp4" type="video/mp4" />
         </video>
 
-        {/* Video - Mobile - playbackRate adjusted via useEffect for 5s duration */}
+        {/* Video - Mobile - mesmo vídeo */}
         <video
           ref={mobileVideoRef}
           muted
           playsInline
           onEnded={handleVideoEnd}
           className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 md:hidden ${
-            introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
+            introPhase === 'logo' || introPhase === 'transition' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
-          <source src="/videos/hero-video-mobile.mp4?v=6" type="video/mp4" />
+          <source src="/videos/hero-video-new.mp4" type="video/mp4" />
         </video>
+
 
         {/* Fade to black overlay */}
         <motion.div
