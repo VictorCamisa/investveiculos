@@ -116,9 +116,15 @@ export default function Home() {
           muted
           playsInline
           onEnded={handleVideoEnd}
-          className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 hidden md:block ${
+          className={`absolute inset-0 w-full bg-black transition-opacity duration-500 hidden md:block ${
             introPhase === 'logo' || introPhase === 'transition' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
+          style={{ 
+            height: '115%', 
+            top: '-7.5%',
+            objectFit: 'cover',
+            objectPosition: 'center top'
+          }}
         >
           <source src="/videos/hero-video-new.mp4" type="video/mp4" />
         </video>
@@ -129,9 +135,15 @@ export default function Home() {
           muted
           playsInline
           onEnded={handleVideoEnd}
-          className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 md:hidden ${
+          className={`absolute inset-0 w-full bg-black transition-opacity duration-500 md:hidden ${
             introPhase === 'logo' || introPhase === 'transition' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
+          style={{ 
+            height: '115%', 
+            top: '-7.5%',
+            objectFit: 'cover',
+            objectPosition: 'center top'
+          }}
         >
           <source src="/videos/hero-video-new.mp4" type="video/mp4" />
         </video>
