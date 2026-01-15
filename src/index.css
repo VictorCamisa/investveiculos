@@ -185,7 +185,7 @@
   }
 
   body {
-    @apply min-h-full bg-background text-foreground m-0 p-0 font-sans;
+    @apply min-h-full bg-background text-foreground m-0 p-0 font-sans uppercase;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     overflow-x: hidden;
     overscroll-behavior: none;
