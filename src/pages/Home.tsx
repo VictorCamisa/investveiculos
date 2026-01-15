@@ -25,8 +25,14 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  // Pré-carrega o GIF para garantir que apareça no mobile
   useEffect(() => {
-    // GIF aparece por 3 segundos, depois transição suave para o vídeo
+    const img = new Image();
+    img.src = introGif;
+  }, []);
+
+  useEffect(() => {
+    // GIF aparece por 4 segundos, depois transição suave para o vídeo
     const logoTimer = setTimeout(() => {
       // Primeiro entra na fase de transição (tela preta)
       setIntroPhase('transition');
