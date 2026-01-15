@@ -83,7 +83,7 @@ export default function Home() {
             objectPosition: 'center top'
           }}
         >
-          <source src="/videos/hero-video-new.mp4" type="video/mp4" />
+          <source src="/videos/investinicio.mp4" type="video/mp4" />
         </video>
 
         {/* Video - Mobile - mesmo vídeo */}
@@ -102,7 +102,7 @@ export default function Home() {
             objectPosition: 'center top'
           }}
         >
-          <source src="/videos/hero-video-new.mp4" type="video/mp4" />
+          <source src="/videos/investinicio.mp4" type="video/mp4" />
         </video>
 
         {/* Fade to black overlay quando o vídeo termina */}
