@@ -11,7 +11,7 @@ import heroBgNight from '@/assets/hero-bg-night.jpg';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [introPhase, setIntroPhase] = useState<'logo' | 'video' | 'fading' | 'final'>('logo');
+  const [introPhase, setIntroPhase] = useState<'video' | 'fading' | 'final'>('video');
   const videoRef = useRef<HTMLVideoElement>(null);
   const mobileVideoRef = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -25,25 +25,23 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Logo aparece e sai, depois inicia o vídeo
-    const logoTimer = setTimeout(() => {
-      setIntroPhase('video');
-      // Inicia o vídeo após a transição
-      setTimeout(() => {
-        if (isMobile) {
-          if (mobileVideoRef.current) {
-            // Ajusta velocidade para durar 5 segundos
-            const videoDuration = mobileVideoRef.current.duration || 10;
-            mobileVideoRef.current.playbackRate = videoDuration / 5;
-            mobileVideoRef.current.play();
-          }
-        } else {
-          videoRef.current?.play();
+    // Inicia o vídeo diretamente
+    const startVideo = () => {
+      if (isMobile) {
+        if (mobileVideoRef.current) {
+          // Ajusta velocidade para durar 5 segundos
+          const videoDuration = mobileVideoRef.current.duration || 10;
+          mobileVideoRef.current.playbackRate = videoDuration / 5;
+          mobileVideoRef.current.play();
         }
-      }, 500);
-    }, 3000); // Logo fica 3 segundos
-
-    return () => clearTimeout(logoTimer);
+      } else {
+        videoRef.current?.play();
+      }
+    };
+    
+    // Pequeno delay para garantir que o vídeo está carregado
+    const timer = setTimeout(startVideo, 100);
+    return () => clearTimeout(timer);
   }, [isMobile]);
 
   const handleVideoEnd = () => {
@@ -63,31 +61,9 @@ export default function Home() {
 
   return (
     <div className="bg-public-bg text-public-fg">
-      {/* Hero Section - Logo Intro → Video → Fade to Black → Logo + Phrase */}
+      {/* Hero Section - Video → Fade to Black → Logo + Phrase */}
       <section className="relative h-[100dvh] overflow-hidden bg-black">
         
-        {/* Logo Intro Animation (início) */}
-        <AnimatePresence>
-          {introPhase === 'logo' && (
-            <motion.div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black"
-              initial={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
-            >
-              <motion.img
-                src={logoImg}
-                alt="Invest Veículos"
-                className="h-20 sm:h-28 md:h-40 lg:h-48 w-auto object-contain px-8"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.1 }}
-                transition={{ duration: 1 }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
         {/* Dark overlay on video to make it darker - more opacity for mobile */}
         <div 
           className={`absolute inset-0 pointer-events-none z-[5] transition-opacity duration-500 ${
@@ -102,7 +78,7 @@ export default function Home() {
           playsInline
           onEnded={handleVideoEnd}
           className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 hidden md:block ${
-            introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
+            introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
           <source src="/videos/hero-video.mp4?v=5" type="video/mp4" />
@@ -115,7 +91,7 @@ export default function Home() {
           playsInline
           onEnded={handleVideoEnd}
           className={`absolute inset-0 w-full h-full object-cover bg-black transition-opacity duration-500 md:hidden ${
-            introPhase === 'logo' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
+            introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
         >
           <source src="/videos/hero-video-mobile.mp4?v=6" type="video/mp4" />
