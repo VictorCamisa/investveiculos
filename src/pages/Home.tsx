@@ -31,7 +31,7 @@ export default function Home() {
       // Primeiro entra na fase de transição (tela preta)
       setIntroPhase('transition');
       
-      // Após 1.5s de tela preta, inicia o vídeo
+      // Após 0.7s de tela preta, inicia o vídeo
       setTimeout(() => {
         setIntroPhase('video');
         // Pequeno delay antes de dar play no vídeo
@@ -45,8 +45,8 @@ export default function Home() {
           } else {
             videoRef.current?.play();
           }
-        }, 300);
-      }, 1500);
+        }, 200);
+      }, 700);
     }, 3000); // GIF fica 3 segundos
 
     return () => clearTimeout(logoTimer);
@@ -79,7 +79,7 @@ export default function Home() {
               className="absolute inset-0 z-20 flex items-center justify-center bg-black"
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 1 }}
+              transition={{ duration: 0.5 }}
             >
               <motion.img
                 src={introGif}
@@ -88,7 +88,7 @@ export default function Home() {
                 initial={{ opacity: 1 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
+                transition={{ duration: 0.4 }}
               />
             </motion.div>
           )}
@@ -101,7 +101,7 @@ export default function Home() {
               className="absolute inset-0 z-20 bg-black"
               initial={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.8 }}
+              transition={{ duration: 0.4 }}
             />
           )}
         </AnimatePresence>
