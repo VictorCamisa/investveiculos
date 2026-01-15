@@ -1,18 +1,16 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowRight, MapPin, Phone, ChevronRight, ChevronDown, Car, Users, Star, Award } from 'lucide-react';
+import { MapPin, Phone, ChevronRight, Car, Users, Star, Award } from 'lucide-react';
 import { useFeaturedVehicles } from '@/hooks/usePublicVehicles';
 import { PublicVehicleCard } from '@/components/public/PublicVehicleCard';
 import { LocationMap } from '@/components/ui/expand-map';
 import { StatsCard } from '@/components/ui/stats-card';
 import logoImg from '@/assets/logo-invest-veiculos.png';
-import heroBgNight from '@/assets/hero-bg-night.jpg';
-import introGif from '@/assets/intro-animation.gif';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [introPhase, setIntroPhase] = useState<'logo' | 'transition' | 'video' | 'fading' | 'final'>('logo');
+  const [introPhase, setIntroPhase] = useState<'video' | 'fading' | 'final'>('video');
   const videoRef = useRef<HTMLVideoElement>(null);
   const mobileVideoRef = useRef<HTMLVideoElement>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -25,37 +23,21 @@ export default function Home() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Pré-carrega o GIF para garantir que apareça no mobile
   useEffect(() => {
-    const img = new Image();
-    img.src = introGif;
-  }, []);
+    // Inicia o vídeo imediatamente
+    const playTimer = setTimeout(() => {
+      if (isMobile) {
+        if (mobileVideoRef.current) {
+          const videoDuration = mobileVideoRef.current.duration || 10;
+          mobileVideoRef.current.playbackRate = videoDuration / 5;
+          mobileVideoRef.current.play();
+        }
+      } else {
+        videoRef.current?.play();
+      }
+    }, 200);
 
-  useEffect(() => {
-    // GIF aparece por 4 segundos, depois transição suave para o vídeo
-    const logoTimer = setTimeout(() => {
-      // Primeiro entra na fase de transição (tela preta)
-      setIntroPhase('transition');
-      
-      // Após 0.7s de tela preta, inicia o vídeo
-      setTimeout(() => {
-        setIntroPhase('video');
-        // Pequeno delay antes de dar play no vídeo
-        setTimeout(() => {
-          if (isMobile) {
-            if (mobileVideoRef.current) {
-              const videoDuration = mobileVideoRef.current.duration || 10;
-              mobileVideoRef.current.playbackRate = videoDuration / 5;
-              mobileVideoRef.current.play();
-            }
-          } else {
-            videoRef.current?.play();
-          }
-        }, 200);
-      }, 700);
-    }, 4000); // GIF fica 4 segundos
-
-    return () => clearTimeout(logoTimer);
+    return () => clearTimeout(playTimer);
   }, [isMobile]);
 
   const handleVideoEnd = () => {
@@ -75,41 +57,8 @@ export default function Home() {
 
   return (
     <div className="bg-public-bg text-public-fg">
-      {/* Hero Section - Logo Intro → Video → Fade to Black → Logo + Phrase */}
+      {/* Hero Section - Video → Fade to Black → Logo */}
       <section className="relative h-[100dvh] overflow-hidden bg-black">
-        
-        {/* GIF Animation (início) */}
-        <AnimatePresence>
-          {introPhase === 'logo' && (
-            <motion.div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black"
-              initial={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <motion.img
-                src={introGif}
-                alt="Invest Veículos"
-                className="h-32 sm:h-40 md:h-56 lg:h-64 w-auto object-contain mix-blend-lighten"
-                initial={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.4 }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Transition phase - tela preta suave antes do vídeo */}
-        <AnimatePresence>
-          {introPhase === 'transition' && (
-            <motion.div
-              className="absolute inset-0 z-20 bg-black"
-              initial={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.4 }}
-            />
-          )}
-        </AnimatePresence>
 
         {/* Dark overlay on video to make it darker */}
         <div 
@@ -125,7 +74,7 @@ export default function Home() {
           playsInline
           onEnded={handleVideoEnd}
           className={`absolute inset-0 w-full bg-black transition-opacity duration-500 hidden md:block ${
-            introPhase === 'logo' || introPhase === 'transition' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
+            introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
           style={{ 
             height: '115%', 
@@ -144,7 +93,7 @@ export default function Home() {
           playsInline
           onEnded={handleVideoEnd}
           className={`absolute inset-0 w-full bg-black transition-opacity duration-500 md:hidden ${
-            introPhase === 'logo' || introPhase === 'transition' || introPhase === 'final' ? 'opacity-0' : 'opacity-100'
+            introPhase === 'final' ? 'opacity-0' : 'opacity-100'
           }`}
           style={{ 
             height: '115%', 
