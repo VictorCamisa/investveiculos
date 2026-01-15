@@ -8,6 +8,7 @@ import { LocationMap } from '@/components/ui/expand-map';
 import { StatsCard } from '@/components/ui/stats-card';
 import logoImg from '@/assets/logo-invest-veiculos.png';
 import heroBgNight from '@/assets/hero-bg-night.jpg';
+import introGif from '@/assets/intro-animation.gif';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
@@ -76,13 +77,13 @@ export default function Home() {
               transition={{ duration: 0.8 }}
             >
               <motion.img
-                src={logoImg}
+                src={introGif}
                 alt="Invest Veículos"
-                className="h-20 sm:h-28 md:h-40 lg:h-48 w-auto object-contain px-8"
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 1.1 }}
-                transition={{ duration: 1 }}
+                className="h-32 sm:h-40 md:h-56 lg:h-64 w-auto object-contain"
+                initial={{ opacity: 1 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
               />
             </motion.div>
           )}
