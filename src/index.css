@@ -185,11 +185,32 @@
   }
 
   body {
-    @apply min-h-full bg-background text-foreground m-0 p-0 font-sans uppercase;
+    @apply min-h-full bg-background text-foreground m-0 p-0 font-sans;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
     overflow-x: hidden;
     overscroll-behavior: none;
     -webkit-overflow-scrolling: touch;
+    letter-spacing: -0.01em;
+  }
+
+  /* Refined typography for headings */
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold tracking-tight;
+  }
+
+  /* Subtle micro-interactions */
+  button, a, [role="button"] {
+    @apply transition-all duration-200 ease-out;
+  }
+
+  /* Cards and surfaces - softer appearance */
+  .card, [class*="Card"] {
+    @apply transition-shadow duration-300;
+  }
+
+  /* Public site keeps uppercase for brand identity */
+  .public-layout {
+    text-transform: uppercase;
   }
 
   #root {
