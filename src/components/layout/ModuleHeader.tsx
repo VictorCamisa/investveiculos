@@ -15,9 +15,10 @@ interface ModuleHeaderProps {
   description: string;
   basePath: string;
   navItems: SubNavItem[];
+  actions?: React.ReactNode;
 }
 
-export function ModuleHeader({ icon: Icon, title, description, basePath, navItems }: ModuleHeaderProps) {
+export function ModuleHeader({ icon: Icon, title, description, basePath, navItems, actions }: ModuleHeaderProps) {
   const location = useLocation();
 
   return (
@@ -27,10 +28,11 @@ export function ModuleHeader({ icon: Icon, title, description, basePath, navItem
         <div className="p-2 rounded-lg bg-primary/10">
           <Icon className="h-6 w-6 text-primary" />
         </div>
-        <div>
+        <div className="flex-1">
           <h1 className="text-xl font-semibold">{title}</h1>
           <p className="text-sm text-muted-foreground">{description}</p>
         </div>
+        {actions && <div className="ml-auto">{actions}</div>}
       </div>
       
       {/* Sub Navigation */}

@@ -1,5 +1,6 @@
 import { Outlet } from 'react-router-dom';
 import { ModuleHeader } from '@/components/layout/ModuleHeader';
+import { QualificationTargetSelector } from './QualificationTargetSelector';
 import {
   Users,
   LayoutDashboard,
@@ -26,6 +27,7 @@ export function CRMLayout() {
         description="Gerencie leads e negociações"
         basePath="/crm"
         navItems={navItems}
+        actions={<QualificationTargetSelector />}
       />
       <Outlet />
     </div>
