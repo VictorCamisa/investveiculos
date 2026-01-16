@@ -1360,6 +1360,7 @@ export type Database = {
           notes: string | null
           payment_method: string | null
           purchase_timeline: string | null
+          qualification_tier: string | null
           qualified_by: string | null
           score: number
           trade_in_value: number | null
@@ -1385,6 +1386,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           purchase_timeline?: string | null
+          qualification_tier?: string | null
           qualified_by?: string | null
           score?: number
           trade_in_value?: number | null
@@ -1410,6 +1412,7 @@ export type Database = {
           notes?: string | null
           payment_method?: string | null
           purchase_timeline?: string | null
+          qualification_tier?: string | null
           qualified_by?: string | null
           score?: number
           trade_in_value?: number | null
@@ -2019,6 +2022,42 @@ export type Database = {
           updated_at?: string | null
         }
         Relationships: []
+      }
+      qualification_config: {
+        Row: {
+          id: string
+          target_tier: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          target_tier?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          target_tier?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "qualification_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "qualification_config_updated_by_fkey"
+            columns: ["updated_by"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+        ]
       }
       round_robin_config: {
         Row: {
