@@ -1,9 +1,13 @@
 import { useState } from 'react';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { MessageSquare, LayoutGrid, FileText } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { MessageSquare, LayoutGrid } from 'lucide-react';
 import { ReportChat } from './ReportChat';
 import { ReportGallery } from './ReportGallery';
-import { ModuleHeader } from '@/components/layout/ModuleHeader';
+
+const tabs = [
+  { id: 'chat', label: 'Chat com IA', icon: MessageSquare },
+  { id: 'gallery', label: 'Galeria', icon: LayoutGrid },
+];
 
 export function ReportsLayout() {
   const [activeTab, setActiveTab] = useState('chat');
@@ -15,37 +19,33 @@ export function ReportsLayout() {
   };
 
   return (
-    <div>
-      <ModuleHeader
-        icon={FileText}
-        title="Relatórios Inteligentes"
-        description="Gere relatórios com IA ou escolha templates prontos"
-        basePath="/relatorios"
-        navItems={[]}
-      />
-      
-      <div className="p-6">
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="mb-6">
-            <TabsTrigger value="chat" className="flex items-center gap-2">
-              <MessageSquare className="h-4 w-4" />
-              Chat com IA
-            </TabsTrigger>
-            <TabsTrigger value="gallery" className="flex items-center gap-2">
-              <LayoutGrid className="h-4 w-4" />
-              Galeria de Relatórios
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="chat">
-            <ReportChat initialTemplate={selectedReport} onClearTemplate={() => setSelectedReport(null)} />
-          </TabsContent>
-
-          <TabsContent value="gallery">
-            <ReportGallery onSelectTemplate={handleSelectTemplate} />
-          </TabsContent>
-        </Tabs>
+    <div className="space-y-4">
+      {/* Simple pill navigation */}
+      <div className="flex items-center gap-2 p-1 bg-muted/50 rounded-lg w-fit">
+        {tabs.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={cn(
+              'flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all',
+              activeTab === tab.id
+                ? 'bg-background text-foreground shadow-sm' 
+                : 'text-muted-foreground hover:text-foreground'
+            )}
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        ))}
       </div>
+
+      {activeTab === 'chat' && (
+        <ReportChat initialTemplate={selectedReport} onClearTemplate={() => setSelectedReport(null)} />
+      )}
+
+      {activeTab === 'gallery' && (
+        <ReportGallery onSelectTemplate={handleSelectTemplate} />
+      )}
     </div>
   );
 }
