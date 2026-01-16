@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useUsersWithRoles, useUpdateUser, useSyncUsers } from '@/hooks/useUsers';
+import { useUsersWithRoles, useUpdateUser, useSyncUsers, useDeleteUser } from '@/hooks/useUsers';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -28,6 +28,7 @@ import {
   XCircle,
   Loader2,
   RefreshCw,
+  Trash2,
 } from 'lucide-react';
 import { UserFormDialog } from './UserFormDialog';
 import { UserActivityDialog } from './UserActivityDialog';
@@ -40,6 +41,7 @@ export function UserManagement() {
   const { user: currentUser } = useAuth();
   const updateUser = useUpdateUser();
   const syncUsers = useSyncUsers();
+  const deleteUser = useDeleteUser();
 
   const [searchTerm, setSearchTerm] = useState('');
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
@@ -56,6 +58,12 @@ export function UserManagement() {
       userId: user.id,
       is_active: !user.is_active,
     });
+  };
+
+  const handleDeleteUser = async (user: UserWithRoles) => {
+    if (confirm(`Tem certeza que deseja excluir permanentemente o usuário "${user.full_name || user.email}"? Esta ação não pode ser desfeita.`)) {
+      await deleteUser.mutateAsync(user.id);
+    }
   };
 
   // Verifica se o usuário é gerente (não pode ser editado/excluído por outros)
@@ -210,6 +218,20 @@ export function UserManagement() {
                                     </>
                                   )}
                                 </DropdownMenuItem>
+                                
+                                {/* Mostrar opção de excluir apenas para usuários inativos */}
+                                {!user.is_active && !user.is_master && (
+                                  <>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem
+                                      onClick={() => handleDeleteUser(user)}
+                                      className="text-destructive focus:text-destructive"
+                                    >
+                                      <Trash2 className="h-4 w-4 mr-2" />
+                                      Excluir Permanentemente
+                                    </DropdownMenuItem>
+                                  </>
+                                )}
                               </>
                             )}
                           </DropdownMenuContent>
