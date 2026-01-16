@@ -1907,6 +1907,20 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "negotiations_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "negotiations_salesperson_id_fkey"
+            columns: ["salesperson_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+          {
             foreignKeyName: "negotiations_vehicle_id_fkey"
             columns: ["vehicle_id"]
             isOneToOne: false
