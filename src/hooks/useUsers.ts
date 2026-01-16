@@ -98,6 +98,48 @@ export function useSyncUsers() {
   });
 }
 
+// Delete inactive user (Admin only)
+export function useDeleteUser() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (userId: string) => {
+      const { data: { session } } = await supabase.auth.getSession();
+
+      if (!session) {
+        throw new Error('Você precisa estar logado');
+      }
+
+      const response = await fetch(`${SUPABASE_URL}/functions/v1/delete-user`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ user_id: userId }),
+      });
+
+      const data = await response.json();
+      if (!response.ok) {
+        throw new Error(data.error || 'Erro ao excluir usuário');
+      }
+
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['users-with-roles'] });
+      toast({
+        title: 'Usuário excluído!',
+        description: 'O usuário foi removido do sistema.',
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: 'Erro ao excluir', description: error.message, variant: 'destructive' });
+    },
+  });
+}
+
 
 export function useUserDetails(userId: string | null) {
   return useQuery({
