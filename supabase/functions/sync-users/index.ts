@@ -75,7 +75,7 @@ serve(async (req) => {
       });
     }
 
-    // Apenas gerente (Matheus) pode sincronizar
+    // Verifica se é gerente OU is_master
     const { data: roleData } = await supabaseAdmin
       .from("user_roles")
       .select("role")
@@ -83,7 +83,15 @@ serve(async (req) => {
       .eq("role", "gerente")
       .maybeSingle();
 
-    if (!roleData) {
+    const { data: profileData } = await supabaseAdmin
+      .from("profiles")
+      .select("is_master")
+      .eq("id", requestingUser.id)
+      .single();
+
+    const isAuthorized = roleData || profileData?.is_master === true;
+
+    if (!isAuthorized) {
       return new Response(JSON.stringify({ error: "Apenas Administradores podem sincronizar usuários" }), {
         status: 403,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
