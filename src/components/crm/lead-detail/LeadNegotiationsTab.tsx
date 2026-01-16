@@ -59,7 +59,7 @@ function NegotiationCard({
   onDelete: () => void;
   onView?: () => void;
 }) {
-  const isWon = negotiation.status === 'fechado';
+  const isWon = negotiation.status === 'ganho';
   const isLost = negotiation.status === 'perdido';
   const isActive = !isWon && !isLost;
   
@@ -256,8 +256,8 @@ export function LeadNegotiationsTab({
   };
 
   // Stats
-  const activeNegotiations = negotiations.filter(n => !['fechado', 'perdido'].includes(n.status));
-  const wonNegotiations = negotiations.filter(n => n.status === 'fechado');
+  const activeNegotiations = negotiations.filter(n => !['ganho', 'perdido'].includes(n.status as string));
+  const wonNegotiations = negotiations.filter(n => n.status === 'ganho');
   const lostNegotiations = negotiations.filter(n => n.status === 'perdido');
   const totalValue = wonNegotiations.reduce((sum, n) => sum + (n.estimated_value || 0), 0);
 
@@ -283,8 +283,8 @@ export function LeadNegotiationsTab({
 
   // Sort: active first, then by date
   const sortedNegotiations = [...negotiations].sort((a, b) => {
-    const aActive = !['fechado', 'perdido'].includes(a.status as string);
-    const bActive = !['fechado', 'perdido'].includes(b.status as string);
+    const aActive = !['ganho', 'perdido'].includes(a.status as string);
+    const bActive = !['ganho', 'perdido'].includes(b.status as string);
     if (aActive && !bActive) return -1;
     if (!aActive && bActive) return 1;
     return new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
