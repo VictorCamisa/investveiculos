@@ -29,11 +29,8 @@ export default function Home() {
     // Inicia o vídeo imediatamente
     const playTimer = setTimeout(() => {
       if (isMobile) {
-        if (mobileVideoRef.current) {
-          const videoDuration = mobileVideoRef.current.duration || 10;
-          mobileVideoRef.current.playbackRate = videoDuration / 5;
-          mobileVideoRef.current.play();
-        }
+        // Mobile: velocidade normal
+        mobileVideoRef.current?.play();
       } else {
         videoRef.current?.play();
       }
