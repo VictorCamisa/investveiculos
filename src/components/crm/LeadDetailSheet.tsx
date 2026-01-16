@@ -18,9 +18,9 @@ import { leadStatusLabels, leadStatusColors, leadSourceLabels } from '@/types/cr
 import { useLeadInteractions } from '@/hooks/useLeadInteractions';
 import { useNegotiations } from '@/hooks/useNegotiations';
 import { useDeleteLead } from '@/hooks/useLeads';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { WhatsAppChatModal } from '@/components/whatsapp/WhatsAppChatModal';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { LeadInfoTab } from './lead-detail/LeadInfoTab';
 import { LeadQualificationTab } from './lead-detail/LeadQualificationTab';
@@ -35,6 +35,7 @@ interface LeadDetailSheetProps {
 }
 
 export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }: LeadDetailSheetProps) {
+  const queryClient = useQueryClient();
   const { data: interactions = [] } = useLeadInteractions(lead?.id || '');
   const { data: allNegotiations = [] } = useNegotiations();
   const deleteLead = useDeleteLead();
@@ -43,6 +44,59 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
   const [deleteLeadDialogOpen, setDeleteLeadDialogOpen] = useState(false);
 
   const leadNegotiations = allNegotiations.filter(n => n.lead_id === lead?.id);
+
+  // Real-time subscription for lead qualifications
+  useEffect(() => {
+    if (!lead?.id || !open) return;
+
+    console.log('[LeadDetailSheet] Setting up real-time subscription for lead:', lead.id);
+
+    const channel = supabase
+      .channel(`lead-qualifications-${lead.id}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: 'INSERT', 
+          schema: 'public', 
+          table: 'lead_qualifications'
+        },
+        (payload) => {
+          const newRow = payload.new as { lead_id?: string; negotiation_id?: string };
+          console.log('[LeadDetailSheet] New qualification received:', newRow);
+          
+          // Check if this qualification is for our lead
+          if (newRow?.lead_id === lead.id) {
+            console.log('[LeadDetailSheet] Invalidating qualification query');
+            queryClient.invalidateQueries({ queryKey: ['lead-qualifications-by-lead', lead.id] });
+          }
+        }
+      )
+      .on(
+        'postgres_changes',
+        { 
+          event: 'UPDATE', 
+          schema: 'public', 
+          table: 'lead_qualifications'
+        },
+        (payload) => {
+          const updatedRow = payload.new as { lead_id?: string; negotiation_id?: string };
+          console.log('[LeadDetailSheet] Qualification updated:', updatedRow);
+          
+          if (updatedRow?.lead_id === lead.id) {
+            console.log('[LeadDetailSheet] Invalidating qualification query on update');
+            queryClient.invalidateQueries({ queryKey: ['lead-qualifications-by-lead', lead.id] });
+          }
+        }
+      )
+      .subscribe((status) => {
+        console.log('[LeadDetailSheet] Subscription status:', status);
+      });
+
+    return () => {
+      console.log('[LeadDetailSheet] Cleaning up subscription for lead:', lead.id);
+      supabase.removeChannel(channel);
+    };
+  }, [lead?.id, open, queryClient]);
 
   const handleDeleteLead = () => {
     if (lead) {
