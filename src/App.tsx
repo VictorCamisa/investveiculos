@@ -28,7 +28,10 @@ const VehicleDetails = lazy(() => import("./pages/VehicleDetails"));
 const ImportVehicles = lazy(() => import("./pages/ImportVehicles"));
 const CRMHome = lazy(() => import("./pages/CRMHome"));
 const CRMAnalytics = lazy(() => import("./pages/CRMAnalytics"));
-const FollowUps = lazy(() => import("./pages/FollowUps"));
+const FollowUpsLayout = lazy(() => import("@/components/follow-ups/FollowUpsLayout").then(m => ({ default: m.FollowUpsLayout })));
+const ReactivationPage = lazy(() => import("@/components/follow-ups/ReactivationPage").then(m => ({ default: m.ReactivationPage })));
+const WhatsAppActivationPage = lazy(() => import("@/components/follow-ups/WhatsAppActivationPage").then(m => ({ default: m.WhatsAppActivationPage })));
+const EmailActivationPage = lazy(() => import("@/components/follow-ups/EmailActivationPage").then(m => ({ default: m.EmailActivationPage })));
 const LostNegotiations = lazy(() => import("./pages/LostNegotiations"));
 const Settings = lazy(() => import("./pages/Settings"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -192,7 +195,11 @@ const App = () => (
                   }>
                     <Route index element={<Suspense fallback={<PageLoader />}><CRMHome /></Suspense>} />
                     <Route path="leads" element={<Suspense fallback={<PageLoader />}><Leads /></Suspense>} />
-                    <Route path="follow-ups" element={<Suspense fallback={<PageLoader />}><FollowUps /></Suspense>} />
+                    <Route path="follow-ups" element={<Suspense fallback={<PageLoader />}><FollowUpsLayout /></Suspense>}>
+                      <Route index element={<ReactivationPage />} />
+                      <Route path="whatsapp" element={<WhatsAppActivationPage />} />
+                      <Route path="email" element={<EmailActivationPage />} />
+                    </Route>
                     <Route path="perdas" element={<Suspense fallback={<PageLoader />}><LostNegotiations /></Suspense>} />
                     <Route path="analytics" element={<Suspense fallback={<PageLoader />}><CRMAnalytics /></Suspense>} />
                   </Route>
