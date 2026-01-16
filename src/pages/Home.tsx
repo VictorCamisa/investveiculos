@@ -43,11 +43,22 @@ export default function Home() {
   }, [isMobile]);
 
   const handleVideoEnd = () => {
-    // Quando o vídeo termina, faz fade para preto e depois mostra a logo
+    // No mobile, apenas congela no último frame (não faz nada)
+    if (isMobile) {
+      return;
+    }
+    // Desktop: faz fade para preto e depois mostra a logo
     setIntroPhase('fading');
     setTimeout(() => {
       setIntroPhase('final');
-    }, 1000); // Após 1 segundo de escurecimento, mostra a logo
+    }, 1000);
+  };
+
+  const handleMobileVideoEnd = () => {
+    // Mobile: congela no último frame - pausa o vídeo no final
+    if (mobileVideoRef.current) {
+      mobileVideoRef.current.pause();
+    }
   };
 
   const openGoogleMaps = () => {
@@ -59,12 +70,12 @@ export default function Home() {
 
   return (
     <div className="bg-public-bg text-public-fg">
-      {/* Hero Section - Video → Fade to Black → Logo */}
+      {/* Hero Section - Video → Fade to Black → Logo (Desktop) / Freeze on last frame (Mobile) */}
       <section className="relative h-[100dvh] overflow-hidden bg-black">
 
-        {/* Dark overlay on video to make it darker */}
+        {/* Dark overlay on video to make it darker - ONLY DESKTOP */}
         <div 
-          className={`absolute inset-0 pointer-events-none z-[5] transition-opacity duration-500 ${
+          className={`absolute inset-0 pointer-events-none z-[5] transition-opacity duration-500 hidden md:block ${
             introPhase === 'video' ? 'opacity-100' : 'opacity-0'
           } bg-black/60`}
         />
@@ -88,15 +99,13 @@ export default function Home() {
           <source src="/videos/investinicio.mp4" type="video/mp4" />
         </video>
 
-        {/* Video - Mobile - mesmo vídeo */}
+        {/* Video - Mobile - vídeo separado, sem overlay, congela no final */}
         <video
           ref={mobileVideoRef}
           muted
           playsInline
-          onEnded={handleVideoEnd}
-          className={`absolute inset-0 w-full bg-black transition-opacity duration-500 md:hidden ${
-            introPhase === 'final' ? 'opacity-0' : 'opacity-100'
-          }`}
+          onEnded={handleMobileVideoEnd}
+          className="absolute inset-0 w-full md:hidden"
           style={{ 
             height: '115%', 
             top: '-7.5%',
@@ -104,12 +113,12 @@ export default function Home() {
             objectPosition: 'center top'
           }}
         >
-          <source src="/videos/investinicio.mp4" type="video/mp4" />
+          <source src="/videos/hero-video-mobile.mp4" type="video/mp4" />
         </video>
 
-        {/* Fade to black overlay quando o vídeo termina */}
+        {/* Fade to black overlay quando o vídeo termina - ONLY DESKTOP */}
         <motion.div
-          className="absolute inset-0 bg-black pointer-events-none z-[15]"
+          className="absolute inset-0 bg-black pointer-events-none z-[15] hidden md:block"
           initial={{ opacity: 0 }}
           animate={{ 
             opacity: introPhase === 'fading' || introPhase === 'final' ? 1 : 0 
@@ -117,9 +126,9 @@ export default function Home() {
           transition={{ duration: 1 }}
         />
 
-        {/* Logo final após fade to black */}
+        {/* Logo final após fade to black - ONLY DESKTOP */}
         <AnimatePresence>
-          {introPhase === 'final' && (
+          {introPhase === 'final' && !isMobile && (
             <motion.div
               className="absolute inset-0 z-20 flex items-center justify-center bg-black"
               initial={{ opacity: 0 }}
