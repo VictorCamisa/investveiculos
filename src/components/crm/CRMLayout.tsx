@@ -1,12 +1,16 @@
+import { useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { QualificationTargetSelector } from './QualificationTargetSelector';
+import { Button } from '@/components/ui/button';
 import {
   LayoutDashboard,
   UserPlus,
   MessageSquare,
   BarChart3,
   XCircle,
+  Bot,
+  BotOff,
 } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
 
@@ -20,6 +24,7 @@ const navItems = [
 
 export function CRMLayout() {
   const location = useLocation();
+  const [agentEnabled, setAgentEnabled] = useState(false);
 
   return (
     <div className="space-y-4">
@@ -52,7 +57,32 @@ export function CRMLayout() {
           <ScrollBar orientation="horizontal" />
         </ScrollArea>
         
-        <QualificationTargetSelector />
+        <div className="flex items-center gap-2">
+          <Button
+            variant={agentEnabled ? "default" : "outline"}
+            size="sm"
+            onClick={() => setAgentEnabled(!agentEnabled)}
+            className={cn(
+              "gap-2 transition-all",
+              agentEnabled 
+                ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
+                : "text-muted-foreground"
+            )}
+          >
+            {agentEnabled ? (
+              <>
+                <Bot className="h-4 w-4" />
+                Agente Ativo
+              </>
+            ) : (
+              <>
+                <BotOff className="h-4 w-4" />
+                Agente Inativo
+              </>
+            )}
+          </Button>
+          <QualificationTargetSelector />
+        </div>
       </div>
 
       <Outlet />
