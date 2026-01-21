@@ -2976,6 +2976,7 @@ export type Database = {
           instance_key: string | null
           instance_name: string | null
           is_default: boolean | null
+          is_lead_source: boolean | null
           is_shared: boolean | null
           name: string
           phone_number: string | null
@@ -2996,6 +2997,7 @@ export type Database = {
           instance_key?: string | null
           instance_name?: string | null
           is_default?: boolean | null
+          is_lead_source?: boolean | null
           is_shared?: boolean | null
           name: string
           phone_number?: string | null
@@ -3016,6 +3018,7 @@ export type Database = {
           instance_key?: string | null
           instance_name?: string | null
           is_default?: boolean | null
+          is_lead_source?: boolean | null
           is_shared?: boolean | null
           name?: string
           phone_number?: string | null

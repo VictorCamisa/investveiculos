@@ -40,6 +40,7 @@ export interface WhatsAppInstance {
   qr_code_expires_at?: string;
   is_default: boolean;
   is_shared: boolean;
+  is_lead_source?: boolean;
   signature_template?: string;
   webhook_url?: string;
   created_by?: string;

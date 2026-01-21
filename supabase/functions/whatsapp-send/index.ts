@@ -31,26 +31,12 @@ serve(async (req) => {
     const evolutionUrl = (Deno.env.get('EVOLUTION_API_URL') ?? '').replace(/\/$/, '');
     const evolutionKey = Deno.env.get('EVOLUTION_API_KEY') ?? '';
 
-    // Get instance configuration - prioritize user's own instance
+    // Get instance configuration - prioritize user's own instance, NEVER use lead source for salesperson replies
     let instance;
     let isUsingSharedInstance = false;
     
-    // First, try to use specified instanceId
-    if (instanceId) {
-      const { data } = await supabase
-        .from('whatsapp_instances')
-        .select('*')
-        .eq('id', instanceId)
-        .single();
-      instance = data;
-      // Check if this is a shared instance being used by another user
-      if (instance && instance.user_id && instance.user_id !== userId && instance.is_shared) {
-        isUsingSharedInstance = true;
-      }
-    }
-    
-    // If no instanceId but userId provided, try user's own instance first
-    if (!instance && userId) {
+    // If userId provided, try user's own instance first (PRIORITY #1)
+    if (userId) {
       const { data: userInstance } = await supabase
         .from('whatsapp_instances')
         .select('*')
@@ -64,12 +50,35 @@ serve(async (req) => {
       }
     }
     
-    // If no own instance, try shared instance
+    // If no own instance and instanceId specified (but NOT lead source), use it
+    if (!instance && instanceId) {
+      const { data } = await supabase
+        .from('whatsapp_instances')
+        .select('*')
+        .eq('id', instanceId)
+        .single();
+      
+      // Only use specified instance if it's NOT the lead source OR if user has no own instance and is not a salesperson
+      if (data && !data.is_lead_source) {
+        instance = data;
+        // Check if this is a shared instance being used by another user
+        if (instance.user_id && instance.user_id !== userId && instance.is_shared) {
+          isUsingSharedInstance = true;
+        }
+      } else if (data && data.is_lead_source && !userId) {
+        // Allow using lead source only if no userId (system/AI messages)
+        instance = data;
+        console.log('Using lead source instance for system message');
+      }
+    }
+    
+    // If no own instance, try shared instance (but NOT lead source)
     if (!instance && userId) {
       const { data: sharedInstance } = await supabase
         .from('whatsapp_instances')
         .select('*')
         .eq('is_shared', true)
+        .eq('is_lead_source', false)
         .eq('status', 'connected')
         .limit(1)
         .maybeSingle();
@@ -81,25 +90,44 @@ serve(async (req) => {
       }
     }
     
-    // Fallback: try default instance
+    // Fallback: try default instance (but NOT lead source unless it's a system call)
     if (!instance) {
       const { data } = await supabase
         .from('whatsapp_instances')
         .select('*')
         .eq('is_default', true)
         .single();
-      instance = data;
+      
+      if (data && (!data.is_lead_source || !userId)) {
+        instance = data;
+      }
     }
     
-    // Final fallback: first connected instance
+    // Final fallback: first connected instance (but NOT lead source unless system call)
     if (!instance) {
-      const { data: firstInstance } = await supabase
+      const query = supabase
+        .from('whatsapp_instances')
+        .select('*')
+        .eq('status', 'connected');
+      
+      // If userId provided, exclude lead source
+      if (userId) {
+        query.eq('is_lead_source', false);
+      }
+      
+      const { data: firstInstance } = await query.limit(1).single();
+      instance = firstInstance;
+    }
+    
+    // Absolute fallback for system/AI: use any connected instance including lead source
+    if (!instance && !userId) {
+      const { data: anyInstance } = await supabase
         .from('whatsapp_instances')
         .select('*')
         .eq('status', 'connected')
         .limit(1)
         .single();
-      instance = firstInstance;
+      instance = anyInstance;
     }
 
     if (!instance) {
