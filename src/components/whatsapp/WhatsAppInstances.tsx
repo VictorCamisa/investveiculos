@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Plus, QrCode, Wifi, WifiOff, RefreshCw, Trash2, Settings } from 'lucide-react';
+import { Plus, QrCode, Wifi, WifiOff, RefreshCw, Trash2, Radio } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -115,6 +115,22 @@ export function WhatsAppInstances() {
 
   const handleLogout = async (instanceId: string) => {
     await instanceAction.mutateAsync({ action: 'logout', instanceId });
+  };
+
+  const handleSetLeadSource = async (instanceId: string, currentValue: boolean) => {
+    try {
+      await updateInstance.mutateAsync({ 
+        id: instanceId, 
+        is_lead_source: !currentValue 
+      } as any);
+      toast.success(!currentValue 
+        ? 'Instância definida como Principal (Captação de Leads)' 
+        : 'Instância removida como fonte de leads'
+      );
+    } catch (error) {
+      console.error('Error updating lead source:', error);
+      toast.error('Erro ao atualizar instância');
+    }
   };
 
   // Auto-sync status every 5 seconds for instances not connected
@@ -424,17 +440,37 @@ export function WhatsAppInstances() {
                 </div>
 
                 <div className="flex flex-wrap gap-1 justify-center">
+                  {instance.is_lead_source && (
+                    <Badge className="text-xs bg-primary text-primary-foreground">
+                      <Radio className="h-3 w-3 mr-1" />
+                      Principal (Captação)
+                    </Badge>
+                  )}
                   {instance.is_default && (
                     <Badge variant="outline" className="text-xs">
                       Padrão
                     </Badge>
                   )}
                   {instance.is_shared && (
-                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                    <Badge variant="outline" className="text-xs bg-secondary text-secondary-foreground">
                       Compartilhada
                     </Badge>
                   )}
                 </div>
+
+                {/* Lead Source Toggle */}
+                {instance.status === 'connected' && (
+                  <Button
+                    variant={instance.is_lead_source ? "default" : "outline"}
+                    size="sm"
+                    className="w-full mt-2"
+                    onClick={() => handleSetLeadSource(instance.id, instance.is_lead_source || false)}
+                    disabled={updateInstance.isPending}
+                  >
+                    <Radio className="h-4 w-4 mr-2" />
+                    {instance.is_lead_source ? 'Principal (Captação Ativa)' : 'Definir como Principal'}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           ))}

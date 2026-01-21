@@ -145,21 +145,34 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
     return;
   }
 
+  // ===== FETCH INSTANCE AND CHECK IF IT'S LEAD SOURCE =====
+  const { data: instance } = await supabase
+    .from('whatsapp_instances')
+    .select('id, is_lead_source, user_id')
+    .eq('instance_name', instanceName)
+    .single();
+  
+  const isLeadSource = instance?.is_lead_source === true;
+  console.log(`Instance ${instanceName} is_lead_source:`, isLeadSource);
+
   // ===== INCOMING MESSAGE: Process lead and contact =====
   
-  // Find or create lead by phone
+  // Find or create lead by phone (ONLY if is_lead_source)
   let leadId: string | null = null;
   let contact: { id: string; lead_id?: string; unread_count?: number; phone?: string } | null = null;
 
   if (phone) {
-    // Try to find existing lead
+    // Try to find existing lead (always do this to link messages)
     leadId = await findLeadIdByPhone(supabase, phone);
 
-    if (!leadId) {
+    // Only create new lead if this is the lead source instance
+    if (!leadId && isLeadSource) {
       // Create new lead WITHOUT salesperson assignment (Round Robin runs on qualification)
       console.log('Creating new lead for phone:', phone, 'name:', pushName);
       leadId = await createLeadWithoutAssignment(supabase, phone, pushName || 'WhatsApp');
       console.log('Created lead:', leadId);
+    } else if (!leadId) {
+      console.log('Instance is not lead source, skipping lead creation for phone:', phone);
     } else {
       // Update existing lead's last contact
       console.log('Updating existing lead:', leadId);
@@ -236,13 +249,6 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
     }
   }
 
-  // Get instance
-  const { data: instance } = await supabase
-    .from('whatsapp_instances')
-    .select('id')
-    .eq('instance_name', instanceName)
-    .single();
-
   // Save message
   await supabase.from('whatsapp_messages').insert({
     instance_id: instance?.id,
@@ -276,7 +282,7 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
     }
   }
 
-  // Create lead interaction record
+  // Create lead interaction record (only if lead exists)
   if (leadId) {
     await supabase.from('lead_interactions').insert({
       lead_id: leadId,
@@ -286,8 +292,12 @@ async function handleNewMessage(supabase: any, data: any, instanceName: string, 
   }
 
   // ===== AI AGENT INTEGRATION =====
-  // Check if there's an active AI agent connected to this WhatsApp instance
-  await handleAIAgentResponse(supabase, instance?.id, effectivePhone, content, leadId, instanceName, isAudioMessage, audioBase64ForTranscription);
+  // Only trigger AI agent if this instance is the lead source (Principal)
+  if (isLeadSource) {
+    await handleAIAgentResponse(supabase, instance?.id, effectivePhone, content, leadId, instanceName, isAudioMessage, audioBase64ForTranscription);
+  } else {
+    console.log('Skipping AI agent - instance is not lead source');
+  }
 }
 
 // Handle AI Agent auto-response
