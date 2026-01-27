@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { Outlet, NavLink, useLocation } from 'react-router-dom';
 import { cn } from '@/lib/utils';
 import { QualificationTargetSelector } from './QualificationTargetSelector';
@@ -11,8 +10,16 @@ import {
   XCircle,
   Bot,
   BotOff,
+  Loader2,
 } from 'lucide-react';
 import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import { useCRMAgent } from '@/hooks/useCRMAgent';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 const navItems = [
   { path: '/crm', label: 'Pipeline', icon: LayoutDashboard },
@@ -24,7 +31,56 @@ const navItems = [
 
 export function CRMLayout() {
   const location = useLocation();
-  const [agentEnabled, setAgentEnabled] = useState(false);
+  const { agentState, isLoading, toggleAgent, isToggling } = useCRMAgent();
+
+  const handleToggleAgent = () => {
+    if (!agentState.agentId) {
+      return;
+    }
+    toggleAgent(!agentState.isEnabled);
+  };
+
+  const getButtonContent = () => {
+    if (isLoading || isToggling) {
+      return (
+        <>
+          <Loader2 className="h-4 w-4 animate-spin" />
+          {isToggling ? 'Alterando...' : 'Carregando...'}
+        </>
+      );
+    }
+
+    if (!agentState.agentId) {
+      return (
+        <>
+          <BotOff className="h-4 w-4" />
+          Sem Agente
+        </>
+      );
+    }
+
+    return agentState.isEnabled ? (
+      <>
+        <Bot className="h-4 w-4" />
+        Agente Ativo
+      </>
+    ) : (
+      <>
+        <BotOff className="h-4 w-4" />
+        Agente Inativo
+      </>
+    );
+  };
+
+  const getTooltipContent = () => {
+    if (!agentState.agentId) {
+      return 'Configure um agente IA vinculado à instância principal do WhatsApp';
+    }
+    if (agentState.isEnabled) {
+      return `${agentState.agentName || 'Agente'} está respondendo automaticamente na instância ${agentState.instanceName || 'principal'}`;
+    }
+    return `Clique para ativar ${agentState.agentName || 'o agente'}`;
+  };
 
   return (
     <div className="space-y-4">
@@ -58,29 +114,29 @@ export function CRMLayout() {
         </ScrollArea>
         
         <div className="flex items-center gap-2">
-          <Button
-            variant={agentEnabled ? "default" : "outline"}
-            size="sm"
-            onClick={() => setAgentEnabled(!agentEnabled)}
-            className={cn(
-              "gap-2 transition-all",
-              agentEnabled 
-                ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
-                : "text-muted-foreground"
-            )}
-          >
-            {agentEnabled ? (
-              <>
-                <Bot className="h-4 w-4" />
-                Agente Ativo
-              </>
-            ) : (
-              <>
-                <BotOff className="h-4 w-4" />
-                Agente Inativo
-              </>
-            )}
-          </Button>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  variant={agentState.isEnabled ? "default" : "outline"}
+                  size="sm"
+                  onClick={handleToggleAgent}
+                  disabled={isLoading || isToggling || !agentState.agentId}
+                  className={cn(
+                    "gap-2 transition-all",
+                    agentState.isEnabled 
+                      ? "bg-emerald-600 hover:bg-emerald-700 text-white" 
+                      : "text-muted-foreground"
+                  )}
+                >
+                  {getButtonContent()}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>{getTooltipContent()}</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
           <QualificationTargetSelector />
         </div>
       </div>
