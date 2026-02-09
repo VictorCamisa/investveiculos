@@ -1338,16 +1338,37 @@ ${qualificationData.down_payment ? '💵 *Entrada:* R$ ' + qualificationData.dow
 📲 Acesse o CRM para continuar o atendimento!`;
 
                   try {
-                    await sendWhatsAppMessage(
-                      { 
-                        phone: salespersonProfile.phone, 
-                        message: whatsappMessage,
-                        instance_name: 'default' 
+                    // Get the Principal (lead source) instance to send notification FROM
+                    const { data: principalInstance } = await supabase
+                      .from('whatsapp_instances')
+                      .select('id, instance_name')
+                      .eq('is_lead_source', true)
+                      .eq('status', 'connected')
+                      .maybeSingle();
+                    
+                    const instanceIdToUse = principalInstance?.id || undefined;
+                    console.log(`[Auto-Qualify] Sending WhatsApp via Principal instance: ${principalInstance?.instance_name || 'fallback'}`);
+                    
+                    const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
+                      method: 'POST',
+                      headers: {
+                        'Authorization': `Bearer ${serviceRoleKey}`,
+                        'Content-Type': 'application/json',
                       },
-                      supabaseUrl,
-                      serviceRoleKey
-                    );
-                    console.log(`[Auto-Qualify] WhatsApp sent to salesperson: ${salesperson.name} (${salespersonProfile.phone})`);
+                      body: JSON.stringify({
+                        phone: salespersonProfile.phone,
+                        message: whatsappMessage,
+                        instanceId: instanceIdToUse,
+                        // NO userId so whatsapp-send allows lead source instance
+                      }),
+                    });
+                    
+                    if (!sendResponse.ok) {
+                      const errorText = await sendResponse.text();
+                      console.error(`[Auto-Qualify] WhatsApp send failed:`, errorText);
+                    } else {
+                      console.log(`[Auto-Qualify] WhatsApp sent to salesperson: ${salesperson.name} (${salespersonProfile.phone})`);
+                    }
                   } catch (whatsappError) {
                     console.error(`[Auto-Qualify] Failed to send WhatsApp to salesperson:`, whatsappError);
                   }
