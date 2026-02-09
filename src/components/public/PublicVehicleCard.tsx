@@ -73,7 +73,6 @@ export function PublicVehicleCard({ vehicle, index = 0 }: PublicVehicleCardProps
               alt={`${vehicle.brand} ${vehicle.model}`}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
               loading="lazy"
-              crossOrigin="anonymous"
               onError={() => setImageError(prev => ({ ...prev, [currentImageIndex]: true }))}
             />
           ) : (
