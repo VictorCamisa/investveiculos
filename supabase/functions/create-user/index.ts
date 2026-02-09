@@ -86,9 +86,9 @@ serve(async (req) => {
     }
 
     // Get request body
-    const { email, password, full_name, role, roles, permissions } = await req.json();
+    const { email, password, full_name, phone, role, roles, permissions } = await req.json();
 
-    console.log("[create-user] Creating user:", { email, full_name, role, roles, permissionsCount: permissions?.length });
+    console.log("[create-user] Creating user:", { email, full_name, phone, role, roles, permissionsCount: permissions?.length });
 
     if (!email || !password || !full_name) {
       return new Response(JSON.stringify({ error: "Missing required fields" }), {
@@ -117,18 +117,18 @@ serve(async (req) => {
 
     // Ensure profile exists
     const now = new Date().toISOString();
+    const profileData: Record<string, any> = {
+      id: newUser.user.id,
+      email: newUser.user.email,
+      full_name,
+      is_active: true,
+      updated_at: now,
+    };
+    if (phone) profileData.phone = phone;
+
     const { error: profileError } = await supabaseAdmin
       .from("profiles")
-      .upsert(
-        {
-          id: newUser.user.id,
-          email: newUser.user.email,
-          full_name,
-          is_active: true,
-          updated_at: now,
-        },
-        { onConflict: "id" }
-      );
+      .upsert(profileData, { onConflict: "id" });
 
     if (profileError) {
       console.error("[create-user] Error creating profile:", profileError);
