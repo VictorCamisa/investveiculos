@@ -26,15 +26,22 @@ export default function Home() {
   }, []);
 
   useEffect(() => {
-    // Inicia o vídeo imediatamente
+    // Inicia o vídeo imediatamente após detectar mobile
     const playTimer = setTimeout(() => {
       if (isMobile) {
-        // Mobile: velocidade normal
-        mobileVideoRef.current?.play();
+        const mobile = mobileVideoRef.current;
+        if (mobile) {
+          mobile.load();
+          mobile.play().catch(() => {});
+        }
       } else {
-        videoRef.current?.play();
+        const desktop = videoRef.current;
+        if (desktop) {
+          desktop.load();
+          desktop.play().catch(() => {});
+        }
       }
-    }, 200);
+    }, 300);
 
     return () => clearTimeout(playTimer);
   }, [isMobile]);
