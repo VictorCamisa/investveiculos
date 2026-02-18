@@ -178,6 +178,16 @@ interface CreateVehicleInput {
   images?: string[];
 }
 
+// Map app field names to database column names
+function mapVehicleToDB(input: Partial<CreateVehicleInput>) {
+  const { sale_price, purchase_price, ...rest } = input;
+  return {
+    ...rest,
+    ...(sale_price !== undefined && { price_sale: sale_price }),
+    ...(purchase_price !== undefined && { price_purchase: purchase_price }),
+  };
+}
+
 export function useCreateVehicle() {
   const queryClient = useQueryClient();
 
@@ -189,7 +199,7 @@ export function useCreateVehicle() {
       const { data, error } = await (supabase as any)
         .from('vehicles')
         .insert({
-          ...input,
+          ...mapVehicleToDB(input),
           created_by: user?.id,
         })
         .select()
@@ -232,7 +242,7 @@ export function useUpdateVehicle() {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const { data, error } = await (supabase as any)
         .from('vehicles')
-        .update(input)
+        .update(mapVehicleToDB(input))
         .eq('id', id)
         .select()
         .single();
