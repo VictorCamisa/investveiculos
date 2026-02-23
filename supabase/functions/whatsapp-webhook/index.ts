@@ -338,32 +338,18 @@ async function handleAIAgentResponse(
     if (messageContent === '[AUDIO_PENDING_TRANSCRIPTION]' && audioBase64) {
       console.log('Transcribing audio with agent API key...');
       
-      // Get OpenAI API key from agent config
-      let openaiApiKey: string | null = null;
-      if (agent.api_key_encrypted) {
-        try {
-          const keys = JSON.parse(agent.api_key_encrypted);
-          openaiApiKey = keys.openai || null;
-        } catch {
-          // Legacy format - single key
-          if (agent.llm_provider === 'openai') {
-            openaiApiKey = agent.api_key_encrypted;
-          }
-        }
-      }
-      
-      // Always use OpenAI API key from environment
-      const envOpenaiKey = openaiApiKey || Deno.env.get('OPENAI_API_KEY');
-      if (envOpenaiKey) {
-        const transcription = await transcribeAudioFromBase64(audioBase64, envOpenaiKey);
+      // Use ElevenLabs for audio transcription
+      const elevenLabsKey = Deno.env.get('ELEVENLABS_API_KEY');
+      if (elevenLabsKey) {
+        const transcription = await transcribeAudioWithElevenLabs(audioBase64, elevenLabsKey);
         if (transcription) {
           actualMessageContent = transcription;
-          console.log('Audio transcribed successfully via OpenAI:', actualMessageContent.substring(0, 50));
+          console.log('Audio transcribed successfully via ElevenLabs:', actualMessageContent.substring(0, 50));
         } else {
           actualMessageContent = '[Áudio não transcrito]';
         }
       } else {
-        console.error('No OpenAI API key found for audio transcription');
+        console.error('No ElevenLabs API key found for audio transcription');
         actualMessageContent = '[Áudio - sem chave de transcrição]';
       }
     }
@@ -643,13 +629,13 @@ async function getAudioBase64FromEvolution(
   }
 }
 
-// Transcribe audio using OpenAI Whisper
-async function transcribeAudioFromBase64(
+// Transcribe audio using ElevenLabs Speech-to-Text
+async function transcribeAudioWithElevenLabs(
   audioBase64: string,
-  openaiApiKey: string
+  apiKey: string
 ): Promise<string | null> {
-  if (!openaiApiKey) {
-    console.error('No OpenAI API key provided for audio transcription');
+  if (!apiKey) {
+    console.error('No ElevenLabs API key provided for audio transcription');
     return null;
   }
   
@@ -663,31 +649,30 @@ async function transcribeAudioFromBase64(
     
     const audioBlob = new Blob([bytes], { type: 'audio/ogg' });
     
-    // Create FormData for Whisper API
     const formData = new FormData();
     formData.append('file', audioBlob, 'audio.ogg');
-    formData.append('model', 'whisper-1');
-    formData.append('language', 'pt');
+    formData.append('language_code', 'por');
     
-    console.log('Sending audio to Whisper for transcription via OpenAI...');
+    console.log('Sending audio to ElevenLabs for transcription...');
     
-    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    const response = await fetch('https://api.elevenlabs.io/v1/speech-to-text', {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${openaiApiKey}`,
+        'xi-api-key': apiKey,
       },
       body: formData,
     });
     
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Whisper transcription failed:', response.status, errorText);
+      console.error('ElevenLabs transcription failed:', response.status, errorText);
       return null;
     }
     
     const data = await response.json();
-    console.log('Transcription successful:', data.text?.substring(0, 50));
-    return data.text || null;
+    const text = data.text || null;
+    console.log('Transcription successful:', text?.substring(0, 50));
+    return text;
   } catch (error) {
     console.error('Error transcribing audio:', error);
     return null;
