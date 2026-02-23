@@ -192,7 +192,7 @@ export function WhatsAppInstances() {
                 <Label htmlFor="instance_name">Nome na Evolution API *</Label>
                 <Input
                   id="instance_name"
-                  placeholder="Ex: matheus-veiculos-1"
+                  placeholder="Ex: invest-veiculos-1"
                   value={formData.instance_name}
                   onChange={(e) => setFormData({ ...formData, instance_name: e.target.value })}
                 />

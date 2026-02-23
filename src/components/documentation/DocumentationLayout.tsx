@@ -132,7 +132,7 @@ export const DocumentationLayout = () => {
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(36);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Matheus Veículos', pageWidth / 2, pageHeight / 2 - 40, { align: 'center' });
+      pdf.text('Invest Veículos', pageWidth / 2, pageHeight / 2 - 40, { align: 'center' });
       
       pdf.setFontSize(28);
       pdf.setFont('helvetica', 'normal');
@@ -176,7 +176,7 @@ export const DocumentationLayout = () => {
       
       addText('Sobre o Sistema', 16, true);
       yPosition += 3;
-      addText('O Matheus Veículos é um sistema completo de gestão para revendas de veículos, desenvolvido com tecnologias modernas para oferecer uma experiência fluida e eficiente na gestão de todo o ciclo de vendas automotivas.', 11);
+      addText('O Invest Veículos é um sistema completo de gestão para revendas de veículos, desenvolvido com tecnologias modernas para oferecer uma experiência fluida e eficiente na gestão de todo o ciclo de vendas automotivas.', 11);
       yPosition += 8;
       
       addText('Stack Tecnológica', 16, true);
@@ -523,7 +523,7 @@ export const DocumentationLayout = () => {
       pdf.setTextColor(255, 255, 255);
       pdf.setFontSize(24);
       pdf.setFont('helvetica', 'bold');
-      pdf.text('Matheus Veículos', pageWidth / 2, pageHeight / 2 - 20, { align: 'center' });
+      pdf.text('Invest Veículos', pageWidth / 2, pageHeight / 2 - 20, { align: 'center' });
       
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'normal');
@@ -532,7 +532,7 @@ export const DocumentationLayout = () => {
       pdf.setFontSize(10);
       pdf.setTextColor(156, 163, 175);
       pdf.text('Sistema desenvolvido com React, TypeScript e Supabase', pageWidth / 2, pageHeight / 2 + 20, { align: 'center' });
-      pdf.text(`© ${new Date().getFullYear()} Matheus Veículos - Todos os direitos reservados`, pageWidth / 2, pageHeight - 30, { align: 'center' });
+      pdf.text(`© ${new Date().getFullYear()} Invest Veículos - Todos os direitos reservados`, pageWidth / 2, pageHeight - 30, { align: 'center' });
 
       // Add page numbers to all pages except cover and final
       const totalPages = pdf.getNumberOfPages();
@@ -541,11 +541,11 @@ export const DocumentationLayout = () => {
         pdf.setFontSize(9);
         pdf.setTextColor(156, 163, 175);
         pdf.text(`Página ${i - 1} de ${totalPages - 2}`, pageWidth / 2, pageHeight - 10, { align: 'center' });
-        pdf.text('Matheus Veículos - Documentação Técnica', margin, pageHeight - 10);
+        pdf.text('Invest Veículos - Documentação Técnica', margin, pageHeight - 10);
       }
 
       // Save PDF
-      pdf.save('matheus-veiculos-documentacao-tecnica.pdf');
+      pdf.save('invest-veiculos-documentacao-tecnica.pdf');
       toast.success("PDF exportado com sucesso!");
     } catch (error) {
       console.error('Erro ao exportar PDF:', error);

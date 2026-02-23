@@ -15,6 +15,9 @@ export function useCRMAgent() {
   // Find the AI agent connected to the lead source WhatsApp instance
   const { data: agentState, isLoading } = useQuery({
     queryKey: ['crm-agent-state'],
+    staleTime: 1000 * 60, // 1 minute
+    refetchOnWindowFocus: true,
+    refetchOnMount: true,
     queryFn: async (): Promise<CRMAgentState> => {
       // First find the lead source instance
       const { data: leadSourceInstance, error: instanceError } = await (supabase

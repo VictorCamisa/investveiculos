@@ -228,9 +228,9 @@ export default function Sidebar() {
       <div className="flex items-center justify-between p-4 border-b border-sidebar-border">
         <div className={cn('flex items-center gap-3', collapsed && 'justify-center w-full')}>
           <div className="h-9 w-9 rounded-lg bg-primary flex items-center justify-center shrink-0">
-            <span className="text-primary-foreground font-bold text-sm">MV</span>
+            <span className="text-primary-foreground font-bold text-sm">IV</span>
           </div>
-          {!collapsed && <span className="font-semibold text-base">Matheus Veículos</span>}
+          {!collapsed && <span className="font-semibold text-base">Invest Veículos</span>}
         </div>
         {!collapsed && (
           <Button

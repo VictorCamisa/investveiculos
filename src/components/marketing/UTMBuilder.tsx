@@ -33,7 +33,7 @@ const mediums = [
 ];
 
 export function UTMBuilder() {
-  const [baseUrl, setBaseUrl] = useState('https://matheusveiculos.com.br/veiculos');
+  const [baseUrl, setBaseUrl] = useState('https://investveiculos.com/veiculos');
   const [utmSource, setUtmSource] = useState('');
   const [utmMedium, setUtmMedium] = useState('');
   const [utmCampaign, setUtmCampaign] = useState('');

@@ -24,10 +24,12 @@ export function LeadCard({ lead, onClick, compact = false }: LeadCardProps) {
           <div className="flex items-start justify-between gap-2">
             <div className="min-w-0 flex-1">
               <h4 className="font-medium text-sm truncate">{lead.name}</h4>
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                <Phone className="h-3 w-3" />
-                <span>{lead.phone}</span>
-              </div>
+              {lead.phone && (
+                <div className="flex items-center gap-1 mt-0.5">
+                  <Phone className="h-3.5 w-3.5 text-primary" />
+                  <span className="text-sm font-medium text-foreground">{lead.phone}</span>
+                </div>
+              )}
             </div>
             <Badge className={cn("text-xs shrink-0", leadStatusColors[lead.status])}>
               {leadStatusLabels[lead.status]}
@@ -75,10 +77,12 @@ export function LeadCard({ lead, onClick, compact = false }: LeadCardProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-2">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Phone className="h-4 w-4" />
-          <span>{lead.phone}</span>
-        </div>
+        {lead.phone && (
+          <div className="flex items-center gap-2">
+            <Phone className="h-4 w-4 text-primary" />
+            <span className="text-sm font-semibold text-foreground">{lead.phone}</span>
+          </div>
+        )}
         
         {lead.email && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
