@@ -5,6 +5,7 @@ export interface SalespersonDetail {
   id: string;
   full_name: string | null;
   email: string | null;
+  phone: string | null;
   avatar_url: string | null;
   is_active: boolean;
   created_at: string;
@@ -47,6 +48,7 @@ interface ProfileRow {
   id: string;
   full_name: string | null;
   email: string | null;
+  phone: string | null;
   avatar_url: string | null;
   is_active: boolean;
   created_at: string;
@@ -64,7 +66,7 @@ export function useSalespersonDetail(userId: string | undefined) {
       
       const { data: profile, error: profileError } = await supabase
         .from('profiles')
-        .select('id, full_name, email, avatar_url, is_active, created_at')
+        .select('id, full_name, email, phone, avatar_url, is_active, created_at')
         .eq('id', userId)
         .single();
       
@@ -84,6 +86,7 @@ export function useSalespersonDetail(userId: string | undefined) {
         id: typedProfile.id,
         full_name: typedProfile.full_name,
         email: typedProfile.email,
+        phone: typedProfile.phone,
         avatar_url: typedProfile.avatar_url,
         is_active: typedProfile.is_active,
         created_at: typedProfile.created_at,
