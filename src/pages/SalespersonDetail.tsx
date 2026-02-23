@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Progress } from '@/components/ui/progress';
@@ -19,8 +21,13 @@ import {
   XCircle,
   Clock,
   Award,
-  BarChart3
+  BarChart3,
+  Save,
+  Edit2
 } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
+import { useQueryClient } from '@tanstack/react-query';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { 
@@ -47,6 +54,35 @@ export default function SalespersonDetail() {
   const { data: leads } = useSalespersonLeads(id);
   const { data: activities } = useSalespersonActivities(id);
   const { data: monthlySales } = useSalespersonMonthlySales(id);
+  const queryClient = useQueryClient();
+  
+  const [editingPhone, setEditingPhone] = useState(false);
+  const [phoneValue, setPhoneValue] = useState('');
+  const [savingPhone, setSavingPhone] = useState(false);
+
+  const handleEditPhone = () => {
+    setPhoneValue(salesperson?.phone || '');
+    setEditingPhone(true);
+  };
+
+  const handleSavePhone = async () => {
+    if (!id) return;
+    setSavingPhone(true);
+    try {
+      const { error } = await (supabase
+        .from('profiles') as any)
+        .update({ phone: phoneValue || null })
+        .eq('id', id);
+      if (error) throw error;
+      toast.success('WhatsApp atualizado com sucesso!');
+      queryClient.invalidateQueries({ queryKey: ['salesperson-detail', id] });
+      setEditingPhone(false);
+    } catch (err) {
+      toast.error('Erro ao salvar WhatsApp');
+    } finally {
+      setSavingPhone(false);
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { 
@@ -106,6 +142,34 @@ export default function SalespersonDetail() {
             <div className="flex-1">
               <h1 className="text-2xl font-bold">{salesperson.full_name || 'Sem nome'}</h1>
               <p className="text-muted-foreground">{salesperson.email}</p>
+              
+              {/* WhatsApp */}
+              <div className="flex items-center gap-2 mt-1">
+                <MessageCircle className="h-4 w-4 text-green-600" />
+                {editingPhone ? (
+                  <div className="flex items-center gap-2">
+                    <Input
+                      value={phoneValue}
+                      onChange={(e) => setPhoneValue(e.target.value)}
+                      placeholder="(11) 99999-9999"
+                      className="h-8 w-48 text-sm"
+                    />
+                    <Button size="sm" variant="ghost" onClick={handleSavePhone} disabled={savingPhone} className="h-8 px-2">
+                      <Save className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-1">
+                    <span className="text-sm text-muted-foreground">
+                      {salesperson.phone || 'Sem WhatsApp'}
+                    </span>
+                    <Button size="sm" variant="ghost" onClick={handleEditPhone} className="h-6 w-6 p-0">
+                      <Edit2 className="h-3 w-3" />
+                    </Button>
+                  </div>
+                )}
+              </div>
+
               <div className="flex items-center gap-3 mt-2">
                 <Badge variant={salesperson.is_active ? 'default' : 'secondary'}>
                   {salesperson.is_active ? 'Ativo' : 'Inativo'}
