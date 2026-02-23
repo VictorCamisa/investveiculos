@@ -60,6 +60,8 @@ export function SalesTeamView() {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState('equipe');
   const [editingConfig, setEditingConfig] = useState<string | null>(null);
+  const [editPriority, setEditPriority] = useState(0);
+  const [editDailyLimit, setEditDailyLimit] = useState<string>('');
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [roleDialogOpen, setRoleDialogOpen] = useState(false);
   const [createUserDialogOpen, setCreateUserDialogOpen] = useState(false);
@@ -332,13 +334,60 @@ export function SalesTeamView() {
                         </div>
                         <div>
                           <p className="font-medium">{config.salesperson?.full_name || 'Sem nome'}</p>
-                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                            <span>Prioridade: {config.priority}</span>
-                            <span>•</span>
-                            <span>Limite: {config.daily_limit || 'Sem limite'}</span>
-                            <span>•</span>
-                            <span>Hoje: {config.current_count || 0}</span>
-                          </div>
+                          {editingConfig === config.id ? (
+                            <div className="flex items-center gap-3 mt-1">
+                              <div className="flex items-center gap-1">
+                                <label className="text-xs text-muted-foreground">Prioridade:</label>
+                                <Input
+                                  type="number"
+                                  value={editPriority}
+                                  onChange={(e) => setEditPriority(parseInt(e.target.value) || 0)}
+                                  className="h-7 w-20 text-sm"
+                                />
+                              </div>
+                              <div className="flex items-center gap-1">
+                                <label className="text-xs text-muted-foreground">Limite/dia:</label>
+                                <Input
+                                  type="number"
+                                  value={editDailyLimit}
+                                  onChange={(e) => setEditDailyLimit(e.target.value)}
+                                  placeholder="∞"
+                                  className="h-7 w-20 text-sm"
+                                />
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2"
+                                onClick={() => {
+                                  updateConfig.mutate({
+                                    id: config.id,
+                                    priority: editPriority,
+                                    daily_limit: editDailyLimit ? parseInt(editDailyLimit) : null,
+                                  });
+                                  setEditingConfig(null);
+                                }}
+                              >
+                                <Check className="h-4 w-4 text-green-600" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2"
+                                onClick={() => setEditingConfig(null)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                              <span>Prioridade: {config.priority}</span>
+                              <span>•</span>
+                              <span>Limite: {config.daily_limit || 'Sem limite'}</span>
+                              <span>•</span>
+                              <span>Hoje: {config.current_count || 0}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
 
@@ -349,6 +398,19 @@ export function SalesTeamView() {
                         </div>
 
                         <div className="flex items-center gap-2">
+                          {editingConfig !== config.id && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                setEditingConfig(config.id);
+                                setEditPriority(config.priority);
+                                setEditDailyLimit(config.daily_limit?.toString() || '');
+                              }}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                          )}
                           <Switch
                             checked={config.is_active}
                             onCheckedChange={(checked) => 
@@ -358,7 +420,7 @@ export function SalesTeamView() {
                           <Button
                             size="sm"
                             variant="ghost"
-                            className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             onClick={() => removeFromRoundRobin.mutate(config.id)}
                           >
                             <Trash2 className="h-4 w-4" />
@@ -367,7 +429,7 @@ export function SalesTeamView() {
                       </div>
                     </div>
 
-                    {config.daily_limit && (
+                    {config.daily_limit && editingConfig !== config.id && (
                       <div className="mt-4">
                         <div className="flex items-center justify-between text-sm mb-1">
                           <span className="text-muted-foreground">Progresso diário</span>
