@@ -30,7 +30,7 @@ export const OverviewSection = ({ searchTerm }: OverviewSectionProps) => {
     <div className="space-y-6">
       <SectionHeader
         title="Visão Geral do Sistema"
-        description="Sistema completo de gestão para loja de veículos - Matheus Veículos"
+        description="Sistema completo de gestão para loja de veículos - Invest Veículos"
         icon={LayoutDashboard}
       />
 
@@ -43,7 +43,7 @@ export const OverviewSection = ({ searchTerm }: OverviewSectionProps) => {
         </CardHeader>
         <CardContent className="space-y-4">
           <p className="text-sm text-muted-foreground">
-            O sistema Matheus Veículos é uma solução completa para gestão de lojas de veículos,
+            O sistema Invest Veículos é uma solução completa para gestão de lojas de veículos,
             incluindo CRM, gestão de estoque, vendas, financeiro, marketing, comissões e integração
             com WhatsApp para atendimento automatizado.
           </p>

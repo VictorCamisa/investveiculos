@@ -226,7 +226,7 @@ export default function Auth() {
           >
             <img 
               src={logo} 
-              alt="Matheus Veículos" 
+              alt="Invest Veículos" 
               className="h-12 brightness-0 invert opacity-90"
             />
 
@@ -251,7 +251,7 @@ export default function Auth() {
             transition={{ duration: 0.5, delay: 0.6 }}
             className="text-zinc-700 text-sm"
           >
-            © {new Date().getFullYear()} Matheus Veículos
+            © {new Date().getFullYear()} Invest Veículos
           </motion.div>
         </div>
       </motion.div>
@@ -406,7 +406,7 @@ export default function Auth() {
 
           {/* Mobile footer */}
           <p className="lg:hidden text-center text-zinc-400 text-xs mt-10">
-            © {new Date().getFullYear()} Matheus Veículos
+            © {new Date().getFullYear()} Invest Veículos
           </p>
         </div>
       </motion.div>
