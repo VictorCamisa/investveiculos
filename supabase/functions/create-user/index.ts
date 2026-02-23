@@ -47,24 +47,33 @@ serve(async (req) => {
       });
     }
 
-    // Validate the JWT using admin client's getUser
+    // Validate the JWT using getClaims
     const token = authHeader.replace("Bearer ", "");
-    const { data: { user: requestingUser }, error: userError } = await supabaseAdmin.auth.getUser(token);
     
-    if (userError || !requestingUser) {
-      console.error("[create-user] JWT validation error:", userError);
+    // Create a user-scoped client to validate the token
+    const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? serviceRoleKey, {
+      global: { headers: { Authorization: authHeader } },
+    });
+    
+    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(token);
+    
+    if (claimsError || !claimsData?.claims) {
+      console.error("[create-user] JWT validation error:", claimsError);
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    console.log("[create-user] Requesting user:", requestingUser.id, requestingUser.email);
+    const requestingUserId = claimsData.claims.sub as string;
+    const requestingUserEmail = claimsData.claims.email as string;
+
+    console.log("[create-user] Requesting user:", requestingUserId, requestingUserEmail);
 
     // Check if requesting user is a gerente (admin) using security definer function
     const { data: isGerente, error: roleCheckError } = await supabaseAdmin
       .rpc('check_user_role', { 
-        check_user_id: requestingUser.id, 
+        check_user_id: requestingUserId, 
         check_role: 'gerente' 
       });
 
