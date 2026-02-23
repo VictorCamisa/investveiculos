@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { NegotiationCard } from './NegotiationCard';
 import type { Negotiation, NegotiationStatus } from '@/types/negotiations';
 import { negotiationStatusLabels, pipelineColumns } from '@/types/negotiations';
 import { useUpdateNegotiation } from '@/hooks/useNegotiations';
+import { usePermissions } from '@/hooks/usePermissions';
 import { Plus, Target } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { SaleFromNegotiationModal } from '@/components/sales/SaleFromNegotiationModal';
@@ -26,6 +27,7 @@ export function NegotiationPipeline({
   showSalesperson 
 }: NegotiationPipelineProps) {
   const updateNegotiation = useUpdateNegotiation();
+  const { isVendedor } = usePermissions();
   const [saleModalOpen, setSaleModalOpen] = useState(false);
   const [pendingWonNegotiation, setPendingWonNegotiation] = useState<Negotiation | null>(null);
   
@@ -193,7 +195,9 @@ export function NegotiationPipeline({
       {/* Pipeline Columns */}
       <div className="flex-1 overflow-x-auto overflow-y-hidden">
         <div className="flex gap-3 pb-4 h-full" style={{ minWidth: 'max-content' }}>
-          {pipelineColumns.map((status) => {
+          {pipelineColumns
+            .filter(status => !isVendedor || !['em_andamento', 'proposta_enviada'].includes(status))
+            .map((status) => {
             const columnNegotiations = getNegotiationsByStatus(status);
             const totalValue = columnNegotiations.reduce((sum, n) => sum + (n.estimated_value || 0), 0);
 
