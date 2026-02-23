@@ -812,28 +812,27 @@ function getLLMConfig(agent: any, lovableApiKey: string): { endpoint: string; he
     console.log(`No API key found for provider ${agent.llm_provider}, falling back to Lovable Gateway`);
   }
   
-  // Default: use OpenAI API directly
-  const openaiApiKey = Deno.env.get('OPENAI_API_KEY') ?? '';
+  // Default: use Lovable AI Gateway
+  const lovableKey = Deno.env.get('LOVABLE_API_KEY') ?? '';
   return {
-    endpoint: 'https://api.openai.com/v1/chat/completions',
+    endpoint: 'https://ai.gateway.lovable.dev/v1/chat/completions',
     headers: {
-      'Authorization': `Bearer ${openaiApiKey}`,
+      'Authorization': `Bearer ${lovableKey}`,
       'Content-Type': 'application/json',
     },
-    // Transform model name from gateway format to OpenAI format
+    // Lovable AI Gateway accepts model names as-is
     transformModel: (model: string) => {
-      const modelName = model.replace('openai/', '').replace('google/', '');
-      // Map gateway models to OpenAI models
-      const openaiModels: Record<string, string> = {
-        'gpt-5': 'gpt-4o',
-        'gpt-5-mini': 'gpt-4o-mini',
-        'gpt-5-nano': 'gpt-4o-mini',
-        'gemini-2.5-flash': 'gpt-4o-mini',
-        'gemini-2.5-pro': 'gpt-4o',
-        'gemini-3-flash-preview': 'gpt-4o-mini',
-        'gemini-3-pro-preview': 'gpt-4o',
-      };
-      return openaiModels[modelName] || 'gpt-4o-mini';
+      // If no prefix, default to gemini flash
+      if (!model.includes('/')) {
+        const defaults: Record<string, string> = {
+          'gpt-4o': 'google/gemini-3-flash-preview',
+          'gpt-4o-mini': 'google/gemini-3-flash-preview',
+          'gpt-4': 'google/gemini-2.5-pro',
+          'gpt-3.5-turbo': 'google/gemini-2.5-flash-lite',
+        };
+        return defaults[model] || 'google/gemini-3-flash-preview';
+      }
+      return model;
     }
   };
 }
