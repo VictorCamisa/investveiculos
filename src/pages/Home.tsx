@@ -1,6 +1,6 @@
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { MapPin, Phone, ChevronRight, Car, Users, Star, Award, Shield, Handshake, CheckCircle2, Quote, Clock, Sparkles, FileCheck, HeartHandshake } from 'lucide-react';
 import { useFeaturedVehicles } from '@/hooks/usePublicVehicles';
 import { PublicVehicleCard } from '@/components/public/PublicVehicleCard';
@@ -10,19 +10,10 @@ import logoImg from '@/assets/logo-invest-veiculos.png';
 import lojaNoite from '@/assets/loja-noite.jpg';
 import lojaDia from '@/assets/loja-dia.jpg';
 import lojaFachada from '@/assets/loja-fachada-principal.jpg';
-import heroEndBanner from '@/assets/hero-end-banner.jpg';
-
 const HERO_VIDEO_URL = '/videos/hero-banner.mp4';
 
 function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
-  const [videoEnded, setVideoEnded] = useState(false);
-  const [showContent, setShowContent] = useState(false);
-
-  const handleVideoEnd = useCallback(() => {
-    setVideoEnded(true);
-    setTimeout(() => setShowContent(true), 1200);
-  }, []);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -32,80 +23,38 @@ function HeroVideo() {
 
   return (
     <section className="relative h-[100dvh] overflow-hidden bg-black">
-      {/* Video — cropped to hide watermarks (top/bottom + right side) */}
-      <div className="absolute inset-0 overflow-hidden">
+      <div className="absolute inset-0">
         <video
           ref={videoRef}
           src={HERO_VIDEO_URL}
           muted
           playsInline
+          loop
           preload="auto"
-          onEnded={handleVideoEnd}
-          className="absolute object-cover"
-          style={{
-            width: '110%',
-            height: '120%',
-            top: '-10%',
-            left: '-5%',
-          }}
+          className="absolute inset-0 w-full h-full object-cover"
         />
       </div>
 
-      {/* End banner image that fades in when video ends */}
-      <AnimatePresence>
-        {videoEnded && (
-          <motion.div
-            className="absolute inset-0 z-10 overflow-hidden"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 1.5, ease: 'easeInOut' }}
+      {/* CTA buttons */}
+      <div className="absolute bottom-32 left-0 right-0 z-20 flex justify-center px-6">
+        <div className="flex flex-col sm:flex-row gap-5">
+          <Link
+            to="/veiculos"
+            className="group relative px-10 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-[0.2em] uppercase overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--public-primary-rgb),0.4)] hover:scale-105"
           >
-            {/* Blurred stretched background to fill edges */}
-            <img
-              src={heroEndBanner}
-              alt=""
-              aria-hidden="true"
-              className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl brightness-50"
-            />
-            {/* Crisp centered banner */}
-            <img
-              src={heroEndBanner}
-              alt="Invest Veículos - Qualidade que você vê, confiança que você sente"
-              className="relative w-full h-full object-cover object-left"
-            />
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* CTA buttons after transition */}
-      <AnimatePresence>
-        {showContent && (
-          <motion.div
-            className="absolute bottom-32 left-0 right-0 z-20 flex justify-center px-6"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: 'easeOut' }}
+            <span className="relative z-10">Ver Estoque</span>
+            <div className="absolute inset-0 bg-gradient-to-r from-public-primary-dark to-public-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+          </Link>
+          <a
+            href="https://wa.me/5512981776577"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="group px-10 py-4 border-2 border-white/40 text-white font-public-body font-bold text-sm tracking-[0.2em] uppercase text-center transition-all duration-300 hover:border-white hover:bg-white/10 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] backdrop-blur-sm"
           >
-            <div className="flex flex-col sm:flex-row gap-5">
-              <Link
-                to="/veiculos"
-                className="group relative px-10 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-[0.2em] uppercase overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--public-primary-rgb),0.4)] hover:scale-105"
-              >
-                <span className="relative z-10">Ver Estoque</span>
-                <div className="absolute inset-0 bg-gradient-to-r from-public-primary-dark to-public-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-              </Link>
-              <a
-                href="https://wa.me/5512981776577"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="group px-10 py-4 border-2 border-white/40 text-white font-public-body font-bold text-sm tracking-[0.2em] uppercase text-center transition-all duration-300 hover:border-white hover:bg-white/10 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] backdrop-blur-sm"
-              >
-                Fale Conosco
-              </a>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            Fale Conosco
+          </a>
+        </div>
+      </div>
 
       {/* Bottom gradient fade */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-public-bg to-transparent z-30" />
