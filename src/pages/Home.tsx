@@ -1,6 +1,6 @@
-import { useRef, useEffect } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Phone, ChevronRight, Car, Users, Star, Award, Shield, Handshake, CheckCircle2, Quote, Clock, Sparkles, FileCheck, HeartHandshake } from 'lucide-react';
 import { useFeaturedVehicles } from '@/hooks/usePublicVehicles';
 import { PublicVehicleCard } from '@/components/public/PublicVehicleCard';
@@ -11,14 +11,46 @@ import lojaNoite from '@/assets/loja-noite.jpg';
 import lojaDia from '@/assets/loja-dia.jpg';
 import lojaFachada from '@/assets/loja-fachada-principal.jpg';
 const HERO_VIDEO_URL = '/videos/hero-banner.mp4';
+const FADE_DURATION = 2; // seconds before end to start darkening
 
 function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const overlayRef = useRef<HTMLDivElement>(null);
+  const [showCTA, setShowCTA] = useState(false);
 
   useEffect(() => {
     const video = videoRef.current;
-    if (!video) return;
+    const overlay = overlayRef.current;
+    if (!video || !overlay) return;
+
     video.play().catch(() => {});
+
+    const onTimeUpdate = () => {
+      if (!video.duration) return;
+      const timeLeft = video.duration - video.currentTime;
+
+      if (timeLeft <= FADE_DURATION) {
+        // Progress from 0 to 1 as we approach the end
+        const progress = 1 - timeLeft / FADE_DURATION;
+        overlay.style.opacity = String(Math.min(progress * 0.75, 0.75)); // max 75% dark
+      } else {
+        overlay.style.opacity = '0';
+      }
+    };
+
+    const onEnded = () => {
+      // Pause on the last frame
+      video.pause();
+      overlay.style.opacity = '0.75';
+      setShowCTA(true);
+    };
+
+    video.addEventListener('timeupdate', onTimeUpdate);
+    video.addEventListener('ended', onEnded);
+    return () => {
+      video.removeEventListener('timeupdate', onTimeUpdate);
+      video.removeEventListener('ended', onEnded);
+    };
   }, []);
 
   return (
@@ -29,32 +61,47 @@ function HeroVideo() {
           src={HERO_VIDEO_URL}
           muted
           playsInline
-          loop
           preload="auto"
           className="absolute inset-0 w-full h-full object-cover"
         />
       </div>
 
-      {/* CTA buttons */}
-      <div className="absolute bottom-32 left-0 right-0 z-20 flex justify-center px-6">
-        <div className="flex flex-col sm:flex-row gap-5">
-          <Link
-            to="/veiculos"
-            className="group relative px-10 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-[0.2em] uppercase overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--public-primary-rgb),0.4)] hover:scale-105"
+      {/* Dark overlay that fades in near the end */}
+      <div
+        ref={overlayRef}
+        className="absolute inset-0 bg-black pointer-events-none z-10 transition-none"
+        style={{ opacity: 0 }}
+      />
+
+      {/* CTA buttons - appear after video ends */}
+      <AnimatePresence>
+        {showCTA && (
+          <motion.div
+            className="absolute bottom-32 left-0 right-0 z-20 flex justify-center px-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
           >
-            <span className="relative z-10">Ver Estoque</span>
-            <div className="absolute inset-0 bg-gradient-to-r from-public-primary-dark to-public-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-          </Link>
-          <a
-            href="https://wa.me/5512981776577"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="group px-10 py-4 border-2 border-white/40 text-white font-public-body font-bold text-sm tracking-[0.2em] uppercase text-center transition-all duration-300 hover:border-white hover:bg-white/10 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] backdrop-blur-sm"
-          >
-            Fale Conosco
-          </a>
-        </div>
-      </div>
+            <div className="flex flex-col sm:flex-row gap-5">
+              <Link
+                to="/veiculos"
+                className="group relative px-10 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-[0.2em] uppercase overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--public-primary-rgb),0.4)] hover:scale-105"
+              >
+                <span className="relative z-10">Ver Estoque</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-public-primary-dark to-public-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </Link>
+              <a
+                href="https://wa.me/5512981776577"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group px-10 py-4 border-2 border-white/40 text-white font-public-body font-bold text-sm tracking-[0.2em] uppercase text-center transition-all duration-300 hover:border-white hover:bg-white/10 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] backdrop-blur-sm"
+              >
+                Fale Conosco
+              </a>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Bottom gradient fade */}
       <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-public-bg to-transparent z-30" />
