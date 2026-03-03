@@ -5,7 +5,7 @@ import { PublicChatWidget } from './PublicChatWidget';
 
 export function PublicLayout() {
   return (
-    <div className="min-h-screen bg-public-bg text-public-fg">
+    <div className="min-h-screen bg-public-bg text-public-fg font-public-body">
       <PublicHeader />
       <main>
         <Outlet />
