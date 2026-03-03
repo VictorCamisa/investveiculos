@@ -1337,16 +1337,31 @@ ${qualificationData.down_payment ? '💵 *Entrada:* R$ ' + qualificationData.dow
 📲 Acesse o CRM para continuar o atendimento!`;
 
                   try {
-                    // Get the Principal (lead source) instance to send notification FROM
-                    const { data: principalInstance } = await supabase
-                      .from('whatsapp_instances')
-                      .select('id, instance_name')
-                      .eq('is_lead_source', true)
-                      .eq('status', 'connected')
-                      .maybeSingle();
+                    // Use the agent's linked WhatsApp instance EXCLUSIVELY
+                    const agentInstanceId = agent.whatsapp_instance_id;
+                    let agentInstanceName = 'unknown';
                     
-                    const instanceIdToUse = principalInstance?.id || undefined;
-                    console.log(`[Auto-Qualify] Sending WhatsApp via Principal instance: ${principalInstance?.instance_name || 'fallback'}`);
+                    if (agentInstanceId) {
+                      const { data: agentInstance } = await supabase
+                        .from('whatsapp_instances')
+                        .select('instance_name, status')
+                        .eq('id', agentInstanceId)
+                        .single();
+                      
+                      if (agentInstance) {
+                        agentInstanceName = agentInstance.instance_name;
+                        if (agentInstance.status !== 'connected') {
+                          console.error(`[Auto-Qualify] Agent's instance ${agentInstanceName} is NOT connected (status: ${agentInstance.status})`);
+                        }
+                      }
+                    }
+                    
+                    console.log(`[Auto-Qualify] Sending WhatsApp via Agent's instance: ${agentInstanceName} (ID: ${agentInstanceId})`);
+                    
+                    if (!agentInstanceId) {
+                      console.error(`[Auto-Qualify] Agent has NO whatsapp_instance_id configured! Cannot send qualification.`);
+                      throw new Error('Agent has no WhatsApp instance configured');
+                    }
                     
                     const sendResponse = await fetch(`${supabaseUrl}/functions/v1/whatsapp-send`, {
                       method: 'POST',
@@ -1357,7 +1372,7 @@ ${qualificationData.down_payment ? '💵 *Entrada:* R$ ' + qualificationData.dow
                       body: JSON.stringify({
                         phone: salespersonProfile.phone,
                         message: whatsappMessage,
-                        instanceId: instanceIdToUse,
+                        instanceId: agentInstanceId,
                         // NO userId so whatsapp-send allows lead source instance
                       }),
                     });
