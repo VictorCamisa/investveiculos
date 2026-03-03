@@ -1372,7 +1372,25 @@ ${qualificationData.down_payment ? '💵 *Entrada:* R$ ' + qualificationData.dow
                     console.error(`[Auto-Qualify] Failed to send WhatsApp to salesperson:`, whatsappError);
                   }
                 } else {
-                  console.log(`[Auto-Qualify] Salesperson ${salesperson.name} has no phone number registered`);
+                  console.warn(`[Auto-Qualify] Salesperson ${salesperson.name} has no phone number registered - sending alert to managers`);
+                  
+                  // Alert managers that salesperson has no phone
+                  const { data: alertManagers } = await supabase
+                    .from('user_roles')
+                    .select('user_id')
+                    .eq('role', 'gerente');
+                  
+                  if (alertManagers && alertManagers.length > 0) {
+                    for (const manager of alertManagers) {
+                      await supabase.from('notifications').insert({
+                        user_id: manager.user_id,
+                        type: 'config_warning',
+                        title: '⚠️ Vendedor sem telefone cadastrado',
+                        message: `${salesperson.name} foi atribuído ao lead ${leadInfo?.name || 'Lead'} mas não recebeu a ficha por WhatsApp pois não tem telefone cadastrado no perfil.`,
+                        link: '/configuracoes',
+                      });
+                    }
+                  }
                 }
                 
                 // Also notify managers
@@ -2507,13 +2525,29 @@ async function sendVehiclePhotos(
   console.log(`[sendVehiclePhotos] Sending ${photosToSend.length} photos for vehicle ${vehicleId}`);
   
   try {
-    // Get instance for this conversation
-    const { data: instance } = await supabase
+    // ALWAYS use the Principal (lead source) instance for AI-generated photos
+    let instance;
+    const { data: principalInstance } = await supabase
       .from('whatsapp_instances')
       .select('instance_name')
+      .eq('is_lead_source', true)
       .eq('status', 'connected')
-      .limit(1)
-      .single();
+      .maybeSingle();
+    
+    if (principalInstance) {
+      instance = principalInstance;
+      console.log('[sendVehiclePhotos] Using Principal instance:', instance.instance_name);
+    } else {
+      // Fallback: any connected instance (should not happen in production)
+      const { data: fallbackInstance } = await supabase
+        .from('whatsapp_instances')
+        .select('instance_name')
+        .eq('status', 'connected')
+        .limit(1)
+        .single();
+      instance = fallbackInstance;
+      console.warn('[sendVehiclePhotos] Principal instance not found, using fallback:', instance?.instance_name);
+    }
     
     if (!instance) {
       return { error: 'Nenhuma instância WhatsApp disponível' };
