@@ -55,7 +55,7 @@ function HeroVideo() {
       <AnimatePresence>
         {videoEnded && (
           <motion.div
-            className="absolute inset-0 z-10"
+            className="absolute inset-0 z-10 bg-[#1a1a1a] flex items-center justify-center"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1.5, ease: 'easeInOut' }}
@@ -63,9 +63,8 @@ function HeroVideo() {
             <img
               src={heroEndBanner}
               alt="Invest Veículos - Qualidade que você vê, confiança que você sente"
-              className="w-full h-full object-cover"
+              className="w-full h-auto max-h-full object-contain"
             />
-            <div className="absolute inset-0 bg-black/40" />
           </motion.div>
         )}
       </AnimatePresence>
