@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MapPin, Phone, ChevronRight, Car, Users, Star, Award, Shield, Handshake, CheckCircle2, Quote, Clock, Sparkles, FileCheck, HeartHandshake } from 'lucide-react';
@@ -10,6 +10,107 @@ import logoImg from '@/assets/logo-invest-veiculos.png';
 import lojaNoite from '@/assets/loja-noite.jpg';
 import lojaDia from '@/assets/loja-dia.jpg';
 import lojaFachada from '@/assets/loja-fachada-principal.jpg';
+
+const HERO_VIDEO_URL = '/videos/hero-banner.mp4';
+
+function HeroVideo() {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const [videoEnded, setVideoEnded] = useState(false);
+  const [showLogo, setShowLogo] = useState(false);
+  const [showContent, setShowContent] = useState(false);
+
+  const handleVideoEnd = useCallback(() => {
+    setVideoEnded(true);
+    setTimeout(() => setShowLogo(true), 600);
+    setTimeout(() => setShowContent(true), 1400);
+  }, []);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+    video.play().catch(() => {});
+  }, []);
+
+  return (
+    <section className="relative h-[100dvh] overflow-hidden bg-black">
+      {/* Video — cropped vertically to hide watermark */}
+      <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+        <video
+          ref={videoRef}
+          src={HERO_VIDEO_URL}
+          muted
+          playsInline
+          preload="auto"
+          onEnded={handleVideoEnd}
+          className="w-full object-cover"
+          style={{
+            height: '115%',
+            marginTop: '-7.5%',
+          }}
+        />
+      </div>
+
+      {/* Darken overlay that fades in when video ends */}
+      <motion.div
+        className="absolute inset-0 bg-black pointer-events-none z-10"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: videoEnded ? 0.7 : 0 }}
+        transition={{ duration: 1.5, ease: 'easeInOut' }}
+      />
+
+      {/* Logo reveal */}
+      <AnimatePresence>
+        {showLogo && (
+          <motion.div
+            className="absolute inset-0 z-20 flex flex-col items-center justify-center px-6"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 1.2, ease: 'easeOut' }}
+          >
+            <motion.img
+              src={logoImg}
+              alt="Invest Veículos"
+              className="h-20 sm:h-28 md:h-36 w-auto object-contain drop-shadow-2xl"
+              initial={{ opacity: 0, scale: 0.85 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            />
+
+            {/* CTA buttons after logo */}
+            <AnimatePresence>
+              {showContent && (
+                <motion.div
+                  className="flex flex-col sm:flex-row gap-4 mt-10"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.7, ease: 'easeOut' }}
+                >
+                  <Link
+                    to="/veiculos"
+                    className="px-8 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-widest uppercase hover:bg-public-primary-dark transition-colors"
+                  >
+                    Ver Estoque
+                  </Link>
+                  <a
+                    href="https://wa.me/5512981776577"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-8 py-4 border border-white/30 text-white font-public-body font-bold text-sm tracking-widest uppercase hover:bg-white/10 transition-colors text-center"
+                  >
+                    Fale Conosco
+                  </a>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom gradient fade */}
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-public-bg to-transparent z-30" />
+    </section>
+  );
+}
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
@@ -23,75 +124,9 @@ export default function Home() {
 
   return (
     <div className="bg-public-bg text-public-fg">
-      {/* Hero Section - Elegant Static Banner */}
-      <section className="relative h-[100dvh] overflow-hidden">
-        {/* Background Image */}
-        <div className="absolute inset-0">
-          <img 
-            src={lojaFachada} 
-            alt="Invest Veículos - Fachada" 
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
-        </div>
+      {/* Hero Section - Video Banner */}
+      <HeroVideo />
 
-        {/* Content */}
-        <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 text-center">
-          <motion.img
-            src={logoImg}
-            alt="Invest Veículos"
-            className="h-16 sm:h-20 md:h-24 w-auto object-contain mb-8 md:mb-12"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8 }}
-          />
-
-          <motion.h1
-            className="font-public-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl text-white leading-[0.9] tracking-wide mb-4 md:mb-6"
-            initial={{ opacity: 0, y: 30 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.8, delay: 0.2 }}
-          >
-            SEMINOVOS
-            <br />
-            <span className="text-public-primary">PREMIUM</span>
-          </motion.h1>
-
-          <motion.p
-            className="text-white/70 font-public-body text-sm sm:text-base md:text-lg font-medium tracking-[0.2em] uppercase max-w-xl mb-8 md:mb-12"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.8, delay: 0.5 }}
-          >
-            Mais de 20 anos de tradição em Taubaté
-          </motion.p>
-
-          <motion.div
-            className="flex flex-col sm:flex-row gap-4"
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6, delay: 0.7 }}
-          >
-            <Link
-              to="/veiculos"
-              className="px-8 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-widest uppercase hover:bg-public-primary-dark transition-colors"
-            >
-              Ver Estoque
-            </Link>
-            <a
-              href="https://wa.me/5512981776577"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="px-8 py-4 border border-white/30 text-white font-public-body font-bold text-sm tracking-widest uppercase hover:bg-white/10 transition-colors"
-            >
-              Fale Conosco
-            </a>
-          </motion.div>
-        </div>
-
-        {/* Bottom gradient fade */}
-        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-public-bg to-transparent z-10" />
-      </section>
 
       {/* Featured Vehicles Section */}
       <section className="py-12 sm:py-16 md:py-24 bg-public-bg">
