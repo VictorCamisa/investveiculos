@@ -11,15 +11,15 @@
 
 @layer base {
   :root {
-    /* Light mode - Laranja, Cinza e Preto */
-    --background: 0 0% 98%;
-    --foreground: 0 0% 10%;
+    /* Light mode - Dark theme with charcoal gray */
+    --background: 0 0% 13%;
+    --foreground: 0 0% 92%;
 
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 10%;
+    --card: 0 0% 16%;
+    --card-foreground: 0 0% 92%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 10%;
+    --popover: 0 0% 16%;
+    --popover-foreground: 0 0% 92%;
 
     --primary: 36 82% 52%;
     --primary-foreground: 0 0% 100%;
@@ -27,11 +27,11 @@
     --secondary: 0 0% 54%;
     --secondary-foreground: 0 0% 100%;
 
-    --muted: 0 0% 96%;
-    --muted-foreground: 0 0% 45%;
+    --muted: 0 0% 18%;
+    --muted-foreground: 0 0% 55%;
 
-    --accent: 36 82% 95%;
-    --accent-foreground: 36 82% 40%;
+    --accent: 36 30% 18%;
+    --accent-foreground: 36 82% 62%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
@@ -42,40 +42,40 @@
     --warning: 36 82% 52%;
     --warning-foreground: 0 0% 100%;
 
-    --border: 0 0% 90%;
-    --input: 0 0% 92%;
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
     --ring: 36 82% 52%;
 
     --radius: 0.625rem;
 
-    /* Sidebar - Light */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 30%;
+    /* Sidebar */
+    --sidebar-background: 0 0% 11%;
+    --sidebar-foreground: 0 0% 75%;
     --sidebar-primary: 36 82% 52%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 0 0% 96%;
-    --sidebar-accent-foreground: 0 0% 20%;
-    --sidebar-border: 0 0% 92%;
+    --sidebar-accent: 0 0% 16%;
+    --sidebar-accent-foreground: 0 0% 90%;
+    --sidebar-border: 0 0% 18%;
     --sidebar-ring: 36 82% 52%;
 
     /* Surface levels for depth */
-    --surface-1: 0 0% 100%;
-    --surface-2: 0 0% 98%;
-    --surface-3: 0 0% 96%;
+    --surface-1: 0 0% 16%;
+    --surface-2: 0 0% 14%;
+    --surface-3: 0 0% 18%;
 
     /* Text hierarchy */
-    --text-primary: 0 0% 10%;
-    --text-secondary: 0 0% 40%;
-    --text-muted: 0 0% 55%;
+    --text-primary: 0 0% 95%;
+    --text-secondary: 0 0% 65%;
+    --text-muted: 0 0% 50%;
 
     /* Auth page colors */
-    --auth-bg: 0 0% 97%;
-    --auth-surface: 0 0% 100%;
-    --auth-muted-surface: 0 0% 96%;
-    --auth-border: 0 0% 90%;
-    --auth-text-secondary: 0 0% 50%;
-    --auth-text-primary: 0 0% 20%;
-    --auth-heading: 0 0% 10%;
+    --auth-bg: 0 0% 10%;
+    --auth-surface: 0 0% 15%;
+    --auth-muted-surface: 0 0% 18%;
+    --auth-border: 0 0% 22%;
+    --auth-text-secondary: 0 0% 55%;
+    --auth-text-primary: 0 0% 80%;
+    --auth-heading: 0 0% 95%;
 
     /* Public website theme - InvestVeículos
        Warm charcoal tones to complement orange accent */
