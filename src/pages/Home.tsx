@@ -55,15 +55,23 @@ function HeroVideo() {
       <AnimatePresence>
         {videoEnded && (
           <motion.div
-            className="absolute inset-0 z-10 bg-[#1a1a1a] flex items-center justify-center"
+            className="absolute inset-0 z-10 overflow-hidden"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ duration: 1.5, ease: 'easeInOut' }}
           >
+            {/* Blurred stretched background to fill edges */}
+            <img
+              src={heroEndBanner}
+              alt=""
+              aria-hidden="true"
+              className="absolute inset-0 w-full h-full object-cover scale-110 blur-2xl brightness-50"
+            />
+            {/* Crisp centered banner */}
             <img
               src={heroEndBanner}
               alt="Invest Veículos - Qualidade que você vê, confiança que você sente"
-              className="w-full h-auto max-h-full object-contain"
+              className="relative w-full h-full object-cover object-left"
             />
           </motion.div>
         )}
