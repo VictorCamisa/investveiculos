@@ -10,19 +10,18 @@ import logoImg from '@/assets/logo-invest-veiculos.png';
 import lojaNoite from '@/assets/loja-noite.jpg';
 import lojaDia from '@/assets/loja-dia.jpg';
 import lojaFachada from '@/assets/loja-fachada-principal.jpg';
+import heroEndBanner from '@/assets/hero-end-banner.jpg';
 
 const HERO_VIDEO_URL = '/videos/hero-banner.mp4';
 
 function HeroVideo() {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [videoEnded, setVideoEnded] = useState(false);
-  const [showLogo, setShowLogo] = useState(false);
   const [showContent, setShowContent] = useState(false);
 
   const handleVideoEnd = useCallback(() => {
     setVideoEnded(true);
-    setTimeout(() => setShowLogo(true), 600);
-    setTimeout(() => setShowContent(true), 1400);
+    setTimeout(() => setShowContent(true), 1200);
   }, []);
 
   useEffect(() => {
@@ -52,59 +51,51 @@ function HeroVideo() {
         />
       </div>
 
-      {/* Darken overlay that fades in when video ends */}
-      <motion.div
-        className="absolute inset-0 bg-black pointer-events-none z-10"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: videoEnded ? 0.7 : 0 }}
-        transition={{ duration: 1.5, ease: 'easeInOut' }}
-      />
-
-      {/* Logo reveal */}
+      {/* End banner image that fades in when video ends */}
       <AnimatePresence>
-        {showLogo && (
+        {videoEnded && (
           <motion.div
-            className="absolute inset-0 z-20 flex flex-col items-center justify-center px-6"
+            className="absolute inset-0 z-10"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            transition={{ duration: 1.2, ease: 'easeOut' }}
+            transition={{ duration: 1.5, ease: 'easeInOut' }}
           >
-            <motion.img
-              src={logoImg}
-              alt="Invest Veículos"
-              className="h-20 sm:h-28 md:h-36 w-auto object-contain drop-shadow-2xl"
-              initial={{ opacity: 0, scale: 0.85 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+            <img
+              src={heroEndBanner}
+              alt="Invest Veículos - Qualidade que você vê, confiança que você sente"
+              className="w-full h-full object-cover"
             />
+            <div className="absolute inset-0 bg-black/40" />
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-            {/* CTA buttons after logo */}
-            <AnimatePresence>
-              {showContent && (
-                <motion.div
-                  className="flex flex-col sm:flex-row gap-5 mt-12"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.7, ease: 'easeOut' }}
-                >
-                  <Link
-                    to="/veiculos"
-                    className="group relative px-10 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-[0.2em] uppercase overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--public-primary-rgb),0.4)] hover:scale-105"
-                  >
-                    <span className="relative z-10">Ver Estoque</span>
-                    <div className="absolute inset-0 bg-gradient-to-r from-public-primary-dark to-public-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
-                  </Link>
-                  <a
-                    href="https://wa.me/5512981776577"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="group px-10 py-4 border-2 border-white/40 text-white font-public-body font-bold text-sm tracking-[0.2em] uppercase text-center transition-all duration-300 hover:border-white hover:bg-white/10 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] backdrop-blur-sm"
-                  >
-                    Fale Conosco
-                  </a>
-                </motion.div>
-              )}
-            </AnimatePresence>
+      {/* CTA buttons after transition */}
+      <AnimatePresence>
+        {showContent && (
+          <motion.div
+            className="absolute bottom-32 left-0 right-0 z-20 flex justify-center px-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, ease: 'easeOut' }}
+          >
+            <div className="flex flex-col sm:flex-row gap-5">
+              <Link
+                to="/veiculos"
+                className="group relative px-10 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-[0.2em] uppercase overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--public-primary-rgb),0.4)] hover:scale-105"
+              >
+                <span className="relative z-10">Ver Estoque</span>
+                <div className="absolute inset-0 bg-gradient-to-r from-public-primary-dark to-public-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+              </Link>
+              <a
+                href="https://wa.me/5512981776577"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="group px-10 py-4 border-2 border-white/40 text-white font-public-body font-bold text-sm tracking-[0.2em] uppercase text-center transition-all duration-300 hover:border-white hover:bg-white/10 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] backdrop-blur-sm"
+              >
+                Fale Conosco
+              </a>
+            </div>
           </motion.div>
         )}
       </AnimatePresence>
