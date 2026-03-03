@@ -57,7 +57,7 @@ serve(async (req) => {
     });
 
     const authHeader = req.headers.get("Authorization");
-    if (!authHeader) {
+    if (!authHeader?.startsWith("Bearer ")) {
       return new Response(JSON.stringify({ error: "No authorization header" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -66,27 +66,31 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
 
-    const { data: { user: requestingUser } } = await supabaseAdmin.auth.getUser(token);
+    // Use getClaims instead of getUser to avoid session_not_found errors
+    const { data: claimsData, error: claimsError } = await supabaseAdmin.auth.getClaims(token);
 
-    if (!requestingUser) {
+    if (claimsError || !claimsData?.claims) {
+      console.error("sync-users auth error:", claimsError);
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
+    const requestingUserId = claimsData.claims.sub as string;
+
     // Verifica se é gerente OU is_master
     const { data: roleData } = await supabaseAdmin
       .from("user_roles")
       .select("role")
-      .eq("user_id", requestingUser.id)
+      .eq("user_id", requestingUserId)
       .eq("role", "gerente")
       .maybeSingle();
 
     const { data: profileData } = await supabaseAdmin
       .from("profiles")
       .select("is_master")
-      .eq("id", requestingUser.id)
+      .eq("id", requestingUserId)
       .single();
 
     const isAuthorized = roleData || profileData?.is_master === true;
