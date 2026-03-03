@@ -78,16 +78,16 @@
     --auth-heading: 0 0% 95%;
 
     /* Public website theme - InvestVeículos
-       Warm charcoal tones to complement orange accent */
+       Dark charcoal to match site-wide dark theme */
     --public-primary: 36 82% 52%;
     --public-primary-dark: 36 82% 42%;
     --public-primary-light: 36 82% 62%;
     --public-primary-foreground: 0 0% 100%;
-    --public-background: 25 15% 12%;
-    --public-foreground: 35 10% 92%;
-    --public-surface: 25 12% 15%;
-    --public-muted: 25 10% 18%;
-    --public-border: 25 8% 22%;
+    --public-background: 0 0% 13%;
+    --public-foreground: 0 0% 92%;
+    --public-surface: 0 0% 16%;
+    --public-muted: 0 0% 18%;
+    --public-border: 0 0% 22%;
     --public-highlight: 0 0% 8%;
     --public-highlight-foreground: 0 0% 100%;
   }
@@ -158,16 +158,16 @@
     --auth-heading: 0 0% 95%;
 
     /* Public website theme - InvestVeículos (dark mode)
-       Warm charcoal background to complement orange accent */
+       Dark charcoal to match site-wide dark theme */
     --public-primary: 36 82% 52%;
     --public-primary-dark: 36 82% 42%;
     --public-primary-light: 36 82% 62%;
     --public-primary-foreground: 0 0% 100%;
-    --public-background: 25 15% 12%;
-    --public-foreground: 35 10% 92%;
-    --public-surface: 25 12% 15%;
-    --public-muted: 25 10% 18%;
-    --public-border: 25 8% 22%;
+    --public-background: 0 0% 13%;
+    --public-foreground: 0 0% 92%;
+    --public-surface: 0 0% 16%;
+    --public-muted: 0 0% 18%;
+    --public-border: 0 0% 22%;
     --public-highlight: 0 0% 8%;
     --public-highlight-foreground: 0 0% 100%;
   }
