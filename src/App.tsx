@@ -18,6 +18,8 @@ import Auth from "./pages/Auth";
 const Home = lazy(() => import("./pages/Home"));
 const PublicEstoque = lazy(() => import("./pages/PublicEstoque"));
 const PublicVehicleDetails = lazy(() => import("./pages/PublicVehicleDetails"));
+const Contato = lazy(() => import("./pages/Contato"));
+const Sobre = lazy(() => import("./pages/Sobre"));
 const PublicLayout = lazy(() => import("@/components/public/PublicLayout").then(m => ({ default: m.PublicLayout })));
 
 // Lazy load internal pages
@@ -26,6 +28,7 @@ const Leads = lazy(() => import("./pages/Leads"));
 const Inventory = lazy(() => import("./pages/Inventory"));
 const VehicleDetails = lazy(() => import("./pages/VehicleDetails"));
 const ImportVehicles = lazy(() => import("./pages/ImportVehicles"));
+const BulkPhotoUpload = lazy(() => import("./pages/BulkPhotoUpload"));
 const CRMHome = lazy(() => import("./pages/CRMHome"));
 const CRMAnalytics = lazy(() => import("./pages/CRMAnalytics"));
 const FollowUpsLayout = lazy(() => import("@/components/follow-ups/FollowUpsLayout").then(m => ({ default: m.FollowUpsLayout })));
@@ -178,6 +181,8 @@ const App = () => (
                   <Route path="/" element={<Home />} />
                   <Route path="/veiculos" element={<PublicEstoque />} />
                   <Route path="/veiculos/:id" element={<PublicVehicleDetails />} />
+                  <Route path="/contato" element={<Contato />} />
+                  <Route path="/sobre" element={<Sobre />} />
                 </Route>
 
                 {/* Auth */}
@@ -217,6 +222,11 @@ const App = () => (
                   <Route path="/estoque/importar" element={
                     <ProtectedRoute requiredModule="estoque">
                       <ImportVehicles />
+                    </ProtectedRoute>
+                  } />
+                  <Route path="/estoque/fotos" element={
+                    <ProtectedRoute requiredModule="estoque">
+                      <BulkPhotoUpload />
                     </ProtectedRoute>
                   } />
                   
