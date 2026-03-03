@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePermissions } from '@/hooks/usePermissions';
+import { useSidebarContext } from '@/contexts/SidebarContext';
 import { Button } from '@/components/ui/button';
 import { ThemeToggle } from '@/components/ui/theme-toggle';
 import {
@@ -16,18 +17,37 @@ import {
   LogOut,
   ChevronDown,
   Menu,
+  Maximize,
+  Minimize,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { NotificationBell } from '@/components/notifications/NotificationBell';
-import logoInvestVeiculos from '@/assets/logo-invest-veiculos.png';
 import { MainNav } from './MainNav';
-import { ScrollArea, ScrollBar } from '@/components/ui/scroll-area';
+import logoInvestVeiculos from '@/assets/logo-invest-veiculos.png';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export function AppHeader() {
   const { user, signOut } = useAuth();
   const { isGerente, role } = usePermissions();
+  const { open: sidebarOpen } = useSidebarContext();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+
+  useEffect(() => {
+    const onChange = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen();
+    } else {
+      document.exitFullscreen();
+    }
+  }, []);
 
   const getRoleLabel = () => {
     switch (role) {
@@ -39,34 +59,47 @@ export function AppHeader() {
   };
 
   return (
-    <header className="sticky top-0 z-50 w-full border-b border-border/60 bg-background/90 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
-      <div className="flex h-14 items-center px-4 gap-4">
-        {/* Logo */}
-        <Link to="/dashboard" className="flex items-center gap-2 shrink-0">
-          <img 
-            src={logoInvestVeiculos} 
-            alt="InvestVeículos" 
-            className="h-8 w-auto object-contain"
-          />
-        </Link>
+    <header className="sticky top-0 z-40 w-full border-b border-border/60 bg-background/90 backdrop-blur-md supports-[backdrop-filter]:bg-background/75">
+      <div className="flex h-14 items-center px-3 sm:px-4 gap-2 sm:gap-3">
+        {/* Logo — animates in when sidebar closes */}
+        <AnimatePresence mode="wait">
+          {!sidebarOpen && (
+            <motion.div
+              layoutId="invest-logo"
+              key="header-logo"
+              initial={{ opacity: 0, x: -16 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -16 }}
+              transition={{ duration: 0.25, ease: [0.4, 0, 0.2, 1] }}
+              className="flex items-center gap-2.5 shrink-0"
+            >
+              <Link to="/dashboard" className="flex items-center gap-2.5">
+                <img
+                  src={logoInvestVeiculos}
+                  alt="Invest Veículos"
+                  className="h-8 w-auto object-contain shrink-0"
+                />
+              </Link>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-        {/* Main Navigation - Desktop */}
-        <div className="hidden lg:block flex-1">
-          <ScrollArea className="w-full">
-            <MainNav />
-            <ScrollBar orientation="horizontal" />
-          </ScrollArea>
-        </div>
+        <div className="flex-1" />
 
-        {/* Spacer for mobile */}
-        <div className="flex-1 lg:hidden" />
-
-        {/* Right Section */}
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1 sm:gap-2">
           <NotificationBell />
+
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Button variant="ghost" size="icon" onClick={toggleFullscreen} className="hidden sm:inline-flex">
+                {isFullscreen ? <Minimize className="h-4 w-4" /> : <Maximize className="h-4 w-4" />}
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>{isFullscreen ? 'Sair da tela cheia' : 'Tela cheia'}</TooltipContent>
+          </Tooltip>
+
           <ThemeToggle />
-          
-          {/* User Menu */}
+
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="ghost" size="sm" className="gap-1.5 px-2">
@@ -85,9 +118,7 @@ export function AppHeader() {
               <DropdownMenuLabel>
                 <div className="flex flex-col">
                   <span>{user?.user_metadata?.full_name || 'Usuário'}</span>
-                  <span className="text-xs font-normal text-muted-foreground">
-                    {getRoleLabel()}
-                  </span>
+                  <span className="text-xs font-normal text-muted-foreground">{getRoleLabel()}</span>
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
@@ -107,7 +138,6 @@ export function AppHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {/* Mobile Menu Button */}
           <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
             <SheetTrigger asChild>
               <Button variant="ghost" size="icon" className="lg:hidden">
