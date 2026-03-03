@@ -9,61 +9,10 @@ import { StatsCard } from '@/components/ui/stats-card';
 import logoImg from '@/assets/logo-invest-veiculos.png';
 import lojaNoite from '@/assets/loja-noite.jpg';
 import lojaDia from '@/assets/loja-dia.jpg';
+import lojaFachada from '@/assets/loja-fachada-principal.jpg';
 
 export default function Home() {
   const { data: featuredVehicles, isLoading } = useFeaturedVehicles(6);
-  const [introPhase, setIntroPhase] = useState<'video' | 'fading' | 'final'>('video');
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const mobileVideoRef = useRef<HTMLVideoElement>(null);
-  const [isMobile, setIsMobile] = useState(false);
-
-  useEffect(() => {
-    // Detecta se é mobile
-    const checkMobile = () => setIsMobile(window.innerWidth < 768);
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  useEffect(() => {
-    // Inicia o vídeo imediatamente após detectar mobile
-    const playTimer = setTimeout(() => {
-      if (isMobile) {
-        const mobile = mobileVideoRef.current;
-        if (mobile) {
-          mobile.load();
-          mobile.play().catch(() => {});
-        }
-      } else {
-        const desktop = videoRef.current;
-        if (desktop) {
-          desktop.load();
-          desktop.play().catch(() => {});
-        }
-      }
-    }, 300);
-
-    return () => clearTimeout(playTimer);
-  }, [isMobile]);
-
-  const handleVideoEnd = () => {
-    // No mobile, apenas congela no último frame (não faz nada)
-    if (isMobile) {
-      return;
-    }
-    // Desktop: faz fade para preto e depois mostra a logo
-    setIntroPhase('fading');
-    setTimeout(() => {
-      setIntroPhase('final');
-    }, 1000);
-  };
-
-  const handleMobileVideoEnd = () => {
-    // Mobile: congela no último frame - pausa o vídeo no final
-    if (mobileVideoRef.current) {
-      mobileVideoRef.current.pause();
-    }
-  };
 
   const openGoogleMaps = () => {
     window.open(
@@ -74,83 +23,74 @@ export default function Home() {
 
   return (
     <div className="bg-public-bg text-public-fg">
-      {/* Hero Section - Video → Fade to Black → Logo (Desktop) / Freeze on last frame (Mobile) */}
-      <section className="relative h-[100dvh] overflow-hidden bg-black">
+      {/* Hero Section - Elegant Static Banner */}
+      <section className="relative h-[100dvh] overflow-hidden">
+        {/* Background Image */}
+        <div className="absolute inset-0">
+          <img 
+            src={lojaFachada} 
+            alt="Invest Veículos - Fachada" 
+            className="w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/50 to-black/80" />
+        </div>
 
-        {/* Dark overlay on video to make it darker - ONLY DESKTOP */}
-        <div 
-          className={`absolute inset-0 pointer-events-none z-[5] transition-opacity duration-500 hidden md:block ${
-            introPhase === 'video' ? 'opacity-100' : 'opacity-0'
-          } bg-black/60`}
-        />
+        {/* Content */}
+        <div className="relative z-10 h-full flex flex-col items-center justify-center px-6 text-center">
+          <motion.img
+            src={logoImg}
+            alt="Invest Veículos"
+            className="h-16 sm:h-20 md:h-24 w-auto object-contain mb-8 md:mb-12"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8 }}
+          />
 
-        {/* Video - Desktop */}
-        <video
-          ref={videoRef}
-          muted
-          playsInline
-          onEnded={handleVideoEnd}
-          className={`absolute inset-0 w-full bg-black transition-opacity duration-500 hidden md:block ${
-            introPhase === 'final' ? 'opacity-0' : 'opacity-100'
-          }`}
-          style={{ 
-            height: '115%', 
-            top: '-7.5%',
-            objectFit: 'cover',
-            objectPosition: 'center top'
-          }}
-        >
-          <source src="/videos/investinicio.mp4" type="video/mp4" />
-        </video>
+          <motion.h1
+            className="font-public-display text-5xl sm:text-7xl md:text-8xl lg:text-9xl text-white leading-[0.9] tracking-wide mb-4 md:mb-6"
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.8, delay: 0.2 }}
+          >
+            SEMINOVOS
+            <br />
+            <span className="text-public-primary">PREMIUM</span>
+          </motion.h1>
 
-        {/* Video - Mobile - vídeo separado, sem overlay, congela no final */}
-        <video
-          ref={mobileVideoRef}
-          muted
-          playsInline
-          onEnded={handleMobileVideoEnd}
-          className="absolute inset-0 w-full md:hidden"
-          style={{ 
-            height: '115%', 
-            top: '-7.5%',
-            objectFit: 'cover',
-            objectPosition: 'center top'
-          }}
-        >
-          <source src="/videos/hero-video-mobile.mp4" type="video/mp4" />
-        </video>
+          <motion.p
+            className="text-white/70 font-public-body text-sm sm:text-base md:text-lg font-medium tracking-[0.2em] uppercase max-w-xl mb-8 md:mb-12"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: 0.8, delay: 0.5 }}
+          >
+            Mais de 20 anos de tradição em Taubaté
+          </motion.p>
 
-        {/* Fade to black overlay quando o vídeo termina - ONLY DESKTOP */}
-        <motion.div
-          className="absolute inset-0 bg-black pointer-events-none z-[15] hidden md:block"
-          initial={{ opacity: 0 }}
-          animate={{ 
-            opacity: introPhase === 'fading' || introPhase === 'final' ? 1 : 0 
-          }}
-          transition={{ duration: 1 }}
-        />
-
-        {/* Logo final após fade to black - ONLY DESKTOP */}
-        <AnimatePresence>
-          {introPhase === 'final' && !isMobile && (
-            <motion.div
-              className="absolute inset-0 z-20 flex items-center justify-center bg-black"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
+          <motion.div
+            className="flex flex-col sm:flex-row gap-4"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.7 }}
+          >
+            <Link
+              to="/veiculos"
+              className="px-8 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-widest uppercase hover:bg-public-primary-dark transition-colors"
             >
-              <motion.img
-                src={logoImg}
-                alt="Invest Veículos"
-                className="h-24 sm:h-32 md:h-40 lg:h-48 w-auto object-contain"
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ duration: 0.6, delay: 0.2 }}
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
+              Ver Estoque
+            </Link>
+            <a
+              href="https://wa.me/5512981776577"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-8 py-4 border border-white/30 text-white font-public-body font-bold text-sm tracking-widest uppercase hover:bg-white/10 transition-colors"
+            >
+              Fale Conosco
+            </a>
+          </motion.div>
+        </div>
 
+        {/* Bottom gradient fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-public-bg to-transparent z-10" />
       </section>
 
       {/* Featured Vehicles Section */}
@@ -167,7 +107,7 @@ export default function Home() {
               <span className="text-public-primary text-xs sm:text-sm font-medium uppercase tracking-widest mb-2 sm:mb-4 block">
                 Destaques
               </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-public-fg leading-tight">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-public-display text-public-fg leading-none tracking-wide">
                 Nosso <span className="text-public-fg/50">Estoque</span>
               </h2>
             </div>
@@ -285,7 +225,7 @@ export default function Home() {
               <span className="text-public-primary text-xs sm:text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4 block">
                 Quem Somos
               </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-public-fg mb-4 sm:mb-6 leading-tight">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-public-display text-public-fg mb-4 sm:mb-6 leading-none tracking-wide">
                 Excelência em <span className="text-public-primary">Seminovos</span> Premium
               </h2>
               <p className="text-public-fg/70 text-sm sm:text-base md:text-lg leading-relaxed mb-6 sm:mb-8">
@@ -337,7 +277,7 @@ export default function Home() {
             <span className="text-public-primary text-xs sm:text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4 block">
               Nossos Diferenciais
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-public-fg leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-public-display text-public-fg leading-none tracking-wide">
               Por que escolher a <span className="text-public-primary">Invest</span>?
             </h2>
           </motion.div>
@@ -409,7 +349,7 @@ export default function Home() {
             <span className="text-public-primary text-xs sm:text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4 block">
               Depoimentos
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-public-fg leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-public-display text-public-fg leading-none tracking-wide">
               O que nossos <span className="text-public-fg/50">clientes</span> dizem
             </h2>
           </motion.div>
@@ -475,7 +415,7 @@ export default function Home() {
             <span className="text-public-primary text-xs sm:text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4 block">
               Nossa Estrutura
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-public-fg leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-public-display text-public-fg leading-none tracking-wide">
               Conheça nossa <span className="text-public-primary">Loja</span>
             </h2>
           </motion.div>
@@ -514,7 +454,7 @@ export default function Home() {
             <span className="text-public-primary text-xs sm:text-sm font-medium uppercase tracking-widest mb-3 sm:mb-4 block">
               Pronto para dirigir?
             </span>
-            <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-public-fg mb-4 sm:mb-6 leading-tight">
+            <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-public-display text-public-fg mb-4 sm:mb-6 leading-none tracking-wide">
               Encontre seu próximo <span className="text-public-primary">veículo</span>
             </h2>
             <p className="text-public-fg/60 text-sm sm:text-base md:text-lg mb-6 sm:mb-8 leading-relaxed">
@@ -561,7 +501,7 @@ export default function Home() {
               <span className="text-public-primary text-xs sm:text-sm font-medium uppercase tracking-widest mb-2 sm:mb-4 block">
                 Onde Estamos
               </span>
-              <h2 className="text-2xl sm:text-3xl md:text-4xl lg:text-5xl font-display font-bold text-public-fg mb-6 sm:mb-8">
+              <h2 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-public-display text-public-fg mb-6 sm:mb-8 leading-none tracking-wide">
                 Visite nossa <span className="text-public-fg/50">Loja</span>
               </h2>
 
