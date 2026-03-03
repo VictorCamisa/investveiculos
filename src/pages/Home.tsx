@@ -33,8 +33,8 @@ function HeroVideo() {
 
   return (
     <section className="relative h-[100dvh] overflow-hidden bg-black">
-      {/* Video — cropped vertically to hide watermark */}
-      <div className="absolute inset-0 flex items-center justify-center overflow-hidden">
+      {/* Video — cropped to hide watermarks (top/bottom + right side) */}
+      <div className="absolute inset-0 overflow-hidden">
         <video
           ref={videoRef}
           src={HERO_VIDEO_URL}
@@ -42,10 +42,12 @@ function HeroVideo() {
           playsInline
           preload="auto"
           onEnded={handleVideoEnd}
-          className="w-full object-cover"
+          className="absolute object-cover"
           style={{
-            height: '115%',
-            marginTop: '-7.5%',
+            width: '110%',
+            height: '120%',
+            top: '-10%',
+            left: '-5%',
           }}
         />
       </div>
@@ -80,22 +82,23 @@ function HeroVideo() {
             <AnimatePresence>
               {showContent && (
                 <motion.div
-                  className="flex flex-col sm:flex-row gap-4 mt-10"
+                  className="flex flex-col sm:flex-row gap-5 mt-12"
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, ease: 'easeOut' }}
                 >
                   <Link
                     to="/veiculos"
-                    className="px-8 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-widest uppercase hover:bg-public-primary-dark transition-colors"
+                    className="group relative px-10 py-4 bg-public-primary text-public-primary-foreground font-public-body font-bold text-sm tracking-[0.2em] uppercase overflow-hidden transition-all duration-300 hover:shadow-[0_0_30px_rgba(var(--public-primary-rgb),0.4)] hover:scale-105"
                   >
-                    Ver Estoque
+                    <span className="relative z-10">Ver Estoque</span>
+                    <div className="absolute inset-0 bg-gradient-to-r from-public-primary-dark to-public-primary opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
                   </Link>
                   <a
                     href="https://wa.me/5512981776577"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-8 py-4 border border-white/30 text-white font-public-body font-bold text-sm tracking-widest uppercase hover:bg-white/10 transition-colors text-center"
+                    className="group px-10 py-4 border-2 border-white/40 text-white font-public-body font-bold text-sm tracking-[0.2em] uppercase text-center transition-all duration-300 hover:border-white hover:bg-white/10 hover:scale-105 hover:shadow-[0_0_20px_rgba(255,255,255,0.15)] backdrop-blur-sm"
                   >
                     Fale Conosco
                   </a>
