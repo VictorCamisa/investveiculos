@@ -30,6 +30,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import logoInvestVeiculos from '@/assets/logo-invest-veiculos.png';
+import logoInvestIcon from '@/assets/logo-invest-icon.png';
 import type { ModuleName } from '@/types/users';
 
 interface NavItem {
@@ -192,11 +193,19 @@ export function AppSidebar() {
           collapsed ? 'justify-center' : 'gap-3'
         )}
       >
-        <img
-          src={logoInvestVeiculos}
-          alt="InvestVeículos"
-          className={cn('object-contain transition-all', collapsed ? 'h-8 w-8' : 'h-9')}
-        />
+        {collapsed ? (
+          <img
+            src={logoInvestIcon}
+            alt="InvestVeículos"
+            className="h-8 w-8 object-contain brightness-0 invert opacity-90"
+          />
+        ) : (
+          <img
+            src={logoInvestVeiculos}
+            alt="InvestVeículos"
+            className="h-9 object-contain"
+          />
+        )}
       </div>
 
       {/* Navigation */}
