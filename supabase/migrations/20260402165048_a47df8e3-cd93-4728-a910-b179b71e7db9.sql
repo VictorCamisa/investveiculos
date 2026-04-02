@@ -1,0 +1,1 @@
+UPDATE lead_qualifications SET qualification_tier = CASE WHEN vehicle_interest IS NOT NULL AND (budget_min IS NOT NULL OR budget_max IS NOT NULL) AND payment_method IS NOT NULL AND purchase_timeline IS NOT NULL THEN 'Q3' WHEN vehicle_interest IS NOT NULL THEN 'Q2' ELSE 'Q1' END WHERE qualification_tier IS NULL;
