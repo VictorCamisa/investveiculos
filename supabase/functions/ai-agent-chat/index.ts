@@ -1270,6 +1270,15 @@ serve(async (req) => {
                   negotiation_id: negotiation.id,
                   qualified_by: null, // Qualified by AI
                   score: qualificationScore,
+                  qualification_tier: (() => {
+                    const hasVehicle = !!(qualificationData.vehicle_interest || leadInfo?.vehicle_interest);
+                    const hasBudget = !!(qualificationData.budget_min || qualificationData.budget_max);
+                    const hasPayment = !!qualificationData.payment_method;
+                    const hasTimeline = !!qualificationData.purchase_timeline;
+                    if (hasVehicle && hasBudget && hasPayment && hasTimeline) return 'Q3';
+                    if (hasVehicle) return 'Q2';
+                    return 'Q1';
+                  })(),
                   vehicle_interest: qualificationData.vehicle_interest || leadInfo?.vehicle_interest,
                   budget_min: qualificationData.budget_min,
                   budget_max: qualificationData.budget_max,
@@ -1280,7 +1289,7 @@ serve(async (req) => {
                   trade_in_vehicle: qualificationData.trade_in_vehicle,
                   purchase_timeline: qualificationData.purchase_timeline,
                   vehicle_usage: qualificationData.vehicle_usage,
-                  engagement_score: Math.min(messageCount * 5, 50), // 5 points per message, max 50
+                  engagement_score: Math.min(messageCount * 5, 50),
                   completeness_score: qualificationScore,
                   notes: 'Qualificação preenchida automaticamente via IA',
                 });
@@ -1445,6 +1454,15 @@ ${qualificationData.down_payment ? '💵 *Entrada:* R$ ' + qualificationData.dow
                   negotiation_id: negotiation.id,
                   qualified_by: null,
                   score: qualificationScore,
+                  qualification_tier: (() => {
+                    const hasVehicle = !!(qualificationData.vehicle_interest || leadInfo?.vehicle_interest);
+                    const hasBudget = !!(qualificationData.budget_min || qualificationData.budget_max);
+                    const hasPayment = !!qualificationData.payment_method;
+                    const hasTimeline = !!qualificationData.purchase_timeline;
+                    if (hasVehicle && hasBudget && hasPayment && hasTimeline) return 'Q3';
+                    if (hasVehicle) return 'Q2';
+                    return 'Q1';
+                  })(),
                   vehicle_interest: qualificationData.vehicle_interest || leadInfo?.vehicle_interest,
                   budget_min: qualificationData.budget_min,
                   budget_max: qualificationData.budget_max,
