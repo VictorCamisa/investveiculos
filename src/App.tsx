@@ -388,7 +388,14 @@ const App = () => (
                     </ProtectedRoute>
                   }>
                     <Route index element={<GestaoComercialOverview />} />
+                    <Route path="equipe" element={<SalesTeamView />} />
                     <Route path="round-robin" element={<RoundRobinPage />} />
+                    <Route path="comissoes" element={<CommissionDashboard />} />
+                    <Route path="metas" element={<CommissionGoalsPage />} />
+                    <Route path="ranking" element={<CommissionRankingPage />} />
+                    <Route path="historico" element={<CommissionHistoryPage />} />
+                    <Route path="simulador" element={<CommissionSimulatorPage />} />
+                    <Route path="metricas" element={<SalesMetricsPage />} />
                   </Route>
                 </Route>
               <Route path="*" element={<NotFound />} />
