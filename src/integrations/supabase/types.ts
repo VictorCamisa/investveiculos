@@ -2317,33 +2317,42 @@ export type Database = {
           daily_limit: number | null
           id: string
           is_active: boolean | null
+          is_penalized: boolean | null
           last_assigned_at: string | null
           priority: number | null
+          response_time_override_minutes: number | null
           total_leads_assigned: number | null
           updated_at: string | null
           user_id: string | null
+          weight: number | null
         }
         Insert: {
           current_count?: number | null
           daily_limit?: number | null
           id?: string
           is_active?: boolean | null
+          is_penalized?: boolean | null
           last_assigned_at?: string | null
           priority?: number | null
+          response_time_override_minutes?: number | null
           total_leads_assigned?: number | null
           updated_at?: string | null
           user_id?: string | null
+          weight?: number | null
         }
         Update: {
           current_count?: number | null
           daily_limit?: number | null
           id?: string
           is_active?: boolean | null
+          is_penalized?: boolean | null
           last_assigned_at?: string | null
           priority?: number | null
+          response_time_override_minutes?: number | null
           total_leads_assigned?: number | null
           updated_at?: string | null
           user_id?: string | null
+          weight?: number | null
         }
         Relationships: [
           {
@@ -2361,6 +2370,117 @@ export type Database = {
             referencedColumns: ["user_id"]
           },
         ]
+      }
+      round_robin_penalties: {
+        Row: {
+          applied_at: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          lead_id: string | null
+          penalty_type: string | null
+          reason: string | null
+          user_id: string
+        }
+        Insert: {
+          applied_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          lead_id?: string | null
+          penalty_type?: string | null
+          reason?: string | null
+          user_id: string
+        }
+        Update: {
+          applied_at?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          lead_id?: string | null
+          penalty_type?: string | null
+          reason?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "round_robin_penalties_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "round_robin_penalties_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "salesperson_ranking"
+            referencedColumns: ["user_id"]
+          },
+        ]
+      }
+      round_robin_settings: {
+        Row: {
+          auto_reassign_enabled: boolean | null
+          created_at: string | null
+          distribution_method: string | null
+          id: string
+          is_globally_active: boolean | null
+          max_leads_per_cycle: number | null
+          notify_manager_on_reassign: boolean | null
+          notify_salesperson_on_assign: boolean | null
+          penalty_duration_hours: number | null
+          penalty_enabled: boolean | null
+          penalty_threshold: number | null
+          penalty_type: string | null
+          response_time_limit_minutes: number | null
+          updated_at: string | null
+          working_days: number[] | null
+          working_hours_enabled: boolean | null
+          working_hours_end: string | null
+          working_hours_start: string | null
+        }
+        Insert: {
+          auto_reassign_enabled?: boolean | null
+          created_at?: string | null
+          distribution_method?: string | null
+          id?: string
+          is_globally_active?: boolean | null
+          max_leads_per_cycle?: number | null
+          notify_manager_on_reassign?: boolean | null
+          notify_salesperson_on_assign?: boolean | null
+          penalty_duration_hours?: number | null
+          penalty_enabled?: boolean | null
+          penalty_threshold?: number | null
+          penalty_type?: string | null
+          response_time_limit_minutes?: number | null
+          updated_at?: string | null
+          working_days?: number[] | null
+          working_hours_enabled?: boolean | null
+          working_hours_end?: string | null
+          working_hours_start?: string | null
+        }
+        Update: {
+          auto_reassign_enabled?: boolean | null
+          created_at?: string | null
+          distribution_method?: string | null
+          id?: string
+          is_globally_active?: boolean | null
+          max_leads_per_cycle?: number | null
+          notify_manager_on_reassign?: boolean | null
+          notify_salesperson_on_assign?: boolean | null
+          penalty_duration_hours?: number | null
+          penalty_enabled?: boolean | null
+          penalty_threshold?: number | null
+          penalty_type?: string | null
+          response_time_limit_minutes?: number | null
+          updated_at?: string | null
+          working_days?: number[] | null
+          working_hours_enabled?: boolean | null
+          working_hours_end?: string | null
+          working_hours_start?: string | null
+        }
+        Relationships: []
       }
       sale_commissions: {
         Row: {
