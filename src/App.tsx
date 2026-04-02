@@ -92,6 +92,11 @@ const SalesProfitPage = lazy(() => import("@/components/sales/SalesProfitPage").
 const SalesMetricsPage = lazy(() => import("@/components/sales/SalesMetricsPage").then(m => ({ default: m.SalesMetricsPage })));
 const SalespersonDetail = lazy(() => import("@/pages/SalespersonDetail"));
 
+// Gestão Comercial
+const GestaoComercialLayout = lazy(() => import("@/components/gestao-comercial/GestaoComercialLayout").then(m => ({ default: m.GestaoComercialLayout })));
+const GestaoComercialOverview = lazy(() => import("@/components/gestao-comercial/GestaoComercialOverview").then(m => ({ default: m.GestaoComercialOverview })));
+const RoundRobinPage = lazy(() => import("@/components/gestao-comercial/RoundRobinPage").then(m => ({ default: m.RoundRobinPage })));
+
 // Lazy load Contracts pages
 const ContractsLayout = lazy(() => import("@/components/contracts/ContractsLayout").then(m => ({ default: m.ContractsLayout })));
 const ContractsListPage = lazy(() => import("@/components/contracts/ContractsListPage").then(m => ({ default: m.ContractsListPage })));
