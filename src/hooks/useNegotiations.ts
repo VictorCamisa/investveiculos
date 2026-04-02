@@ -253,11 +253,26 @@ export function useUpdateNegotiation() {
         const { data: { user } } = await supabase.auth.getUser();
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        // Calculate qualification tier
+        const hasVehicleInterest = !!qualificationData.vehicle_interest?.trim();
+        const hasBudget = !!(qualificationData.budget_min || qualificationData.budget_max);
+        const hasPaymentMethod = !!qualificationData.payment_method?.trim();
+        const hasTimeline = !!qualificationData.purchase_timeline?.trim();
+        
+        let qualification_tier = 'Q1'; // Base: has name + contact (from negotiation)
+        if (hasVehicleInterest) {
+          qualification_tier = 'Q2'; // Has vehicle interest + source
+        }
+        if (hasVehicleInterest && hasBudget && hasPaymentMethod && hasTimeline) {
+          qualification_tier = 'Q3'; // Complete qualification
+        }
+
         await (supabase as any).from('lead_qualifications').insert({
           lead_id: negData?.lead_id,
           negotiation_id: id,
           qualified_by: user?.id,
           score: qualificationData.score,
+          qualification_tier,
           vehicle_interest: qualificationData.vehicle_interest,
           budget_min: qualificationData.budget_min,
           budget_max: qualificationData.budget_max,
