@@ -627,10 +627,22 @@ export default function Dashboard() {
               color="amber"
             />
             <QuickActionButton
+              to="/gestao-comercial"
+              icon={<Users className="h-4.5 w-4.5" />}
+              label="Gestão Comercial"
+              color="rose"
+            />
+            <QuickActionButton
+              to="/ai-agents"
+              icon={<MessageSquare className="h-4.5 w-4.5" />}
+              label="Agentes IA"
+              color="cyan"
+            />
+            <QuickActionButton
               to="/financeiro"
               icon={<BarChart3 className="h-4.5 w-4.5" />}
               label="Relatórios"
-              color="cyan"
+              color="amber"
             />
           </CardContent>
         </Card>
