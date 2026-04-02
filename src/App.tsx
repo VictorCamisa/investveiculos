@@ -378,6 +378,18 @@ const App = () => (
                       </Suspense>
                     </ProtectedRoute>
                   } />
+
+                  {/* Gestão Comercial */}
+                  <Route path="/gestao-comercial" element={
+                    <ProtectedRoute requiredModule="configuracoes">
+                      <Suspense fallback={<PageLoader />}>
+                        <GestaoComercialLayout />
+                      </Suspense>
+                    </ProtectedRoute>
+                  }>
+                    <Route index element={<GestaoComercialOverview />} />
+                    <Route path="round-robin" element={<RoundRobinPage />} />
+                  </Route>
                 </Route>
               <Route path="*" element={<NotFound />} />
               </Routes>
