@@ -226,7 +226,7 @@ export function useToggleFollowUpFlow() {
 
       if (readError) throw readError;
 
-      const currentSteps = (current?.steps as Record<string, unknown>) || {};
+      const currentSteps = ((current?.steps ?? {}) as Record<string, unknown>);
       const newSteps = { ...currentSteps, is_active };
 
       const { data, error } = await supabase

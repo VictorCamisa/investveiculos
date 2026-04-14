@@ -36,17 +36,17 @@ import { useState } from 'react';
 interface FollowUpFlow {
   id: string;
   name: string;
-  description: string | null;
-  is_active: boolean;
-  target_lead_status: string[] | null;
-  target_lead_sources: string[] | null;
-  trigger_type: string;
-  delay_days: number | null;
-  delay_hours: number | null;
-  days_of_week: number[] | null;
-  message_template: string;
-  max_contacts_per_lead: number | null;
-  priority: number;
+  description?: string | null;
+  is_active?: boolean;
+  target_lead_status?: string[] | null;
+  target_lead_sources?: string[] | null;
+  trigger_type?: string;
+  delay_days?: number | null;
+  delay_hours?: number | null;
+  days_of_week?: number[] | null;
+  message_template?: string;
+  max_contacts_per_lead?: number | null;
+  priority?: number;
   created_at: string;
 }
 
