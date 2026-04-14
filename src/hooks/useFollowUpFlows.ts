@@ -218,7 +218,7 @@ export function useToggleFollowUpFlow() {
   return useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       // Need to read current steps first to preserve config
-      const { data: current, error: readError } = await supabase
+      const { data: currentRow, error: readError } = await supabase
         .from('follow_up_flows')
         .select('steps')
         .eq('id', id)
@@ -226,7 +226,7 @@ export function useToggleFollowUpFlow() {
 
       if (readError) throw readError;
 
-      const currentSteps = ((current?.steps ?? {}) as Record<string, unknown>);
+      const currentSteps = ((currentRow?.steps as Record<string, unknown>) ?? {});
       const newSteps = { ...currentSteps, is_active };
 
       const { data, error } = await supabase
