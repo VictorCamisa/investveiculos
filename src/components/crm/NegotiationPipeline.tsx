@@ -36,7 +36,6 @@ export function NegotiationPipeline({
   const { data: summaries } = useLeadInteractionSummaries(leadIds);
 
   const [saleModalOpen, setSaleModalOpen] = useState(false);
-  const [saleModalOpen, setSaleModalOpen] = useState(false);
   const [pendingWonNegotiation, setPendingWonNegotiation] = useState<Negotiation | null>(null);
   
   // Stage transition modal state
