@@ -224,9 +224,9 @@ export function useToggleFollowUpFlow() {
         .eq('id', id)
         .single();
 
-      if (readError) throw readError;
+      if (readError || !currentRow) throw readError || new Error('Flow not found');
 
-      const currentSteps = ((currentRow?.steps as Record<string, unknown>) ?? {});
+      const currentSteps = ((currentRow.steps as Record<string, unknown>) ?? {});
       const newSteps = { ...currentSteps, is_active };
 
       const { data, error } = await supabase
