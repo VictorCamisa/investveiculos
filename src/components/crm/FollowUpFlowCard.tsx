@@ -67,7 +67,7 @@ export function FollowUpFlowCard({
 
   const getTimingDescription = () => {
     const parts: string[] = [];
-    const triggerLabel = triggerTypeLabels[flow.trigger_type as keyof typeof triggerTypeLabels] || flow.trigger_type;
+    const triggerLabel = triggerTypeLabels[(flow.trigger_type || 'manual') as keyof typeof triggerTypeLabels] || flow.trigger_type || 'Manual';
     parts.push(triggerLabel);
 
     if (flow.delay_days || flow.delay_hours) {
