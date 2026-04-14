@@ -29,6 +29,13 @@ export function NegotiationPipeline({
 }: NegotiationPipelineProps) {
   const updateNegotiation = useUpdateNegotiation();
   const { isVendedor } = usePermissions();
+
+  const leadIds = useMemo(() => {
+    return negotiations.map(n => n.lead_id).filter(Boolean) as string[];
+  }, [negotiations]);
+  const { data: summaries } = useLeadInteractionSummaries(leadIds);
+
+  const [saleModalOpen, setSaleModalOpen] = useState(false);
   const [saleModalOpen, setSaleModalOpen] = useState(false);
   const [pendingWonNegotiation, setPendingWonNegotiation] = useState<Negotiation | null>(null);
   
