@@ -5,6 +5,7 @@ import { negotiationStatusLabels, pipelineColumns } from '@/types/negotiations';
 import { useUpdateNegotiation } from '@/hooks/useNegotiations';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Plus, Target } from 'lucide-react';
+import { useLeadInteractionSummaries } from '@/hooks/useLeadInteractionSummary';
 import { Button } from '@/components/ui/button';
 import { SaleFromNegotiationModal } from '@/components/sales/SaleFromNegotiationModal';
 import { StageTransitionModal, StageTransitionData } from './StageTransitionModal';
