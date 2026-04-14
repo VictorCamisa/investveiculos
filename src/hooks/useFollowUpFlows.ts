@@ -226,7 +226,8 @@ export function useToggleFollowUpFlow() {
 
       if (readError || !currentRow) throw readError || new Error('Flow not found');
 
-      const currentSteps = ((currentRow.steps as Record<string, unknown>) ?? {});
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const currentSteps = (((currentRow as any).steps as Record<string, unknown>) ?? {});
       const newSteps = { ...currentSteps, is_active };
 
       const { data, error } = await supabase
