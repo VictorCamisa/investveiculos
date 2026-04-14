@@ -5,6 +5,7 @@ import { negotiationStatusLabels, pipelineColumns } from '@/types/negotiations';
 import { useUpdateNegotiation } from '@/hooks/useNegotiations';
 import { usePermissions } from '@/hooks/usePermissions';
 import { Plus, Target } from 'lucide-react';
+import { useLeadInteractionSummaries } from '@/hooks/useLeadInteractionSummary';
 import { Button } from '@/components/ui/button';
 import { SaleFromNegotiationModal } from '@/components/sales/SaleFromNegotiationModal';
 import { StageTransitionModal, StageTransitionData } from './StageTransitionModal';
@@ -28,6 +29,12 @@ export function NegotiationPipeline({
 }: NegotiationPipelineProps) {
   const updateNegotiation = useUpdateNegotiation();
   const { isVendedor } = usePermissions();
+
+  const leadIds = useMemo(() => {
+    return negotiations.map(n => n.lead_id).filter(Boolean) as string[];
+  }, [negotiations]);
+  const { data: summaries } = useLeadInteractionSummaries(leadIds);
+
   const [saleModalOpen, setSaleModalOpen] = useState(false);
   const [pendingWonNegotiation, setPendingWonNegotiation] = useState<Negotiation | null>(null);
   
@@ -239,6 +246,7 @@ export function NegotiationPipeline({
                         onClick={() => onNegotiationClick?.(negotiation)}
                         showSalesperson={showSalesperson}
                         showDeleteButton={true}
+                        interactionSummary={negotiation.lead_id ? summaries?.[negotiation.lead_id] : undefined}
                       />
                     </div>
                   ))}

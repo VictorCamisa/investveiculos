@@ -11,24 +11,27 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import { Car, Phone, Calendar, TrendingUp, User, UserCircle, Trash2 } from 'lucide-react';
+import { Car, Phone, Calendar, TrendingUp, User, UserCircle, Trash2, MessageCircle, AlertCircle, Clock } from 'lucide-react';
 import type { Negotiation } from '@/types/negotiations';
 import { negotiationStatusLabels } from '@/types/negotiations';
-import { format } from 'date-fns';
+import { format, formatDistanceToNow } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
 import { LeadScoreBadge } from './LeadScoreIndicator';
 import { useLeadQualificationByNegotiation } from '@/hooks/useLeadQualification';
 import { useDeleteNegotiation } from '@/hooks/useNegotiations';
 import { useState } from 'react';
+import { cn } from '@/lib/utils';
+import type { LeadInteractionSummary } from '@/hooks/useLeadInteractionSummary';
 
 interface NegotiationCardProps {
   negotiation: Negotiation;
   onClick?: () => void;
   showSalesperson?: boolean;
   showDeleteButton?: boolean;
+  interactionSummary?: LeadInteractionSummary;
 }
 
-export function NegotiationCard({ negotiation, onClick, showSalesperson, showDeleteButton }: NegotiationCardProps) {
+export function NegotiationCard({ negotiation, onClick, showSalesperson, showDeleteButton, interactionSummary }: NegotiationCardProps) {
   const { data: qualification } = useLeadQualificationByNegotiation(negotiation.id);
   const deleteNegotiation = useDeleteNegotiation();
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
@@ -51,7 +54,10 @@ export function NegotiationCard({ negotiation, onClick, showSalesperson, showDel
   return (
     <>
       <Card 
-        className="cursor-pointer hover:shadow-md transition-shadow border-border/50 bg-card"
+        className={cn(
+          "cursor-pointer hover:shadow-md transition-shadow border-border/50 bg-card",
+          interactionSummary?.has_unanswered && "ring-1 ring-orange-400/60 dark:ring-orange-500/40"
+        )}
         onClick={onClick}
       >
         <CardContent className="p-3 space-y-2">
@@ -120,6 +126,32 @@ export function NegotiationCard({ negotiation, onClick, showSalesperson, showDel
             )}
           </div>
 
+          {/* Interaction details */}
+          {interactionSummary && interactionSummary.total_messages > 0 && (
+            <div className="flex flex-col gap-1 pt-1.5 border-t border-border/40">
+              {interactionSummary.has_unanswered && (
+                <div className="flex items-center gap-1 text-xs text-orange-600 dark:text-orange-400 font-medium">
+                  <AlertCircle className="h-3 w-3" />
+                  <span>Mensagem sem resposta</span>
+                </div>
+              )}
+              {interactionSummary.last_message_at && (
+                <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                  <MessageCircle className="h-3 w-3" />
+                  <span>
+                    Última msg: {formatDistanceToNow(new Date(interactionSummary.last_message_at), { 
+                      addSuffix: true, locale: ptBR 
+                    })}
+                  </span>
+                </div>
+              )}
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <Clock className="h-3 w-3" />
+                <span>{interactionSummary.total_messages} msgs</span>
+              </div>
+            </div>
+          )}
+
           {negotiation.expected_close_date && (
             <div className="flex items-center gap-1 text-xs text-muted-foreground">
               <Calendar className="h-3 w-3" />
@@ -127,7 +159,6 @@ export function NegotiationCard({ negotiation, onClick, showSalesperson, showDel
             </div>
           )}
 
-          {/* Show salesperson or "Sem vendedor" badge */}
           {showSalesperson && (
             <div className="flex items-center gap-1 text-xs pt-1 border-t border-border/50">
               <User className="h-3 w-3" />
@@ -141,7 +172,6 @@ export function NegotiationCard({ negotiation, onClick, showSalesperson, showDel
             </div>
           )}
 
-          {/* Always show "Sem vendedor" badge when no salesperson, even if showSalesperson is false */}
           {!showSalesperson && !negotiation.salesperson_id && (
             <div className="flex items-center gap-1 text-xs pt-1 border-t border-border/50">
               <Badge variant="outline" className="text-xs text-orange-600 border-orange-300 dark:text-orange-400 dark:border-orange-600">

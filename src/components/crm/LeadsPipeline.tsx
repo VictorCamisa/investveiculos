@@ -1,8 +1,10 @@
+import { useMemo } from 'react';
 import { LeadCard } from './LeadCard';
 import type { Lead, LeadStatus } from '@/types/crm';
 import { leadStatusLabels } from '@/types/crm';
 import { cn } from '@/lib/utils';
 import { useUpdateLead } from '@/hooks/useLeads';
+import { useLeadInteractionSummaries } from '@/hooks/useLeadInteractionSummary';
 
 interface LeadsPipelineProps {
   leads: Lead[];
@@ -29,6 +31,9 @@ const stageColors: Record<LeadStatus, { border: string; bg: string; header: stri
 
 export function LeadsPipeline({ leads, onLeadClick }: LeadsPipelineProps) {
   const updateLead = useUpdateLead();
+
+  const leadIds = useMemo(() => leads.map(l => l.id), [leads]);
+  const { data: summaries } = useLeadInteractionSummaries(leadIds);
 
   const getLeadsByStatus = (status: LeadStatus) => {
     return leads.filter((lead) => lead.status === status);
@@ -58,6 +63,8 @@ export function LeadsPipeline({ leads, onLeadClick }: LeadsPipelineProps) {
         {pipelineStages.map((status) => {
           const stageLeads = getLeadsByStatus(status);
           const styles = stageColors[status];
+          // Count unanswered in this stage
+          const unansweredCount = stageLeads.filter(l => summaries?.[l.id]?.has_unanswered).length;
           
           return (
             <div
@@ -74,9 +81,16 @@ export function LeadsPipeline({ leads, onLeadClick }: LeadsPipelineProps) {
               <div className={cn("p-3 rounded-t-lg shrink-0", styles.header)}>
                 <div className="flex items-center justify-between">
                   <h3 className="font-semibold text-sm">{leadStatusLabels[status]}</h3>
-                  <span className="text-xs font-medium bg-background/80 text-foreground px-2 py-0.5 rounded-full shadow-sm">
-                    {stageLeads.length}
-                  </span>
+                  <div className="flex items-center gap-1.5">
+                    {unansweredCount > 0 && (
+                      <span className="text-xs font-medium bg-orange-500 text-white px-1.5 py-0.5 rounded-full">
+                        {unansweredCount} 💬
+                      </span>
+                    )}
+                    <span className="text-xs font-medium bg-background/80 text-foreground px-2 py-0.5 rounded-full shadow-sm">
+                      {stageLeads.length}
+                    </span>
+                  </div>
                 </div>
               </div>
 
@@ -93,6 +107,7 @@ export function LeadsPipeline({ leads, onLeadClick }: LeadsPipelineProps) {
                       lead={lead}
                       onClick={() => onLeadClick?.(lead)}
                       compact
+                      interactionSummary={summaries?.[lead.id]}
                     />
                   </div>
                 ))}
