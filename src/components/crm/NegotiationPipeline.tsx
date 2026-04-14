@@ -246,6 +246,7 @@ export function NegotiationPipeline({
                         onClick={() => onNegotiationClick?.(negotiation)}
                         showSalesperson={showSalesperson}
                         showDeleteButton={true}
+                        interactionSummary={negotiation.lead_id ? summaries?.[negotiation.lead_id] : undefined}
                       />
                     </div>
                   ))}
