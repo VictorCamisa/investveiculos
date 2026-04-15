@@ -98,12 +98,11 @@ async function fetchFromMeta(endpoint: string, accessToken: string, appSecret: s
   return response.json();
 }
 
-async function testConnection(accessToken: string, adAccountId: string) {
-  // Test the connection by fetching account info
+async function testConnection(accessToken: string, adAccountId: string, appSecret: string) {
   console.log('Testing Meta connection...');
   console.log(`Ad Account ID: ${adAccountId}`);
   
-  const data = await fetchFromMeta(adAccountId, accessToken, {
+  const data = await fetchFromMeta(adAccountId, accessToken, appSecret, {
     fields: 'id,name,account_status'
   });
   
@@ -111,10 +110,10 @@ async function testConnection(accessToken: string, adAccountId: string) {
   return data;
 }
 
-async function syncCampaigns(supabase: any, adAccountId: string, accessToken: string) {
+async function syncCampaigns(supabase: any, adAccountId: string, accessToken: string, appSecret: string) {
   console.log('Syncing campaigns...');
   
-  const data = await fetchFromMeta(`${adAccountId}/campaigns`, accessToken, {
+  const data = await fetchFromMeta(`${adAccountId}/campaigns`, accessToken, appSecret, {
     fields: 'id,name,objective,status,daily_budget,lifetime_budget,start_time,stop_time,created_time,updated_time',
     limit: '500'
   });
@@ -148,10 +147,10 @@ async function syncCampaigns(supabase: any, adAccountId: string, accessToken: st
   return campaigns.length;
 }
 
-async function syncAdSets(supabase: any, adAccountId: string, accessToken: string) {
+async function syncAdSets(supabase: any, adAccountId: string, accessToken: string, appSecret: string) {
   console.log('Syncing ad sets...');
   
-  const data = await fetchFromMeta(`${adAccountId}/adsets`, accessToken, {
+  const data = await fetchFromMeta(`${adAccountId}/adsets`, accessToken, appSecret, {
     fields: 'id,name,campaign_id,status,optimization_goal,billing_event,daily_budget,lifetime_budget,targeting',
     limit: '500'
   });
@@ -159,7 +158,6 @@ async function syncAdSets(supabase: any, adAccountId: string, accessToken: strin
   const adsets: MetaAdSet[] = data.data || [];
   console.log(`Found ${adsets.length} ad sets`);
 
-  // Get campaign mapping
   const { data: campaignData } = await supabase
     .from('meta_campaigns')
     .select('id, meta_campaign_id');
@@ -194,10 +192,10 @@ async function syncAdSets(supabase: any, adAccountId: string, accessToken: strin
   return adsets.length;
 }
 
-async function syncAds(supabase: any, adAccountId: string, accessToken: string) {
+async function syncAds(supabase: any, adAccountId: string, accessToken: string, appSecret: string) {
   console.log('Syncing ads...');
   
-  const data = await fetchFromMeta(`${adAccountId}/ads`, accessToken, {
+  const data = await fetchFromMeta(`${adAccountId}/ads`, accessToken, appSecret, {
     fields: 'id,name,adset_id,status,creative',
     limit: '500'
   });
@@ -205,7 +203,6 @@ async function syncAds(supabase: any, adAccountId: string, accessToken: string) 
   const ads: MetaAd[] = data.data || [];
   console.log(`Found ${ads.length} ads`);
 
-  // Get adset mapping
   const { data: adsetData } = await supabase
     .from('meta_adsets')
     .select('id, meta_adset_id');
@@ -236,11 +233,10 @@ async function syncAds(supabase: any, adAccountId: string, accessToken: string) 
   return ads.length;
 }
 
-async function syncInsights(supabase: any, adAccountId: string, accessToken: string) {
+async function syncInsights(supabase: any, adAccountId: string, accessToken: string, appSecret: string) {
   console.log('Syncing insights...');
   
-  // Get last 30 days of account-level insights by day
-  const data = await fetchFromMeta(`${adAccountId}/insights`, accessToken, {
+  const data = await fetchFromMeta(`${adAccountId}/insights`, accessToken, appSecret, {
     fields: 'impressions,reach,clicks,unique_clicks,spend,ctr,cpc,cpm,frequency,actions',
     time_range: JSON.stringify({ since: getDateDaysAgo(30), until: getDateDaysAgo(0) }),
     time_increment: '1',
@@ -283,8 +279,7 @@ async function syncInsights(supabase: any, adAccountId: string, accessToken: str
     }
   }
 
-  // Also sync campaign-level insights for the last 30 days
-  const campaignInsightsData = await fetchFromMeta(`${adAccountId}/insights`, accessToken, {
+  const campaignInsightsData = await fetchFromMeta(`${adAccountId}/insights`, accessToken, appSecret, {
     fields: 'campaign_id,campaign_name,impressions,reach,clicks,unique_clicks,spend,ctr,cpc,cpm,frequency,actions',
     time_range: JSON.stringify({ since: getDateDaysAgo(30), until: getDateDaysAgo(0) }),
     level: 'campaign'
@@ -334,7 +329,6 @@ function getDateDaysAgo(days: number): string {
 }
 
 serve(async (req) => {
-  // Handle CORS preflight
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
@@ -347,39 +341,43 @@ serve(async (req) => {
       throw new Error('Missing Supabase configuration.');
     }
 
-    // Parse request body
     let body: any = {};
     try {
       body = await req.json();
     } catch (e) {
-      // No body provided, use env vars
+      // No body provided
     }
 
     const syncType = body.syncType || 'full';
     const testCredentials: TestCredentials | undefined = body.testCredentials;
 
-    // Use test credentials if provided, otherwise use env vars
     let accessToken: string;
     let adAccountId: string;
+    let appSecret: string;
 
     if (testCredentials) {
       accessToken = testCredentials.accessToken;
       adAccountId = testCredentials.adAccountId;
+      appSecret = Deno.env.get('META_APP_SECRET') || '';
       console.log('Using provided test credentials');
     } else {
       const META_ACCESS_TOKEN = Deno.env.get('META_ACCESS_TOKEN');
       const META_AD_ACCOUNT_ID = Deno.env.get('META_AD_ACCOUNT_ID');
 
       if (!META_ACCESS_TOKEN || !META_AD_ACCOUNT_ID) {
-        throw new Error('Missing Meta Ads configuration. Please set META_ACCESS_TOKEN and META_AD_ACCOUNT_ID secrets or provide testCredentials.');
+        throw new Error('Missing Meta Ads configuration.');
       }
 
       accessToken = META_ACCESS_TOKEN;
       adAccountId = META_AD_ACCOUNT_ID;
+      appSecret = Deno.env.get('META_APP_SECRET') || '';
       console.log('Using environment credentials');
     }
 
-    // Ensure adAccountId has act_ prefix
+    if (!appSecret) {
+      throw new Error('Missing META_APP_SECRET. Please configure it in secrets.');
+    }
+
     if (!adAccountId.startsWith('act_')) {
       adAccountId = `act_${adAccountId}`;
     }
@@ -387,12 +385,10 @@ serve(async (req) => {
     console.log(`Starting Meta Ads ${syncType}...`);
     console.log(`Ad Account ID: ${adAccountId}`);
 
-    // Create Supabase client with service role for bypassing RLS
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // If it's just a test, verify connection and return
     if (syncType === 'test') {
-      const accountInfo = await testConnection(accessToken, adAccountId);
+      const accountInfo = await testConnection(accessToken, adAccountId, appSecret);
       
       return new Response(
         JSON.stringify({
@@ -408,7 +404,6 @@ serve(async (req) => {
       );
     }
 
-    // Create sync log entry
     const { data: syncLog, error: syncLogError } = await supabase
       .from('meta_sync_logs')
       .insert({
@@ -426,13 +421,11 @@ serve(async (req) => {
     const syncLogId = syncLog?.id;
 
     try {
-      // Sync all data
-      const campaignsCount = await syncCampaigns(supabase, adAccountId, accessToken);
-      const adsetsCount = await syncAdSets(supabase, adAccountId, accessToken);
-      const adsCount = await syncAds(supabase, adAccountId, accessToken);
-      const insightsCount = await syncInsights(supabase, adAccountId, accessToken);
+      const campaignsCount = await syncCampaigns(supabase, adAccountId, accessToken, appSecret);
+      const adsetsCount = await syncAdSets(supabase, adAccountId, accessToken, appSecret);
+      const adsCount = await syncAds(supabase, adAccountId, accessToken, appSecret);
+      const insightsCount = await syncInsights(supabase, adAccountId, accessToken, appSecret);
 
-      // Update sync log with success
       if (syncLogId) {
         await supabase
           .from('meta_sync_logs')
@@ -448,7 +441,6 @@ serve(async (req) => {
       }
 
       console.log('Meta Ads sync completed successfully!');
-      console.log(`Synced: ${campaignsCount} campaigns, ${adsetsCount} ad sets, ${adsCount} ads, ${insightsCount} insights`);
 
       return new Response(
         JSON.stringify({
@@ -466,7 +458,6 @@ serve(async (req) => {
     } catch (syncError: any) {
       console.error('Sync error:', syncError);
 
-      // Update sync log with error
       if (syncLogId) {
         await supabase
           .from('meta_sync_logs')
