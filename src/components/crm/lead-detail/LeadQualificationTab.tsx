@@ -169,13 +169,14 @@ function QualificationProgress({
   );
 }
 
-function QualificationCard({ qual, index, targetTier }: { qual: Qualification; index: number; targetTier: QualificationTier }) {
-  // Calculate tier from qualification data
+function QualificationCard({ qual, index, leadSource }: { qual: Qualification; index: number; leadSource?: string | null }) {
+  // Use stored tier if available (set correctly since latest fix)
+  // For legacy records without stored tier, calculate it (lead always has name+phone+source)
   const tier = (qual.qualification_tier as QualificationTier) || calculateQualificationTier({
-    name: 'Lead', // Assume name exists if qualification exists
-    phone: 'exists', // Assume contact exists
+    name: 'Lead',
+    phone: 'exists',
+    source: leadSource || 'outros', // leads always have a source
     vehicle_interest: qual.vehicle_interest,
-    source: 'exists', // Assume source exists if from negotiation
     budget_min: qual.budget_min,
     budget_max: qual.budget_max,
     payment_method: qual.payment_method,
@@ -294,20 +295,26 @@ function QualificationCard({ qual, index, targetTier }: { qual: Qualification; i
 export function LeadQualificationTab({ qualifications, lead }: LeadQualificationTabProps) {
   const { data: config } = useQualificationConfig();
   const targetTier = (config?.target_tier as QualificationTier) || 'Q2';
-  
-  // Calculate current tier from lead data
+
+  // Sort by date, most recent first BEFORE calculating current tier
+  const sortedQualifications = [...qualifications].sort(
+    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+  );
+
+  // Calculate current tier using latest qualification data merged with lead data
+  const latestQual = sortedQualifications[0];
   const currentTier = lead ? calculateQualificationTier({
     name: lead.name,
     phone: lead.phone,
     email: lead.email,
-    vehicle_interest: lead.vehicle_interest,
+    vehicle_interest: lead.vehicle_interest || latestQual?.vehicle_interest,
     source: lead.source,
-    budget_min: qualifications[0]?.budget_min,
-    budget_max: qualifications[0]?.budget_max,
-    payment_method: qualifications[0]?.payment_method,
-    purchase_timeline: qualifications[0]?.purchase_timeline,
-    has_trade_in: qualifications[0]?.has_trade_in,
-    trade_in_vehicle: qualifications[0]?.trade_in_vehicle,
+    budget_min: latestQual?.budget_min,
+    budget_max: latestQual?.budget_max,
+    payment_method: latestQual?.payment_method,
+    purchase_timeline: latestQual?.purchase_timeline,
+    has_trade_in: latestQual?.has_trade_in,
+    trade_in_vehicle: latestQual?.trade_in_vehicle,
   }) : null;
 
   if (qualifications.length === 0 && !lead) {
@@ -326,11 +333,6 @@ export function LeadQualificationTab({ qualifications, lead }: LeadQualification
     );
   }
 
-  // Sort by date, most recent first
-  const sortedQualifications = [...qualifications].sort(
-    (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-  );
-
   return (
     <ScrollArea className="flex-1 min-h-0 px-6 pb-6">
       <div className="space-y-4">
@@ -343,19 +345,19 @@ export function LeadQualificationTab({ qualifications, lead }: LeadQualification
         {/* Summary Stats by Tier */}
         <div className="grid grid-cols-3 gap-3">
           {(['Q1', 'Q2', 'Q3'] as QualificationTier[]).map((tier) => {
-            const count = qualifications.filter(q => 
-              (q.qualification_tier as QualificationTier) === tier ||
-              calculateQualificationTier({
+            const count = sortedQualifications.filter(q => {
+              const qTier = (q.qualification_tier as QualificationTier) || calculateQualificationTier({
                 name: 'exists',
                 phone: 'exists',
+                source: lead?.source || 'outros',
                 vehicle_interest: q.vehicle_interest,
-                source: 'exists',
                 budget_min: q.budget_min,
                 budget_max: q.budget_max,
                 payment_method: q.payment_method,
                 purchase_timeline: q.purchase_timeline,
-              }) === tier
-            ).length;
+              });
+              return qTier === tier;
+            }).length;
             const colors = getTierColorClasses(tier);
             const info = QUALIFICATION_TIERS[tier];
             
@@ -376,11 +378,11 @@ export function LeadQualificationTab({ qualifications, lead }: LeadQualification
             <Separator />
             <h4 className="font-medium text-sm text-muted-foreground">Histórico de Qualificações</h4>
             {sortedQualifications.map((qual, index) => (
-              <QualificationCard 
-                key={qual.id} 
-                qual={qual} 
+              <QualificationCard
+                key={qual.id}
+                qual={qual}
                 index={sortedQualifications.length - index}
-                targetTier={targetTier}
+                leadSource={lead?.source}
               />
             ))}
           </>

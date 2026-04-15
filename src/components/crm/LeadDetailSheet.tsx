@@ -216,7 +216,7 @@ export function LeadDetailSheet({ lead, open, onOpenChange, onStartNegotiation }
 
           {/* Qualification Tab */}
           <TabsContent value="qualification" className="flex-1 overflow-hidden mt-4 m-0 data-[state=active]:flex data-[state=active]:flex-col min-h-0">
-            <LeadQualificationTab qualifications={qualifications} />
+            <LeadQualificationTab qualifications={qualifications} lead={lead} />
           </TabsContent>
 
           {/* History Tab */}
