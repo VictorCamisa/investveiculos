@@ -62,9 +62,26 @@ interface TestCredentials {
   adAccountId: string;
 }
 
-async function fetchFromMeta(endpoint: string, accessToken: string, params: Record<string, string> = {}) {
+async function generateAppSecretProof(accessToken: string, appSecret: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(appSecret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(accessToken));
+  return Array.from(new Uint8Array(signature)).map(b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function fetchFromMeta(endpoint: string, accessToken: string, appSecret: string, params: Record<string, string> = {}) {
   const url = new URL(`${META_BASE_URL}/${endpoint}`);
   url.searchParams.set('access_token', accessToken);
+  
+  const proof = await generateAppSecretProof(accessToken, appSecret);
+  url.searchParams.set('appsecret_proof', proof);
+  
   Object.entries(params).forEach(([key, value]) => {
     url.searchParams.set(key, value);
   });
