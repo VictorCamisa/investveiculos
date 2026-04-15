@@ -21,10 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ApiConfig {
-  metaAppId: string;
-  metaAppSecret: string;
   metaAccessToken: string;
-  metaAdAccountId: string;
   googleClientId: string;
   googleClientSecret: string;
   googleRefreshToken: string;
@@ -36,17 +33,13 @@ interface ApiConfig {
 
 export default function MarketingSettingsPage() {
   const [showMetaToken, setShowMetaToken] = useState(false);
-  const [showMetaSecret, setShowMetaSecret] = useState(false);
   const [showGoogleSecret, setShowGoogleSecret] = useState(false);
   const [isTestingMeta, setIsTestingMeta] = useState(false);
   const [isTestingGoogle, setIsTestingGoogle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
   const [config, setConfig] = useState<ApiConfig>({
-    metaAppId: '',
-    metaAppSecret: '',
     metaAccessToken: '',
-    metaAdAccountId: '',
     googleClientId: '',
     googleClientSecret: '',
     googleRefreshToken: '',
