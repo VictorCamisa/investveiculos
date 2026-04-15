@@ -21,10 +21,7 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { supabase } from '@/integrations/supabase/client';
 
 interface ApiConfig {
-  metaAppId: string;
-  metaAppSecret: string;
   metaAccessToken: string;
-  metaAdAccountId: string;
   googleClientId: string;
   googleClientSecret: string;
   googleRefreshToken: string;
@@ -36,17 +33,13 @@ interface ApiConfig {
 
 export default function MarketingSettingsPage() {
   const [showMetaToken, setShowMetaToken] = useState(false);
-  const [showMetaSecret, setShowMetaSecret] = useState(false);
   const [showGoogleSecret, setShowGoogleSecret] = useState(false);
   const [isTestingMeta, setIsTestingMeta] = useState(false);
   const [isTestingGoogle, setIsTestingGoogle] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   
   const [config, setConfig] = useState<ApiConfig>({
-    metaAppId: '',
-    metaAppSecret: '',
     metaAccessToken: '',
-    metaAdAccountId: '',
     googleClientId: '',
     googleClientSecret: '',
     googleRefreshToken: '',
@@ -96,27 +89,12 @@ export default function MarketingSettingsPage() {
   };
 
   const testMetaConnection = async () => {
-    if (!config.metaAccessToken || !config.metaAdAccountId) {
-      toast.error('Preencha o Token de Acesso e o ID da Conta de Anúncios');
-      return;
-    }
-    
     setIsTestingMeta(true);
     toast.info('Testando conexão com Meta Ads...');
     
     try {
-      // First, we need to save the secrets temporarily to test
-      // Call the edge function with the credentials in the body for testing
       const { data, error } = await supabase.functions.invoke('meta-ads-sync', {
-        body: { 
-          syncType: 'test',
-          testCredentials: {
-            accessToken: config.metaAccessToken,
-            adAccountId: config.metaAdAccountId.startsWith('act_') 
-              ? config.metaAdAccountId 
-              : `act_${config.metaAdAccountId}`
-          }
-        }
+        body: { syncType: 'test' }
       });
 
       if (error) throw error;
@@ -127,15 +105,7 @@ export default function MarketingSettingsPage() {
         
         // Now trigger full sync
         await supabase.functions.invoke('meta-ads-sync', {
-          body: { 
-            syncType: 'full',
-            testCredentials: {
-              accessToken: config.metaAccessToken,
-              adAccountId: config.metaAdAccountId.startsWith('act_') 
-                ? config.metaAdAccountId 
-                : `act_${config.metaAdAccountId}`
-            }
-          }
+          body: { syncType: 'full' }
         });
         
         toast.success('Dados do Meta Ads sincronizados com sucesso!');
@@ -278,86 +248,59 @@ export default function MarketingSettingsPage() {
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="metaAppId">App ID</Label>
-              <Input
-                id="metaAppId"
-                placeholder="123456789012345"
-                value={config.metaAppId}
-                onChange={(e) => setConfig(prev => ({ ...prev, metaAppId: e.target.value }))}
-              />
-              <p className="text-xs text-muted-foreground">
-                ID do aplicativo Meta/Facebook
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="metaAppSecret">App Secret</Label>
-              <div className="relative">
-                <Input
-                  id="metaAppSecret"
-                  type={showMetaSecret ? "text" : "password"}
-                  placeholder="xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
-                  value={config.metaAppSecret}
-                  onChange={(e) => setConfig(prev => ({ ...prev, metaAppSecret: e.target.value }))}
-                  className="pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowMetaSecret(!showMetaSecret)}
-                >
-                  {showMetaSecret ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
+          {/* Fixed credentials - already configured */}
+          <div className="grid gap-4 md:grid-cols-3">
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">App ID</Label>
+              <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/50">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="text-sm text-muted-foreground">Configurado</span>
               </div>
-              <p className="text-xs text-muted-foreground">
-                Chave secreta do aplicativo
-              </p>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">App Secret</Label>
+              <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/50">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="text-sm text-muted-foreground">Configurado</span>
+              </div>
+            </div>
+            <div className="space-y-1">
+              <Label className="text-xs text-muted-foreground">ID da Conta de Anúncios</Label>
+              <div className="flex items-center gap-2 h-9 px-3 rounded-md border bg-muted/50">
+                <CheckCircle2 className="h-3.5 w-3.5 text-primary shrink-0" />
+                <span className="text-sm text-muted-foreground">Configurado</span>
+              </div>
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <Label htmlFor="metaAccessToken">Token de Acesso</Label>
-              <div className="relative">
-                <Input
-                  id="metaAccessToken"
-                  type={showMetaToken ? "text" : "password"}
-                  placeholder="EAAxxxxxxxxxx..."
-                  value={config.metaAccessToken}
-                  onChange={(e) => setConfig(prev => ({ ...prev, metaAccessToken: e.target.value }))}
-                  className="pr-10"
-                />
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="absolute right-0 top-0 h-full px-3"
-                  onClick={() => setShowMetaToken(!showMetaToken)}
-                >
-                  {showMetaToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground">
-                Token de acesso do Facebook Marketing API
-              </p>
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="metaAdAccountId">ID da Conta de Anúncios</Label>
+          {/* Editable token field */}
+          <div className="space-y-2">
+            <Label htmlFor="metaAccessToken">Token de Acesso <Badge variant="outline" className="ml-2 text-[10px]">Expira periodicamente</Badge></Label>
+            <div className="relative">
               <Input
-                id="metaAdAccountId"
-                placeholder="act_123456789 ou 123456789"
-                value={config.metaAdAccountId}
-                onChange={(e) => setConfig(prev => ({ ...prev, metaAdAccountId: e.target.value }))}
+                id="metaAccessToken"
+                type={showMetaToken ? "text" : "password"}
+                placeholder="EAAxxxxxxxxxx..."
+                value={config.metaAccessToken}
+                onChange={(e) => setConfig(prev => ({ ...prev, metaAccessToken: e.target.value }))}
+                className="pr-10"
               />
-              <p className="text-xs text-muted-foreground">
-                ID da conta de anúncios (com ou sem "act_")
-              </p>
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="absolute right-0 top-0 h-full px-3"
+                onClick={() => setShowMetaToken(!showMetaToken)}
+              >
+                {showMetaToken ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+              </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              Único campo que precisa ser atualizado quando expirar. Gere um novo em{' '}
+              <a href="https://developers.facebook.com/tools/explorer/" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">
+                Graph API Explorer
+              </a>
+            </p>
           </div>
           
           <div className="flex items-center gap-2">
