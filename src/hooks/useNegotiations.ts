@@ -3,6 +3,7 @@ import { supabase } from '@/integrations/supabase/client';
 import type { Negotiation, NegotiationStatus, LossReasonType } from '@/types/negotiations';
 import { toast } from 'sonner';
 import { notifySalespersonAboutLead } from './useRoundRobin';
+import { calculateQualificationTier } from './useQualificationConfig';
 
 // staleTime: 0 garante que invalidateQueries sempre dispara refetch
 const negotiationQueryOptions = {
@@ -252,21 +253,53 @@ export function useUpdateNegotiation() {
         // Get current user
         const { data: { user } } = await supabase.auth.getUser();
 
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        // Calculate qualification tier
-        const hasVehicleInterest = !!qualificationData.vehicle_interest?.trim();
-        const hasBudget = !!(qualificationData.budget_min || qualificationData.budget_max);
-        const hasPaymentMethod = !!qualificationData.payment_method?.trim();
-        const hasTimeline = !!qualificationData.purchase_timeline?.trim();
-        
-        let qualification_tier = 'Q1'; // Base: has name + contact (from negotiation)
-        if (hasVehicleInterest) {
-          qualification_tier = 'Q2'; // Has vehicle interest + source
-        }
-        if (hasVehicleInterest && hasBudget && hasPaymentMethod && hasTimeline) {
-          qualification_tier = 'Q3'; // Complete qualification
+        // Fetch lead data for accurate tier calculation and vehicle_interest sync
+        let leadName: string | null = null;
+        let leadPhone: string | null = null;
+        let leadEmail: string | null = null;
+        let leadSource: string | null = null;
+
+        if (negData?.lead_id) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const { data: leadForTier } = await (supabase as any)
+            .from('leads')
+            .select('name, phone, email, source, vehicle_interest')
+            .eq('id', negData.lead_id)
+            .single();
+
+          if (leadForTier) {
+            leadName = leadForTier.name;
+            leadPhone = leadForTier.phone;
+            leadEmail = leadForTier.email;
+            leadSource = leadForTier.source;
+
+            // Sync vehicle_interest back to lead if filled in qualification form
+            if (qualificationData.vehicle_interest?.trim() && !leadForTier.vehicle_interest) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              await (supabase as any)
+                .from('leads')
+                .update({ vehicle_interest: qualificationData.vehicle_interest })
+                .eq('id', negData.lead_id);
+            }
+          }
         }
 
+        // Use the canonical tier calculation function (same logic everywhere)
+        const qualification_tier = calculateQualificationTier({
+          name: leadName,
+          phone: leadPhone,
+          email: leadEmail,
+          source: leadSource,
+          vehicle_interest: qualificationData.vehicle_interest,
+          budget_min: qualificationData.budget_min,
+          budget_max: qualificationData.budget_max,
+          payment_method: qualificationData.payment_method,
+          purchase_timeline: qualificationData.purchase_timeline,
+          has_trade_in: qualificationData.has_trade_in,
+          trade_in_vehicle: qualificationData.trade_in_vehicle,
+        }) || 'Q1';
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         await (supabase as any).from('lead_qualifications').insert({
           lead_id: negData?.lead_id,
           negotiation_id: id,

@@ -11,6 +11,8 @@ import { SaleFromNegotiationModal } from '@/components/sales/SaleFromNegotiation
 import { StageTransitionModal, StageTransitionData } from './StageTransitionModal';
 import { QualificationModal } from './QualificationModal';
 import type { QualificationFormData, ScoreBreakdown } from '@/types/qualification';
+import { useQualificationConfig } from '@/hooks/useQualificationConfig';
+import type { QualificationTier } from '@/hooks/useQualificationConfig';
 
 interface NegotiationPipelineProps {
   negotiations: Negotiation[];
@@ -20,15 +22,17 @@ interface NegotiationPipelineProps {
   showSalesperson?: boolean;
 }
 
-export function NegotiationPipeline({ 
-  negotiations, 
-  onNegotiationClick, 
+export function NegotiationPipeline({
+  negotiations,
+  onNegotiationClick,
   onCreateNegotiation,
   onCreateLead,
-  showSalesperson 
+  showSalesperson
 }: NegotiationPipelineProps) {
   const updateNegotiation = useUpdateNegotiation();
   const { isVendedor } = usePermissions();
+  const { data: qualificationConfig } = useQualificationConfig();
+  const targetTier = (qualificationConfig?.target_tier as QualificationTier) || 'Q2';
 
   const leadIds = useMemo(() => {
     return negotiations.map(n => n.lead_id).filter(Boolean) as string[];
@@ -287,6 +291,7 @@ export function NegotiationPipeline({
         onOpenChange={setQualificationModalOpen}
         negotiation={pendingQualification}
         onConfirm={handleQualificationConfirm}
+        targetTier={targetTier}
       />
     </div>
   );
