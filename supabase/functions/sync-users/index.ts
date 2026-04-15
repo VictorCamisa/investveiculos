@@ -66,18 +66,17 @@ serve(async (req) => {
 
     const token = authHeader.replace("Bearer ", "");
 
-    // Use getClaims instead of getUser to avoid session_not_found errors
-    const { data: claimsData, error: claimsError } = await supabaseAdmin.auth.getClaims(token);
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
 
-    if (claimsError || !claimsData?.claims) {
-      console.error("sync-users auth error:", claimsError);
+    if (userError || !userData?.user) {
+      console.error("sync-users auth error:", userError);
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const requestingUserId = claimsData.claims.sub as string;
+    const requestingUserId = userData.user.id;
 
     // Verifica se é gerente OU is_master
     const { data: roleData } = await supabaseAdmin
