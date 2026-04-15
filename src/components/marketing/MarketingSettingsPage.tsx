@@ -96,27 +96,12 @@ export default function MarketingSettingsPage() {
   };
 
   const testMetaConnection = async () => {
-    if (!config.metaAccessToken || !config.metaAdAccountId) {
-      toast.error('Preencha o Token de Acesso e o ID da Conta de Anúncios');
-      return;
-    }
-    
     setIsTestingMeta(true);
     toast.info('Testando conexão com Meta Ads...');
     
     try {
-      // First, we need to save the secrets temporarily to test
-      // Call the edge function with the credentials in the body for testing
       const { data, error } = await supabase.functions.invoke('meta-ads-sync', {
-        body: { 
-          syncType: 'test',
-          testCredentials: {
-            accessToken: config.metaAccessToken,
-            adAccountId: config.metaAdAccountId.startsWith('act_') 
-              ? config.metaAdAccountId 
-              : `act_${config.metaAdAccountId}`
-          }
-        }
+        body: { syncType: 'test' }
       });
 
       if (error) throw error;
@@ -127,15 +112,7 @@ export default function MarketingSettingsPage() {
         
         // Now trigger full sync
         await supabase.functions.invoke('meta-ads-sync', {
-          body: { 
-            syncType: 'full',
-            testCredentials: {
-              accessToken: config.metaAccessToken,
-              adAccountId: config.metaAdAccountId.startsWith('act_') 
-                ? config.metaAdAccountId 
-                : `act_${config.metaAdAccountId}`
-            }
-          }
+          body: { syncType: 'full' }
         });
         
         toast.success('Dados do Meta Ads sincronizados com sucesso!');
