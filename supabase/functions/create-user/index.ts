@@ -47,26 +47,21 @@ serve(async (req) => {
       });
     }
 
-    // Validate the JWT using getClaims
+    // Validate the JWT using getUser
     const token = authHeader.replace("Bearer ", "");
     
-    // Create a user-scoped client to validate the token
-    const supabaseUser = createClient(supabaseUrl, Deno.env.get("SUPABASE_ANON_KEY") ?? serviceRoleKey, {
-      global: { headers: { Authorization: authHeader } },
-    });
+    const { data: userData, error: userError } = await supabaseAdmin.auth.getUser(token);
     
-    const { data: claimsData, error: claimsError } = await supabaseUser.auth.getClaims(token);
-    
-    if (claimsError || !claimsData?.claims) {
-      console.error("[create-user] JWT validation error:", claimsError);
+    if (userError || !userData?.user) {
+      console.error("[create-user] JWT validation error:", userError);
       return new Response(JSON.stringify({ error: "Invalid token" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const requestingUserId = claimsData.claims.sub as string;
-    const requestingUserEmail = claimsData.claims.email as string;
+    const requestingUserId = userData.user.id;
+    const requestingUserEmail = userData.user.email as string;
 
     console.log("[create-user] Requesting user:", requestingUserId, requestingUserEmail);
 
